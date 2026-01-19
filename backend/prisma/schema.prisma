@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  password             String?
+  name                 String
+  authProvider         String   @default("email")
+  googleId             String?  @unique
+  onboardingCompleted  Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relationship
+  artworks             Artwork[]
+
+  @@map("users")
+}
+
+model Artwork {
+  id           String   @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  imageUrl     String?
+  s3ObjectKey  String?  // S3 object key for image storage
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relationships
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reflection   Reflection?
+
+  @@map("artworks")
+}
+
+model Reflection {
+  id         String   @id @default(cuid())
+  artworkId  String   @unique
+  content    String
+  type       String   @default("initial_interpretation")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relationship
+  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+
+  @@map("reflections")
+}

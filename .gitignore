@@ -1,0 +1,34 @@
+# Secrets / credentials
+Google Auth.json
+
+# IDE settings
+.vscode/
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Build outputs
+dist/
+build/
+.vite/
+.cache/
+
+# Environment files
+.env
+.env.local
+
+# Databases
+*.db
+dev.db
+
+# Uploads / runtime files
+uploads/
+tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
