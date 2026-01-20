@@ -155,13 +155,13 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     <div style={isWithinLayout ? styles.layoutContainer : styles.container}>
       {/* Top Navigation Bar - only show if not within Layout */}
       {!isWithinLayout && (
-        <header style={styles.topNav}>
+        <header style={styles.topNav} className="glass-card">
           <div style={styles.topNavContent}>
-            <h1 style={styles.appName}>Collector Identity</h1>
+            <h1 style={styles.appName} className="gradient-text">✨ Collector Identity</h1>
             
             <div style={styles.profileSection}>
               {!isOnline && (
-                <div style={styles.offlineIndicator}>
+                <div style={styles.offlineIndicator} className="pulse">
                   📡 Offline - Check your connection
                 </div>
               )}
@@ -171,19 +171,20 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                 style={styles.profileButton}
+                className="icon-hover"
               >
                 <span style={styles.profileName}>{currentUser?.name || 'User'}</span>
-                <span style={styles.profileIcon}>👤</span>
+                <span style={styles.profileIcon} className="icon-hover">👤</span>
               </button>
               
               {profileMenuOpen && (
-                <div style={styles.profileMenu}>
+                <div style={styles.profileMenu} className="pinterest-card backdrop-blur">
                   <div style={styles.profileMenuHeader}>
                     <span style={styles.profileMenuName}>{currentUser?.name}</span>
                     <span style={styles.profileMenuEmail}>{currentUser?.email}</span>
                   </div>
-                  <button onClick={handleLogout} style={styles.logoutButton}>
-                    Sign Out
+                  <button onClick={handleLogout} style={styles.logoutButton} className="icon-hover">
+                    🚪 Sign Out
                   </button>
                 </div>
               )}
@@ -194,152 +195,188 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
 
       {/* Main Content */}
       <div style={isWithinLayout ? styles.layoutMainContent : styles.mainContent}>
-        <div style={styles.card}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>Add Your Artwork</h1>
-          <p style={styles.subtitle}>
-            Share a piece that represents your creative identity
-          </p>
-          <div style={styles.milestone1Notice}>
-            <p style={styles.noticeText}>
-              You can add one artwork that will become part of your permanent creative identity.
+        <div style={styles.card} className="pinterest-card">
+          <div style={styles.header}>
+            <div style={styles.iconContainer} className="floating">
+              <span style={styles.headerIcon} className="icon-hover">🎨</span>
+            </div>
+            <h1 style={styles.title} className="gradient-text">Add Your Artwork</h1>
+            <p style={styles.subtitle}>
+              Share a piece that represents your creative identity
             </p>
-          </div>
-        </div>
-
-        {/* Upload Method Toggle */}
-        <div style={styles.toggleContainer}>
-          <button
-            type="button"
-            onClick={() => setUploadMethod('file')}
-            style={{
-              ...styles.toggleButton,
-              ...(uploadMethod === 'file' ? styles.toggleButtonActive : {})
-            }}
-          >
-            Upload Image
-          </button>
-          <button
-            type="button"
-            onClick={() => setUploadMethod('text')}
-            style={{
-              ...styles.toggleButton,
-              ...(uploadMethod === 'text' ? styles.toggleButtonActive : {})
-            }}
-          >
-            Text Description
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {/* Title - Always Required */}
-          <div style={styles.field}>
-            <label style={styles.label}>Title *</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              style={styles.input}
-              placeholder="Give your artwork a title"
-            />
+            <div style={styles.milestone1Notice} className="glass-card">
+              <span style={styles.noticeIcon} className="icon-hover floating">💡</span>
+              <p style={styles.noticeText}>
+                You can add one artwork that will become part of your permanent creative identity.
+              </p>
+            </div>
           </div>
 
-          {/* Image Upload Method */}
-          {uploadMethod === 'file' && (
+          {/* Upload Method Toggle */}
+          <div style={styles.toggleContainer} className="glass-card">
+            <button
+              type="button"
+              onClick={() => setUploadMethod('file')}
+              className="icon-hover"
+              style={{
+                ...styles.toggleButton,
+                ...(uploadMethod === 'file' ? styles.toggleButtonActive : {})
+              }}
+            >
+              <span style={styles.toggleIcon}>🖼️</span>
+              Upload Image
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadMethod('text')}
+              className="icon-hover"
+              style={{
+                ...styles.toggleButton,
+                ...(uploadMethod === 'text' ? styles.toggleButtonActive : {})
+              }}
+            >
+              <span style={styles.toggleIcon}>📝</span>
+              Text Description
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Title - Always Required */}
             <div style={styles.field}>
-              <label style={styles.label}>Image File *</label>
-              <div style={styles.fileInputContainer}>
-                <input
-                  type="file"
-                  id="imageFile"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  style={styles.fileInput}
-                />
-                <label htmlFor="imageFile" style={styles.fileInputLabel}>
-                  {formData.imageFile ? 'Change Image' : 'Choose Image File'}
-                </label>
-                {formData.imageFile && (
-                  <button
-                    type="button"
-                    onClick={clearFile}
-                    style={styles.clearButton}
-                  >
-                    Remove
-                  </button>
+              <label style={styles.label}>✨ Title *</label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                required
+                className="form-input"
+                style={styles.input}
+                placeholder="Give your artwork a magical title"
+              />
+            </div>
+
+            {/* Image Upload Method */}
+            {uploadMethod === 'file' && (
+              <div style={styles.field}>
+                <label style={styles.label}>🖼️ Image File *</label>
+                <div style={styles.fileInputContainer}>
+                  <input
+                    type="file"
+                    id="imageFile"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    style={styles.fileInput}
+                  />
+                  <label htmlFor="imageFile" style={styles.fileInputLabel} className="icon-hover">
+                    <span style={styles.uploadIcon}>
+                      {formData.imageFile ? '🔄' : '📁'}
+                    </span>
+                    {formData.imageFile ? 'Change Image' : 'Choose Image File'}
+                  </label>
+                  {formData.imageFile && (
+                    <button
+                      type="button"
+                      onClick={clearFile}
+                      style={styles.clearButton}
+                      className="icon-hover"
+                    >
+                      🗑️ Remove
+                    </button>
+                  )}
+                </div>
+                
+                {imagePreview && (
+                  <div style={styles.imagePreview} className="image-hover pinterest-card">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={styles.previewImage}
+                    />
+                    <div style={styles.previewOverlay}>
+                      <span style={styles.previewIcon} className="floating">✨</span>
+                    </div>
+                  </div>
                 )}
-              </div>
-              
-              {imagePreview && (
-                <div style={styles.imagePreview}>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    style={styles.previewImage}
+
+                {/* Optional description for image uploads */}
+                <div style={styles.field}>
+                  <label style={styles.label}>📝 Description (Optional)</label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="form-input"
+                    style={styles.textarea}
+                    placeholder="Add context or meaning to your image..."
+                    rows={3}
                   />
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Optional description for image uploads */}
+            {/* Text Description Method */}
+            {uploadMethod === 'text' && (
               <div style={styles.field}>
-                <label style={styles.label}>Description (Optional)</label>
+                <label style={styles.label}>📝 Description *</label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
+                  required
+                  className="form-input"
                   style={styles.textarea}
-                  placeholder="Add context or meaning to your image..."
-                  rows={3}
+                  placeholder="Describe your artwork, its meaning, or the story behind it..."
+                  rows={6}
                 />
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Text Description Method */}
-          {uploadMethod === 'text' && (
-            <div style={styles.field}>
-              <label style={styles.label}>Description *</label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                required
-                style={styles.textarea}
-                placeholder="Describe your artwork, its meaning, or the story behind it..."
-                rows={6}
-              />
-            </div>
-          )}
-
-          {error && (
-            <div style={styles.errorContainer}>
-              <div style={styles.error}>{error}</div>
-              <div style={styles.errorActions}>
-                <button
-                  type="button"
-                  onClick={handleRetry}
-                  style={styles.retryButton}
-                >
-                  Try Again
-                </button>
+            {error && (
+              <div style={styles.errorContainer}>
+                <div style={styles.error} className="pinterest-card pulse">
+                  ⚠️ {error}
+                </div>
+                <div style={styles.errorActions}>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    style={styles.retryButton}
+                    className="btn-primary icon-hover"
+                  >
+                    🔄 Try Again
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          <button
-            type="submit"
-            disabled={loading || !isOnline}
-            style={{
-              ...styles.submitButton,
-              ...(loading || !isOnline ? styles.submitButtonDisabled : {})
-            }}
-          >
-            {!isOnline ? 'Offline - Check Connection' : 
-             loading ? 'Creating Artwork...' : 'Create Artwork'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading || !isOnline}
+              className="btn-primary icon-hover"
+              style={{
+                ...styles.submitButton,
+                ...(loading || !isOnline ? styles.submitButtonDisabled : {})
+              }}
+            >
+              {!isOnline ? (
+                <>
+                  <span style={styles.buttonIcon}>📡</span>
+                  Offline - Check Connection
+                </>
+              ) : loading ? (
+                <>
+                  <div className="spinner" style={styles.buttonSpinner}></div>
+                  Creating Masterpiece...
+                </>
+              ) : (
+                <>
+                  <span style={styles.buttonIcon}>✨</span>
+                  Create Artwork
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -349,33 +386,38 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
 const styles = {
   container: {
     minHeight: '100vh',
-    background: '#fafafa',
+    background: 'linear-gradient(135deg, #EFEBCE 0%, #E5E0B8 50%, #DBD5A2 100%)',
+    backgroundAttachment: 'fixed',
   },
   layoutContainer: {
-    maxWidth: '800px',
+    maxWidth: '900px',
     margin: '0 auto',
   },
   topNav: {
-    background: 'white',
-    borderBottom: '1px solid #e8e8e8',
+    background: 'rgba(255, 255, 255, 0.15)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '0 0 25px 25px',
     position: 'sticky',
     top: 0,
     zIndex: 100,
+    margin: '0 20px',
+    marginBottom: '20px',
   },
   topNavContent: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px 32px',
+    padding: '20px 32px',
     maxWidth: '1400px',
     margin: '0 auto',
   },
   appName: {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontSize: '28px',
+    fontWeight: '800',
     margin: 0,
     letterSpacing: '-0.02em',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
   },
   profileSection: {
     position: 'relative',
@@ -386,266 +428,351 @@ const styles = {
   offlineIndicator: {
     fontSize: '14px',
     color: '#dc2626',
+    fontWeight: '600',
+    padding: '8px 16px',
+    background: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: '20px',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+  },
+  helpText: {
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '500',
-    padding: '4px 8px',
-    background: '#fef2f2',
-    borderRadius: '6px',
-    border: '1px solid #fecaca',
   },
   profileButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    padding: '8px 16px',
-    background: 'none',
-    border: '1px solid #e8e8e8',
-    borderRadius: '8px',
+    padding: '12px 20px',
+    background: 'rgba(255, 255, 255, 0.2)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '20px',
     cursor: 'pointer',
     fontSize: '14px',
-    color: '#374151',
-    transition: 'all 0.2s ease',
+    color: 'white',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
   },
   profileName: {
-    fontWeight: '500',
+    fontWeight: '600',
+    textShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
   },
   profileIcon: {
-    fontSize: '16px',
+    fontSize: '18px',
   },
   profileMenu: {
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: '8px',
-    background: 'white',
-    border: '1px solid #e8e8e8',
-    borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-    minWidth: '200px',
+    marginTop: '12px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '20px',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+    minWidth: '220px',
     zIndex: 200,
+    overflow: 'hidden',
   },
   profileMenuHeader: {
-    padding: '16px',
-    borderBottom: '1px solid #f0f0f0',
+    padding: '20px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+    background: 'linear-gradient(135deg, rgba(239, 235, 206, 0.1), rgba(229, 224, 184, 0.1))',
   },
   profileMenuName: {
     display: 'block',
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1a1a1a',
-    fontSize: '14px',
+    fontSize: '16px',
+    marginBottom: '4px',
   },
   profileMenuEmail: {
     display: 'block',
     color: '#666',
-    fontSize: '12px',
-    marginTop: '4px',
+    fontSize: '13px',
   },
   logoutButton: {
     width: '100%',
-    padding: '12px 16px',
+    padding: '16px 20px',
     background: 'none',
     border: 'none',
     textAlign: 'left',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '15px',
     color: '#dc2626',
-    fontWeight: '500',
+    fontWeight: '600',
+    transition: 'all 0.3s ease',
   },
   mainContent: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '24px',
-    minHeight: 'calc(100vh - 73px)',
+    padding: '40px 20px',
+    minHeight: 'calc(100vh - 140px)',
   },
   layoutMainContent: {
     padding: '0',
   },
   card: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '48px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: '30px',
+    padding: '50px',
     width: '100%',
-    maxWidth: '600px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+    maxWidth: '700px',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
   },
   header: {
     textAlign: 'center',
     marginBottom: '40px',
   },
+  iconContainer: {
+    marginBottom: '20px',
+  },
+  headerIcon: {
+    fontSize: '60px',
+    display: 'inline-block',
+    filter: 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.1))',
+  },
   title: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: '12px',
+    fontSize: '36px',
+    fontWeight: '800',
+    marginBottom: '16px',
     letterSpacing: '-0.02em',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
   },
   subtitle: {
     fontSize: '18px',
     color: '#666',
-    lineHeight: '1.5',
-    marginBottom: '16px',
+    lineHeight: '1.6',
+    marginBottom: '20px',
+    fontWeight: '500',
   },
   milestone1Notice: {
-    background: '#f0f9ff',
-    border: '1px solid #bae6fd',
-    borderRadius: '8px',
-    padding: '12px 16px',
+    background: 'linear-gradient(135deg, rgba(239, 235, 206, 0.1), rgba(229, 224, 184, 0.1))',
+    border: '1px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '20px',
+    padding: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  noticeIcon: {
+    fontSize: '24px',
+    flexShrink: 0,
   },
   noticeText: {
     fontSize: '14px',
-    color: '#0369a1',
+    color: '#A69B7B',
     margin: 0,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   toggleContainer: {
     display: 'flex',
-    gap: '8px',
-    marginBottom: '32px',
-    padding: '4px',
-    background: '#f5f5f5',
-    borderRadius: '12px',
+    gap: '12px',
+    marginBottom: '40px',
+    padding: '8px',
+    background: 'rgba(239, 235, 206, 0.1)',
+    borderRadius: '20px',
+    border: '1px solid rgba(239, 235, 206, 0.2)',
   },
   toggleButton: {
     flex: 1,
-    padding: '12px 16px',
+    padding: '16px 20px',
     background: 'transparent',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '15px',
     fontSize: '15px',
-    fontWeight: '500',
+    fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.3s ease',
     color: '#666',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+  },
+  toggleIcon: {
+    fontSize: '18px',
   },
   toggleButtonActive: {
     background: 'white',
     color: '#1a1a1a',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
+    gap: '30px',
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '12px',
   },
   label: {
-    fontSize: '15px',
-    fontWeight: '600',
+    fontSize: '16px',
+    fontWeight: '700',
     color: '#1a1a1a',
   },
   input: {
-    padding: '16px 20px',
-    border: '2px solid #e8e8e8',
-    borderRadius: '12px',
+    padding: '18px 24px',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '18px',
     fontSize: '16px',
-    transition: 'border-color 0.2s ease',
+    transition: 'all 0.3s ease',
     outline: 'none',
     fontFamily: 'inherit',
+    background: 'rgba(255, 255, 255, 0.9)',
   },
   textarea: {
-    padding: '16px 20px',
-    border: '2px solid #e8e8e8',
-    borderRadius: '12px',
+    padding: '18px 24px',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '18px',
     fontSize: '16px',
-    transition: 'border-color 0.2s ease',
+    transition: 'all 0.3s ease',
     outline: 'none',
     resize: 'vertical',
     fontFamily: 'inherit',
-    lineHeight: '1.5',
+    lineHeight: '1.6',
+    background: 'rgba(255, 255, 255, 0.9)',
   },
   fileInputContainer: {
     display: 'flex',
-    gap: '12px',
+    gap: '16px',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   fileInput: {
     display: 'none',
   },
   fileInputLabel: {
-    padding: '16px 24px',
-    background: '#f8f9fa',
-    border: '2px dashed #d1d5db',
-    borderRadius: '12px',
+    padding: '18px 28px',
+    background: 'linear-gradient(135deg, rgba(239, 235, 206, 0.1), rgba(229, 224, 184, 0.1))',
+    border: '2px dashed rgba(239, 235, 206, 0.3)',
+    borderRadius: '18px',
     cursor: 'pointer',
     fontSize: '15px',
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#374151',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.3s ease',
     textAlign: 'center',
     flex: 1,
+    minWidth: '200px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+  },
+  uploadIcon: {
+    fontSize: '20px',
   },
   clearButton: {
-    padding: '8px 16px',
-    background: '#fee2e2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
+    padding: '12px 20px',
+    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1))',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    borderRadius: '15px',
     color: '#dc2626',
     fontSize: '14px',
     cursor: 'pointer',
-    fontWeight: '500',
+    fontWeight: '600',
+    transition: 'all 0.3s ease',
   },
   imagePreview: {
-    marginTop: '16px',
-    borderRadius: '12px',
+    marginTop: '20px',
+    borderRadius: '20px',
     overflow: 'hidden',
-    border: '2px solid #e8e8e8',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    position: 'relative',
   },
   previewImage: {
     width: '100%',
     height: 'auto',
-    maxHeight: '300px',
+    maxHeight: '400px',
     objectFit: 'cover',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    background: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: '50%',
+    width: '50px',
+    height: '50px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+  },
+  previewIcon: {
+    fontSize: '20px',
   },
   submitButton: {
     width: '100%',
-    padding: '18px 24px',
-    background: '#1a1a1a',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
+    padding: '20px 32px',
     fontSize: '16px',
-    fontWeight: '600',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    border: 'none',
+    borderRadius: '18px',
   },
   submitButtonDisabled: {
-    background: '#d1d5db',
+    background: 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)',
     cursor: 'not-allowed',
+  },
+  buttonIcon: {
+    fontSize: '18px',
+  },
+  buttonSpinner: {
+    width: '20px',
+    height: '20px',
+    border: '2px solid rgba(255, 255, 255, 0.3)',
+    borderTop: '2px solid white',
+    borderRadius: '50%',
   },
   errorContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '20px',
   },
   error: {
     color: '#dc2626',
     fontSize: '15px',
     textAlign: 'center',
-    padding: '16px 20px',
-    background: '#fef2f2',
-    borderRadius: '12px',
-    border: '1px solid #fecaca',
-    fontWeight: '500',
+    padding: '20px 24px',
+    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1))',
+    borderRadius: '18px',
+    border: '2px solid rgba(239, 68, 68, 0.2)',
+    fontWeight: '600',
   },
   errorActions: {
     display: 'flex',
-    gap: '12px',
+    gap: '16px',
     justifyContent: 'center',
   },
   retryButton: {
-    padding: '12px 24px',
-    background: '#1a1a1a',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
+    padding: '14px 28px',
     fontSize: '14px',
-    fontWeight: '500',
+    fontWeight: '600',
+    border: 'none',
+    borderRadius: '15px',
     cursor: 'pointer',
   },
 };
+
+// Add hover effect for image preview overlay
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+  .image-hover:hover .previewOverlay {
+    opacity: 1;
+  }
+`;
+document.head.appendChild(styleSheet);
 
 export default AddArtworkPage;

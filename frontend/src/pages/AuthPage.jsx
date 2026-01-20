@@ -93,7 +93,7 @@ const AuthPage = ({ onAuthSuccess }) => {
       <div style={styles.googleButtonContainer}>
         <div id="google-signin-button">
           {!googleLoaded && (
-            <div style={styles.googleButtonPlaceholder}>
+            <div style={styles.googleButtonPlaceholder} className="shimmer">
               Loading Google Sign-In...
             </div>
           )}
@@ -167,16 +167,30 @@ const AuthPage = ({ onAuthSuccess }) => {
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
+      {/* Background decorative elements */}
+      <div style={styles.backgroundElements}>
+        <div style={styles.floatingShape1} className="floating"></div>
+        <div style={styles.floatingShape2} className="floating"></div>
+        <div style={styles.floatingShape3} className="floating"></div>
+      </div>
+
+      <div style={styles.card} className="pinterest-card glass-card">
         <div style={styles.header}>
-          <h1 style={styles.title}>Collector Identity</h1>
+          <div style={styles.logoContainer}>
+            <span style={styles.logo} className="icon-hover floating">✨</span>
+          </div>
+          <h1 style={styles.title} className="gradient-text">
+            Collector Identity
+          </h1>
           <p style={styles.subtitle}>
             {isLogin ? 'Welcome back to your creative journey' : 'Begin your creative identity exploration'}
           </p>
         </div>
 
         {successMessage && (
-          <div style={styles.success}>{successMessage}</div>
+          <div style={styles.success} className="pinterest-card pulse">
+            🎉 {successMessage}
+          </div>
         )}
 
         {/* Google Sign-In Button */}
@@ -191,13 +205,14 @@ const AuthPage = ({ onAuthSuccess }) => {
         <form onSubmit={handleSubmit} style={styles.form}>
           {!isLogin && (
             <div style={styles.field}>
-              <label style={styles.label}>Full Name</label>
+              <label style={styles.label}>✨ Full Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 required={!isLogin}
+                className="form-input"
                 style={styles.input}
                 placeholder="Enter your full name"
               />
@@ -205,20 +220,21 @@ const AuthPage = ({ onAuthSuccess }) => {
           )}
 
           <div style={styles.field}>
-            <label style={styles.label}>Email Address</label>
+            <label style={styles.label}>📧 Email Address</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               required
+              className="form-input"
               style={styles.input}
               placeholder="Enter your email"
             />
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Password</label>
+            <label style={styles.label}>🔐 Password</label>
             <div style={styles.passwordContainer}>
               <input
                 type={showPassword ? "text" : "password"}
@@ -226,6 +242,7 @@ const AuthPage = ({ onAuthSuccess }) => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                className="form-input"
                 style={styles.passwordInput}
                 placeholder="Enter your password"
                 minLength={6}
@@ -234,19 +251,25 @@ const AuthPage = ({ onAuthSuccess }) => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 style={styles.eyeButton}
+                className="icon-hover"
                 tabIndex={-1}
                 title={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
           </div>
 
-          {error && <div style={styles.error}>{error}</div>}
+          {error && (
+            <div style={styles.error} className="pinterest-card pulse">
+              ⚠️ {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
+            className="btn-primary icon-hover"
             style={{
               ...styles.submitButton,
               ...(loading ? styles.submitButtonDisabled : {})
@@ -254,11 +277,16 @@ const AuthPage = ({ onAuthSuccess }) => {
           >
             {loading ? (
               <>
-                <div style={styles.buttonSpinner}></div>
+                <div className="spinner" style={styles.buttonSpinner}></div>
                 {isLogin ? 'Signing In...' : 'Creating Account...'}
               </>
             ) : (
-              isLogin ? 'Sign In' : 'Create Account'
+              <>
+                <span style={styles.buttonIcon}>
+                  {isLogin ? '🚀' : '✨'}
+                </span>
+                {isLogin ? 'Sign In' : 'Create Account'}
+              </>
             )}
           </button>
         </form>
@@ -271,8 +299,9 @@ const AuthPage = ({ onAuthSuccess }) => {
             type="button"
             onClick={switchMode}
             style={styles.switchButton}
+            className="icon-hover"
           >
-            {isLogin ? 'Create Account' : 'Sign In'}
+            {isLogin ? '✨ Create Account' : '🚀 Sign In'}
           </button>
         </div>
       </div>
@@ -287,86 +316,144 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
-    background: '#fafafa',
+    background: 'linear-gradient(135deg, #EFEBCE 0%, #E5E0B8 50%, #DBD5A2 100%)',
+    backgroundAttachment: 'fixed',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  backgroundElements: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+    zIndex: 0,
+  },
+  floatingShape1: {
+    position: 'absolute',
+    width: '200px',
+    height: '200px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '50%',
+    top: '10%',
+    left: '10%',
+    animationDelay: '0s',
+  },
+  floatingShape2: {
+    position: 'absolute',
+    width: '150px',
+    height: '150px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: '50%',
+    top: '60%',
+    right: '15%',
+    animationDelay: '2s',
+  },
+  floatingShape3: {
+    position: 'absolute',
+    width: '100px',
+    height: '100px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: '50%',
+    bottom: '20%',
+    left: '20%',
+    animationDelay: '1s',
   },
   card: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '48px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: '30px',
+    padding: '50px',
     width: '100%',
-    maxWidth: '450px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+    maxWidth: '480px',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    position: 'relative',
+    zIndex: 1,
   },
   header: {
     textAlign: 'center',
     marginBottom: '40px',
   },
+  logoContainer: {
+    marginBottom: '20px',
+  },
+  logo: {
+    fontSize: '60px',
+    display: 'inline-block',
+    filter: 'drop-shadow(0 4px 20px rgba(0, 0, 0, 0.1))',
+  },
   title: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: '12px',
+    fontSize: '36px',
+    fontWeight: '800',
+    marginBottom: '16px',
     letterSpacing: '-0.02em',
+    textShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
   },
   subtitle: {
-    fontSize: '17px',
+    fontSize: '18px',
     color: '#666',
-    lineHeight: '1.5',
+    lineHeight: '1.6',
+    fontWeight: '500',
   },
   googleButtonContainer: {
-    marginBottom: '24px',
+    marginBottom: '30px',
     display: 'flex',
     justifyContent: 'center',
   },
   googleButtonPlaceholder: {
-    padding: '12px 24px',
-    border: '1px solid #e8e8e8',
-    borderRadius: '8px',
+    padding: '16px 24px',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '15px',
     color: '#666',
     fontSize: '14px',
     textAlign: 'center',
     width: '100%',
-    background: '#f8f9fa',
+    background: 'rgba(239, 235, 206, 0.05)',
+    fontWeight: '500',
   },
   divider: {
     display: 'flex',
     alignItems: 'center',
-    margin: '20px 0',
+    margin: '30px 0',
   },
   dividerLine: {
     flex: 1,
-    height: '1px',
-    background: '#e8e8e8',
+    height: '2px',
+    background: 'linear-gradient(90deg, transparent, rgba(239, 235, 206, 0.3), transparent)',
   },
   dividerText: {
     background: 'white',
     color: '#999',
     fontSize: '14px',
-    padding: '0 16px',
+    padding: '0 20px',
+    fontWeight: '600',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '24px',
+    gap: '25px',
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '10px',
   },
   label: {
     fontSize: '15px',
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1a1a1a',
   },
   input: {
-    padding: '16px 20px',
-    border: '2px solid #e8e8e8',
-    borderRadius: '12px',
+    padding: '18px 24px',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '18px',
     fontSize: '16px',
-    transition: 'border-color 0.2s ease',
+    transition: 'all 0.3s ease',
     outline: 'none',
     fontFamily: 'inherit',
+    background: 'rgba(255, 255, 255, 0.9)',
   },
   passwordContainer: {
     position: 'relative',
@@ -374,102 +461,100 @@ const styles = {
     alignItems: 'center',
   },
   passwordInput: {
-    padding: '16px 50px 16px 20px',
-    border: '2px solid #e8e8e8',
-    borderRadius: '12px',
+    padding: '18px 60px 18px 24px',
+    border: '2px solid rgba(239, 235, 206, 0.2)',
+    borderRadius: '18px',
     fontSize: '16px',
-    transition: 'border-color 0.2s ease',
+    transition: 'all 0.3s ease',
     outline: 'none',
     fontFamily: 'inherit',
     width: '100%',
+    background: 'rgba(255, 255, 255, 0.9)',
   },
   eyeButton: {
     position: 'absolute',
-    right: '12px',
+    right: '16px',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    fontSize: '12px',
-    padding: '4px 8px',
+    fontSize: '18px',
+    padding: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '4px',
-    transition: 'background-color 0.2s ease',
-    color: '#666',
-    fontWeight: '500',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    borderRadius: '8px',
+    transition: 'all 0.3s ease',
   },
   submitButton: {
-    padding: '18px 24px',
-    background: '#1a1a1a',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
+    padding: '20px 32px',
     fontSize: '16px',
-    fontWeight: '600',
+    fontWeight: '700',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    marginTop: '8px',
+    marginTop: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
+    gap: '12px',
+    border: 'none',
+    borderRadius: '18px',
   },
   submitButtonDisabled: {
-    background: '#d1d5db',
+    background: 'linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%)',
     cursor: 'not-allowed',
   },
+  buttonIcon: {
+    fontSize: '18px',
+  },
   buttonSpinner: {
-    width: '16px',
-    height: '16px',
+    width: '20px',
+    height: '20px',
     border: '2px solid rgba(255, 255, 255, 0.3)',
     borderTop: '2px solid white',
     borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
   },
   success: {
     color: '#059669',
     fontSize: '15px',
     textAlign: 'center',
-    padding: '16px 20px',
-    background: '#f0fdf4',
-    borderRadius: '12px',
-    border: '1px solid #bbf7d0',
-    fontWeight: '500',
-    marginBottom: '24px',
+    padding: '20px 24px',
+    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))',
+    borderRadius: '18px',
+    border: '2px solid rgba(16, 185, 129, 0.2)',
+    fontWeight: '600',
+    marginBottom: '30px',
   },
   error: {
     color: '#dc2626',
     fontSize: '15px',
     textAlign: 'center',
-    padding: '16px 20px',
-    background: '#fef2f2',
-    borderRadius: '12px',
-    border: '1px solid #fecaca',
-    fontWeight: '500',
+    padding: '20px 24px',
+    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1))',
+    borderRadius: '18px',
+    border: '2px solid rgba(239, 68, 68, 0.2)',
+    fontWeight: '600',
   },
   switchContainer: {
     textAlign: 'center',
-    marginTop: '32px',
-    paddingTop: '24px',
-    borderTop: '1px solid #f0f0f0',
+    marginTop: '40px',
+    paddingTop: '30px',
+    borderTop: '2px solid rgba(0, 0, 0, 0.05)',
   },
   switchText: {
     fontSize: '15px',
     color: '#666',
-    marginBottom: '12px',
+    marginBottom: '16px',
+    fontWeight: '500',
   },
   switchButton: {
     background: 'none',
     border: 'none',
-    color: '#1a1a1a',
+    color: '#A69B7B',
     fontSize: '15px',
-    fontWeight: '600',
+    fontWeight: '700',
     cursor: 'pointer',
-    textDecoration: 'underline',
-    padding: '4px 8px',
+    padding: '8px 16px',
+    borderRadius: '12px',
+    transition: 'all 0.3s ease',
   },
 };
 

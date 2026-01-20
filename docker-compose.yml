@@ -1,6 +1,30 @@
 version: '3.8'
 
 services:
+  # Flask Backend (Python)
+  backend-flask:
+    build:
+      context: ./backend-flask
+      dockerfile: Dockerfile
+    container_name: collector-backend-flask
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///dev.db
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_BUCKET_NAME=artworks
+      - JWT_SECRET=your-super-secure-jwt-secret-key-here
+    volumes:
+      - ./backend-flask:/app
+      - flask_db:/app/instance
+    depends_on:
+      - minio
+    restart: unless-stopped
+
   minio:
     image: minio/minio:latest
     container_name: collector-minio
@@ -21,4 +45,6 @@ services:
 
 volumes:
   minio_data:
+    driver: local
+  flask_db:
     driver: local

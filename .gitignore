@@ -1,34 +1,197 @@
-# Secrets / credentials
-Google Auth.json
+# ========================================
+# 🐍 PYTHON / FLASK BACKEND
+# ========================================
 
-# IDE settings
-.vscode/
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
-# Dependencies
-node_modules/
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Logs
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask
+instance/
+.webassets-cache
 logs/
 *.log
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# 🌐 NODE.JS / REACT FRONTEND
+# ========================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
 # Build outputs
 dist/
-build/
-.vite/
-.cache/
+dist-ssr/
+*.local
 
-# Environment files
+# Editor directories and files
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ========================================
+# 🐳 DOCKER
+# ========================================
+
+# Docker volumes
+docker-compose.override.yml
+
+# ========================================
+# 🗂️ SYSTEM FILES
+# ========================================
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.tmp
+*.temp
+desktop.ini
+
+# ========================================
+# 🔐 SECURITY & SECRETS
+# ========================================
+
+# Environment variables
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Databases
-*.db
-dev.db
+# API keys and secrets
+*.pem
+*.key
+secrets/
+config/secrets.py
 
-# Uploads / runtime files
-uploads/
-tmp/
+# ========================================
+# 📦 PACKAGE MANAGERS
+# ========================================
 
-# OS files
-.DS_Store
-Thumbs.db
+# npm
+package-lock.json
+
+# yarn
+yarn.lock
+
+# pnpm
+pnpm-lock.yaml
+
+# ========================================
+# 🎨 DEVELOPMENT
+# ========================================
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Testing
+.nyc_output/
+coverage/
+
+# ========================================
+# 🚀 DEPLOYMENT
+# ========================================
+
+# Production builds
+build/
+dist/
+
+# Deployment configs (keep templates)
+docker-compose.prod.yml
+kubernetes/
+.kubernetes/
+
+# ========================================
+# 📊 ANALYTICS & MONITORING
+# ========================================
+
+# Logs
+*.log
+logs/
+log/
+
+# Monitoring
+.monitoring/
+metrics/
