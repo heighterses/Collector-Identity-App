@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth, artwork, reflection } from './api.js';
-import AuthPage from './pages/AuthPage.jsx';
+import LandingPage from './components/LandingPage.jsx';
 import AddArtworkPage from './pages/AddArtworkPage.jsx';
 import ReflectionPage from './pages/ReflectionPage.jsx';
 import Layout from './components/Layout.jsx';
@@ -189,13 +189,9 @@ const App = () => {
     );
   }
 
-  // ROUTING LOGIC:
-  // 1. Not authenticated → AuthPage
-  // 2. Authenticated → Enhanced Navigation UI (Dashboard, etc.)
-  // 3. Users can access all pages regardless of artwork status
-
+  // Show landing page for unauthenticated users
   if (!isAuthenticated) {
-    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+    return <LandingPage onAuthSuccess={handleAuthSuccess} />;
   }
 
   // All authenticated users get the enhanced navigation UI
