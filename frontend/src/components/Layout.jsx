@@ -1,23 +1,30 @@
-import { useState } from 'react';
-import { auth } from '../api.js';
+import { useState, useEffect } from 'react';
+import '../styles.css';
 
 const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasArtwork }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    auth.logout();
-    onLogout();
-  };
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileMenuOpen && !event.target.closest('.profile-section')) {
+        setProfileMenuOpen(false);
+      }
+    };
 
-  // Navigation items with simple, monochrome icons
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [profileMenuOpen]);
+
+  // Navigation items with clean icons
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
-    ...(!hasArtwork ? [{ id: 'add-artwork', label: 'Add Artwork', icon: '⊕' }] : []),
-    { id: 'my-artwork', label: 'My Artwork', icon: '◈' },
-    { id: 'reflections', label: 'Reflections', icon: '◐' },
-    { id: 'profile', label: 'Profile', icon: '◯' },
-    { id: 'settings', label: 'Settings', icon: '⚙' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'home' },
+    ...(!hasArtwork ? [{ id: 'add-artwork', label: 'Add Artwork', icon: 'plus' }] : []),
+    { id: 'my-artwork', label: 'My Artwork', icon: 'image' },
+    { id: 'reflections', label: 'Reflections', icon: 'message-circle' },
+    { id: 'profile', label: 'Profile', icon: 'user' },
+    { id: 'settings', label: 'Settings', icon: 'settings' },
   ];
 
   const handleNavClick = (itemId) => {
@@ -30,88 +37,149 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <div style={styles.container}>
-      {/* Top Navigation Bar */}
-      <header style={styles.topNav}>
-        <div style={styles.topNavContent}>
-          <div style={styles.leftSection}>
-            <button
-              onClick={toggleSidebar}
-              style={styles.sidebarToggle}
-              aria-label="Toggle sidebar"
-            >
-              <span style={styles.hamburger}>☰</span>
-            </button>
-            <h1 
-              style={styles.appName}
-              onClick={() => handleNavClick('dashboard')}
-            >
-              Collector Identity
-            </h1>
-          </div>
+    <div className="app-layout">
+      {/* Header */}
+      <header className="app-header">
+        <div className="app-header-left">
+          <button
+            onClick={toggleSidebar}
+            className="sidebar-toggle"
+            aria-label="Toggle sidebar"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h1 
+            className="app-title"
+            onClick={() => handleNavClick('dashboard')}
+          >
+            Collector Identity
+          </h1>
+        </div>
+        
+        <div className="profile-section">
+          <button
+            onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+            className="profile-button"
+            aria-expanded={profileMenuOpen}
+          >
+            <div className="profile-avatar">
+              {getInitials(currentUser?.name)}
+            </div>
+            <span className="profile-name">{currentUser?.name || 'User'}</span>
+            <svg className="profile-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </button>
           
-          <div style={styles.profileSection}>
-            <button
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              style={styles.profileButton}
-            >
-              <span style={styles.profileName}>{currentUser?.name || 'User'}</span>
-              <span style={styles.profileIcon}>◯</span>
-            </button>
-            
-            {profileMenuOpen && (
-              <div style={styles.profileMenu}>
-                <div style={styles.profileMenuHeader}>
-                  <span style={styles.profileMenuName}>{currentUser?.name}</span>
-                  <span style={styles.profileMenuEmail}>{currentUser?.email}</span>
-                </div>
-                <button onClick={handleLogout} style={styles.logoutButton}>
-                  Sign Out
+          {profileMenuOpen && (
+            <div className="profile-menu">
+              <div className="profile-menu-header">
+                <span className="profile-menu-name">{currentUser?.name || 'User'}</span>
+                <span className="profile-menu-email">{currentUser?.email || 'user@example.com'}</span>
+              </div>
+              <div className="profile-menu-actions">
+                <button 
+                  onClick={() => {
+                    handleNavClick('profile');
+                    setProfileMenuOpen(false);
+                  }}
+                  className="profile-menu-action"
+                >
+                  Profile
+                </button>
+                <button 
+                  onClick={() => {
+                    handleNavClick('settings');
+                    setProfileMenuOpen(false);
+                  }}
+                  className="profile-menu-action"
+                >
+                  Settings
+                </button>
+                <button 
+                  onClick={() => {
+                    onLogout();
+                    setProfileMenuOpen(false);
+                  }}
+                  className="profile-menu-action profile-menu-action--logout"
+                >
+                  Sign out
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </header>
 
-      <div style={styles.mainContent}>
-        {/* Collapsible Sidebar */}
-        <nav 
-          style={{
-            ...styles.sidebar,
-            ...(sidebarCollapsed ? styles.sidebarCollapsed : {})
-          }}
-        >
-          <div style={styles.sidebarContent}>
+      <div className="app-main">
+        {/* Sidebar */}
+        <nav className={`app-sidebar ${sidebarCollapsed ? 'app-sidebar--collapsed' : ''}`}>
+          <div className="sidebar-content">
             {navigationItems.map((item) => (
-              <div
+              <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                style={{
-                  ...styles.navItem,
-                  ...(currentPage === item.id ? styles.navItemActive : {}),
-                  ...(sidebarCollapsed ? styles.navItemCollapsed : {})
-                }}
+                className={`nav-item ${currentPage === item.id ? 'nav-item--active' : ''}`}
                 title={sidebarCollapsed ? item.label : ''}
               >
-                <span style={styles.navIcon}>{item.icon}</span>
-                {!sidebarCollapsed && (
-                  <span style={styles.navLabel}>{item.label}</span>
-                )}
-              </div>
+                <span className="nav-icon">
+                  {item.icon === 'home' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9,22 9,12 15,12 15,22"></polyline>
+                    </svg>
+                  )}
+                  {item.icon === 'plus' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                  )}
+                  {item.icon === 'image' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21,15 16,10 5,21"></polyline>
+                    </svg>
+                  )}
+                  {item.icon === 'message-circle' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+                    </svg>
+                  )}
+                  {item.icon === 'user' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  )}
+                  {item.icon === 'settings' && (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1m17-4a4 4 0 0 1-8 0 4 4 0 0 1 8 0zM7 17a4 4 0 0 1-8 0 4 4 0 0 1 8 0z"></path>
+                    </svg>
+                  )}
+                </span>
+                <span className="nav-label">{item.label}</span>
+              </button>
             ))}
           </div>
         </nav>
 
-        {/* Main Content Area */}
-        <main 
-          style={{
-            ...styles.contentArea,
-            ...(sidebarCollapsed ? styles.contentAreaExpanded : {})
-          }}
-        >
-          <div style={styles.contentWrapper}>
+        {/* Main Content */}
+        <main className="app-content">
+          <div className="content-wrapper">
             {children}
           </div>
         </main>
@@ -119,265 +187,5 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
     </div>
   );
 };
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    background: '#fafafa',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-  topNav: {
-    background: 'white',
-    borderBottom: '1px solid #e1e1e1',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-  },
-  topNavContent: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '16px 24px',
-    maxWidth: '100%',
-  },
-  leftSection: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  sidebarToggle: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '8px',
-    borderRadius: '6px',
-    transition: 'background-color 0.2s ease',
-    color: '#666',
-  },
-  hamburger: {
-    fontSize: '18px',
-    display: 'block',
-  },
-  appName: {
-    fontSize: '20px',
-    fontWeight: '600',
-    margin: 0,
-    cursor: 'pointer',
-    color: '#1a1a1a',
-    transition: 'color 0.2s ease',
-  },
-  profileSection: {
-    position: 'relative',
-  },
-  profileButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    background: 'none',
-    border: '1px solid #e1e1e1',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    color: '#666',
-    transition: 'all 0.2s ease',
-  },
-  profileName: {
-    fontWeight: '500',
-    color: '#1a1a1a',
-  },
-  profileIcon: {
-    fontSize: '16px',
-    color: '#666',
-  },
-  profileMenu: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: '8px',
-    background: 'white',
-    border: '1px solid #e1e1e1',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    minWidth: '200px',
-    zIndex: 200,
-    overflow: 'hidden',
-  },
-  profileMenuHeader: {
-    padding: '16px',
-    borderBottom: '1px solid #f0f0f0',
-  },
-  profileMenuName: {
-    display: 'block',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    fontSize: '14px',
-    marginBottom: '4px',
-  },
-  profileMenuEmail: {
-    display: 'block',
-    color: '#666',
-    fontSize: '12px',
-  },
-  logoutButton: {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'none',
-    border: 'none',
-    textAlign: 'left',
-    cursor: 'pointer',
-    fontSize: '14px',
-    color: '#666',
-    transition: 'background-color 0.2s ease',
-  },
-  mainContent: {
-    display: 'flex',
-    minHeight: 'calc(100vh - 65px)',
-  },
-  sidebar: {
-    width: '240px',
-    background: 'white',
-    borderRight: '1px solid #e1e1e1',
-    transition: 'width 0.3s ease',
-    flexShrink: 0,
-    overflow: 'hidden',
-  },
-  sidebarCollapsed: {
-    width: '60px',
-  },
-  sidebarContent: {
-    padding: '24px 0',
-  },
-  navItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 24px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    color: '#666',
-    fontSize: '14px',
-    fontWeight: '500',
-  },
-  navItemCollapsed: {
-    justifyContent: 'center',
-    padding: '12px 18px',
-  },
-  navItemActive: {
-    background: '#f8f9fa',
-    color: '#1a1a1a',
-    borderRight: '3px solid #1a1a1a',
-  },
-  navIcon: {
-    fontSize: '16px',
-    width: '16px',
-    textAlign: 'center',
-    color: 'inherit',
-  },
-  navLabel: {
-    whiteSpace: 'nowrap',
-  },
-  contentArea: {
-    flex: 1,
-    transition: 'margin-left 0.3s ease',
-    background: '#fafafa',
-  },
-  contentAreaExpanded: {
-    // Content expands when sidebar is collapsed
-  },
-  contentWrapper: {
-    padding: '32px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    width: '100%',
-    boxSizing: 'border-box',
-  },
-};
-
-// Add hover effects via CSS
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  /* Subtle hover effects */
-  .layout-sidebar-toggle:hover {
-    background-color: #f5f5f5 !important;
-  }
-  
-  .layout-profile-button:hover {
-    background-color: #f8f9fa !important;
-    border-color: #d0d7de !important;
-  }
-  
-  .layout-nav-item:hover {
-    background-color: #f8f9fa !important;
-    color: #1a1a1a !important;
-  }
-  
-  .layout-logout-button:hover {
-    background-color: #f8f9fa !important;
-  }
-  
-  /* Mobile responsive */
-  @media (max-width: 768px) {
-    .layout-sidebar {
-      position: fixed !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
-      height: 70px !important;
-      z-index: 1000 !important;
-      border-right: none !important;
-      border-top: 1px solid #e1e1e1 !important;
-      background: white !important;
-    }
-    
-    .layout-sidebar-content {
-      display: flex !important;
-      justify-content: space-around !important;
-      align-items: center !important;
-      padding: 8px 16px !important;
-      height: 100% !important;
-    }
-    
-    .layout-nav-item {
-      flex-direction: column !important;
-      gap: 4px !important;
-      padding: 8px 12px !important;
-      min-width: 50px !important;
-      text-align: center !important;
-      border-right: none !important;
-    }
-    
-    .layout-nav-label {
-      font-size: 11px !important;
-    }
-    
-    .layout-nav-icon {
-      font-size: 18px !important;
-    }
-    
-    .layout-content-wrapper {
-      padding: 16px 16px 90px 16px !important;
-    }
-    
-    .layout-sidebar-toggle {
-      display: none !important;
-    }
-  }
-  
-  /* Tablet responsive */
-  @media (min-width: 769px) and (max-width: 1024px) {
-    .layout-content-wrapper {
-      padding: 24px !important;
-    }
-  }
-`;
-
-// Apply classes for hover effects
-if (!document.head.querySelector('#layout-styles')) {
-  styleSheet.id = 'layout-styles';
-  document.head.appendChild(styleSheet);
-}
 
 export default Layout;
