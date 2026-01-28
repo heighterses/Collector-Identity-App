@@ -86,10 +86,10 @@ const MyArtwork = ({ onNavigate }) => {
         <div style={styles.artworkContainer}>
           {/* Main Artwork Display */}
           <div style={styles.artworkDisplay}>
-            {userArtwork.imageUrl && (
+            {userArtwork.image_url && (
               <div style={styles.imageContainer}>
                 <img
-                  src={userArtwork.imageUrl}
+                  src={userArtwork.image_url}
                   alt={userArtwork.title}
                   style={styles.artworkImage}
                 />
@@ -99,7 +99,7 @@ const MyArtwork = ({ onNavigate }) => {
             <div style={styles.artworkDetails}>
               <h2 style={styles.artworkTitle}>{userArtwork.title}</h2>
               <p style={styles.uploadDate}>
-                Uploaded {formatDate(userArtwork.createdAt)}
+                Uploaded {formatDate(userArtwork.created_at)}
               </p>
 
               {userArtwork.description && (

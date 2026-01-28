@@ -41,8 +41,8 @@ const Dashboard = ({ currentUser, onNavigate }) => {
 
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="empty-state">
+      <div className="collection-overview">
+        <div className="collection-loading">
           <p>Loading your collection...</p>
         </div>
       </div>
@@ -50,108 +50,105 @@ const Dashboard = ({ currentUser, onNavigate }) => {
   }
 
   return (
-    <div className="dashboard-container">
+    <div className="collection-overview">
       {/* Header */}
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Welcome back, {currentUser?.name}</h1>
-        <p className="dashboard-subtitle">Your creative journey continues</p>
+      <div className="collection-header">
+        <h1 className="collection-title">Your Collection</h1>
+        <p className="collection-subtitle">Welcome back, {currentUser?.name}</p>
       </div>
 
-      <div className="dashboard-grid">
-        {/* Artwork Section - Primary Focus */}
-        <section className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Your Artwork</h2>
-          </div>
-          
-          <div className="section-content">
-            {userArtwork ? (
-              <div className="artwork-display">
-                <div className="artwork-meta">
-                  <h3>{userArtwork.title}</h3>
-                  {userArtwork.description && (
-                    <p>{userArtwork.description}</p>
-                  )}
-                  <div className="artwork-actions">
-                    <button 
-                      onClick={() => onNavigate('my-artwork')}
-                      className="btn btn-secondary"
-                    >
-                      View Details
-                    </button>
-                  </div>
-                </div>
+      {/* Artwork Section - Primary Focus */}
+      <section className="collection-section collection-section--primary">
+        <div className="section-header">
+          <h2 className="section-title">Artwork</h2>
+        </div>
+        
+        <div className="section-content">
+          {userArtwork ? (
+            <div className="artwork-display">
+              <div className="artwork-meta">
+                <h3 className="artwork-title">{userArtwork.title}</h3>
+                {userArtwork.description && (
+                  <p className="artwork-description">
+                    {userArtwork.description}
+                  </p>
+                )}
               </div>
-            ) : (
-              <div className="empty-state">
-                <h3 className="empty-state-title">Ready to begin?</h3>
-                <p className="empty-state-description">
-                  Add your first piece to start exploring your creative identity.
-                </p>
+              <div className="artwork-actions">
+                {onNavigate && (
+                  <button 
+                    onClick={() => onNavigate('my-artwork')}
+                    className="collection-button collection-button--secondary"
+                  >
+                    View details
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="collection-empty">
+              <p className="empty-message">Add your first piece to begin exploring your creative identity.</p>
+              {onNavigate && (
                 <button 
                   onClick={() => onNavigate('add-artwork')}
-                  className="btn btn-primary"
+                  className="collection-button collection-button--primary"
                 >
-                  Add Your Artwork
+                  Add artwork
                 </button>
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
-        {/* Reflections Section - Secondary */}
-        <section className="dashboard-section">
-          <div className="section-header">
-            <h2 className="section-title">Reflections</h2>
-          </div>
-          
-          <div className="section-content">
-            {userReflection ? (
-              <div className="card">
-                <div className="card-content">
-                  <div className="reflection-meta">
-                    <span className="text-gray-500 font-medium text-sm">
-                      {userReflection.type.replace('_', ' ')}
-                    </span>
-                    <p className="text-gray-600 mb-4">
-                      {userReflection.content.length > 160 
-                        ? `${userReflection.content.substring(0, 160)}...`
-                        : userReflection.content
-                      }
-                    </p>
-                    <button 
-                      onClick={() => onNavigate('reflections')}
-                      className="btn btn-secondary"
-                    >
-                      Read Full Reflection
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : userArtwork ? (
-              <div className="empty-state">
-                <h3 className="empty-state-title">Generate insights</h3>
-                <p className="empty-state-description">
-                  Create a reflection about your artwork to discover deeper meaning.
+      {/* Reflections Section - Secondary */}
+      <section className="collection-section collection-section--secondary">
+        <div className="section-header">
+          <h2 className="section-title">Reflections</h2>
+        </div>
+        
+        <div className="section-content">
+          {userReflection ? (
+            <div className="reflection-display">
+              <div className="reflection-meta">
+                <span className="reflection-type">{userReflection.type.replace('_', ' ')}</span>
+                <p className="reflection-excerpt">
+                  {userReflection.content.length > 160 
+                    ? `${userReflection.content.substring(0, 160)}...`
+                    : userReflection.content
+                  }
                 </p>
+              </div>
+              <div className="reflection-actions">
+                {onNavigate && (
+                  <button 
+                    onClick={() => onNavigate('reflections')}
+                    className="collection-button collection-button--secondary"
+                  >
+                    Read full reflection
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : userArtwork ? (
+            <div className="collection-empty">
+              <p className="empty-message">Generate insights about your artwork.</p>
+              {onNavigate && (
                 <button 
                   onClick={() => onNavigate('reflection')}
-                  className="btn btn-secondary"
+                  className="collection-button collection-button--secondary"
                 >
-                  Create Reflection
+                  Create reflection
                 </button>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <h3 className="empty-state-title">Reflections await</h3>
-                <p className="empty-state-description">
-                  Reflections will appear once you add your artwork.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+              )}
+            </div>
+          ) : (
+            <div className="collection-empty collection-empty--quiet">
+              <p className="empty-message">Reflections will appear once you add artwork.</p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

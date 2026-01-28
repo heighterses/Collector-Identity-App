@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { artwork } from '../api.js';
+import { artwork, auth } from '../api.js';
 
 const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayout = false }) => {
   const [loading, setLoading] = useState(false);
@@ -50,6 +50,22 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       return;
     }
 
+    // Check token validity before making the request
+    try {
+      const tokenCheck = await auth.validateToken();
+      if (!tokenCheck.valid) {
+        setError(`Authentication issue: ${tokenCheck.reason}. Please log in again.`);
+        setLoading(false);
+        return;
+      }
+      console.log('Token is valid for user:', tokenCheck.user.email);
+    } catch (tokenError) {
+      console.log('Token validation error:', tokenError);
+      setError('Unable to validate authentication. Please log in again.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const uploadData = new FormData();
       uploadData.append('title', formData.title.trim());
@@ -72,6 +88,9 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
         } catch (fetchErr) {
           setError('Unable to load your existing artwork. Please refresh the page.');
         }
+      } else if (err.message.includes('Session expired') || err.message.includes('Access token required')) {
+        setError('Your session has expired. Please log in again.');
+        // Don't auto-reload, let user manually refresh or re-login
       } else {
         // Show the actual error message from the backend/MinIO
         setError(err.message || 'Failed to create artwork. Please try again.');
