@@ -20,6 +20,7 @@ const removeAuthToken = () => {
 // API request helper with auth
 const apiRequest = async (endpoint, options = {}) => {
   const token = getAuthToken();
+  console.log('API Request:', endpoint, 'Token:', token ? 'Present' : 'Missing');
   
   const config = {
     headers: {
@@ -34,6 +35,7 @@ const apiRequest = async (endpoint, options = {}) => {
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Network error' }));
+    console.log('API Error:', endpoint, error);
     throw new Error(error.error || 'Request failed');
   }
   
@@ -88,6 +90,23 @@ export const auth = {
     removeAuthToken();
   },
 
+  refreshToken: async () => {
+    try {
+      const result = await apiRequest('/auth/refresh', {
+        method: 'POST',
+      });
+      if (result.token) {
+        setAuthToken(result.token);
+        return result.token;
+      }
+      return null;
+    } catch (error) {
+      // Refresh failed, user needs to login again
+      removeAuthToken();
+      return null;
+    }
+  },
+
   isAuthenticated: () => !!getAuthToken(),
 };
 
@@ -102,6 +121,7 @@ export const artwork = {
 
   createWithFile: async (formData) => {
     const token = getAuthToken();
+    console.log('CreateWithFile - Token:', token ? 'Present' : 'Missing');
     
     const config = {
       headers: {
@@ -117,6 +137,7 @@ export const artwork = {
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
+      console.log('CreateWithFile Error:', error);
       throw new Error(error.error || 'Request failed');
     }
     

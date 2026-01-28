@@ -225,3 +225,27 @@ def complete_onboarding():
         db.session.rollback()
         current_app.logger.error(f'Complete onboarding failed: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
+
+@bp.route('/refresh', methods=['POST'])
+@jwt_required_custom
+def refresh_token():
+    try:
+        user_id = request.current_user['user_id']
+        user_email = request.current_user['email']
+        
+        # Generate new JWT token
+        new_token = jwt.encode(
+            {'userId': user_id, 'email': user_email},
+            current_app.config['JWT_SECRET_KEY'],
+            algorithm='HS256'
+        )
+        
+        current_app.logger.info(f'Token refreshed for user: {user_id}, {user_email}')
+        
+        return jsonify({
+            'token': new_token
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f'Token refresh failed: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500

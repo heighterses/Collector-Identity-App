@@ -1,221 +1,243 @@
 import { useState, useEffect } from 'react';
-import { artwork, reflection } from '../api.js';
 
-const Profile = ({ currentUser }) => {
-  const [userArtwork, setUserArtwork] = useState(null);
-  const [userReflection, setUserReflection] = useState(null);
+const Profile = ({ currentUser, onLogout }) => {
   const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    loadProfileData();
-  }, []);
+    if (currentUser) {
+      setDisplayName(currentUser.name || '');
+    }
+    const timer = setTimeout(() => setLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [currentUser]);
 
-  const loadProfileData = async () => {
-    setLoading(true);
-    
-    try {
-      // Load artwork
-      try {
-        const artworkData = await artwork.getMine();
-        setUserArtwork(artworkData.artwork);
-      } catch (artworkErr) {
-        setUserArtwork(null);
-      }
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
-      // Load reflection
-      try {
-        const reflectionData = await reflection.getMine();
-        setUserReflection(reflectionData.reflection);
-      } catch (reflectionErr) {
-        setUserReflection(null);
-      }
-    } catch (error) {
-      console.error('Profile data loading error:', error);
-    } finally {
-      setLoading(false);
+  const handleSaveDisplayName = () => {
+    // In a real app, this would save to backend
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setDisplayName(currentUser?.name || '');
+    setIsEditing(false);
+  };
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
     }
   };
 
+  const isGoogleUser = currentUser?.authProvider === 'google';
+
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loadingState}>
-          <div style={styles.spinner}></div>
-          <p>Loading your profile...</p>
+      <div className="dashboard-container">
+        <div className="empty-state">
+          <p>Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Profile</h1>
-        <p style={styles.subtitle}>Your creative identity overview</p>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">Profile</h1>
       </div>
 
-      <div style={styles.profileGrid}>
-        {/* Personal Information Card */}
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>Personal Information</h3>
-            <span style={styles.cardIcon}>👤</span>
-          </div>
-          <div style={styles.cardContent}>
-            <div style={styles.profileInfo}>
-              <div style={styles.profileField}>
-                <span style={styles.fieldLabel}>Full Name</span>
-                <span style={styles.fieldValue}>{currentUser?.name || 'Not provided'}</span>
+      <div style={styles.profileContainer}>
+        {/* Profile Header - Identity */}
+        <div className="card">
+          <div className="card-content">
+            <div style={styles.profileHeader}>
+              <div style={styles.avatarSection}>
+                <div style={styles.avatar}>
+                  {getInitials(currentUser?.name)}
+                </div>
+                <button 
+                  className="btn btn-secondary"
+                  style={styles.changeAvatarButton}
+                  disabled
+                >
+                  Change Avatar
+                </button>
               </div>
-              <div style={styles.profileField}>
-                <span style={styles.fieldLabel}>Email Address</span>
-                <span style={styles.fieldValue}>{currentUser?.email || 'Not provided'}</span>
-              </div>
-              <div style={styles.profileField}>
-                <span style={styles.fieldLabel}>Authentication Method</span>
-                <span style={styles.fieldValue}>
-                  {currentUser?.authProvider === 'google' ? 'Google Sign-In' : 'Email & Password'}
-                </span>
-              </div>
-              <div style={styles.profileField}>
-                <span style={styles.fieldLabel}>Member Since</span>
-                <span style={styles.fieldValue}>
-                  {currentUser?.createdAt 
-                    ? new Date(currentUser.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    : 'Unknown'
-                  }
-                </span>
+              
+              <div style={styles.profileInfo}>
+                <div style={styles.nameSection}>
+                  {isEditing ? (
+                    <div style={styles.editingContainer}>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="form-input"
+                        style={styles.nameInput}
+                        placeholder="Enter your name"
+                      />
+                      <div style={styles.editActions}>
+                        <button 
+                          onClick={handleSaveDisplayName}
+                          className="btn btn-primary"
+                          style={styles.saveButton}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          onClick={handleCancelEdit}
+                          className="btn btn-secondary"
+                          style={styles.cancelButton}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={styles.nameDisplay}>
+                      <h2 style={styles.displayName}>{displayName || 'No name set'}</h2>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        style={styles.editButton}
+                        className="profile-edit-button"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div style={styles.emailSection}>
+                  <span style={styles.email}>{currentUser?.email}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Creative Journey Card */}
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>Creative Journey</h3>
-            <span style={styles.cardIcon}>🎨</span>
+        {/* Preferences */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Preferences</h3>
           </div>
-          <div style={styles.cardContent}>
-            <div style={styles.journeyStats}>
-              <div style={styles.stat}>
-                <span style={styles.statValue}>{userArtwork ? '1' : '0'}</span>
-                <span style={styles.statLabel}>Artwork Created</span>
+          <div className="card-content">
+            <div style={styles.preferencesGrid} className="profile-preferences-grid">
+              <div style={styles.preferenceItem}>
+                <label style={styles.preferenceLabel}>Language</label>
+                <select style={styles.preferenceSelect} disabled>
+                  <option>English</option>
+                  <option>Spanish</option>
+                  <option>French</option>
+                  <option>German</option>
+                </select>
               </div>
-              <div style={styles.stat}>
-                <span style={styles.statValue}>{userReflection ? '1' : '0'}</span>
-                <span style={styles.statLabel}>Reflection Generated</span>
+              
+              <div style={styles.preferenceItem}>
+                <label style={styles.preferenceLabel}>Timezone</label>
+                <select style={styles.preferenceSelect} disabled>
+                  <option>Auto-detect</option>
+                  <option>Pacific Time (PT)</option>
+                  <option>Eastern Time (ET)</option>
+                  <option>Central Time (CT)</option>
+                  <option>Mountain Time (MT)</option>
+                </select>
               </div>
             </div>
+          </div>
+        </div>
 
-            {userArtwork && (
-              <div style={styles.currentArtwork}>
-                <h4 style={styles.currentArtworkTitle}>Current Artwork</h4>
-                <div style={styles.artworkSummary}>
-                  <span style={styles.artworkTitle}>{userArtwork.title}</span>
-                  <span style={styles.artworkDate}>
-                    Created {new Date(userArtwork.createdAt).toLocaleDateString()}
+        {/* Account */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Account</h3>
+          </div>
+          <div className="card-content">
+            <div style={styles.accountContainer}>
+              <div style={styles.accountItem}>
+                <div style={styles.accountInfo}>
+                  <span style={styles.accountLabel}>Password</span>
+                  {isGoogleUser ? (
+                    <span style={styles.accountNote}>Managed by Google</span>
+                  ) : (
+                    <span style={styles.accountDescription}>Change your account password</span>
+                  )}
+                </div>
+                <button 
+                  className="btn btn-secondary" 
+                  disabled={isGoogleUser}
+                  style={isGoogleUser ? styles.disabledButton : {}}
+                >
+                  Change Password
+                </button>
+              </div>
+
+              <div style={styles.accountItem}>
+                <div style={styles.accountInfo}>
+                  <span style={styles.accountLabel}>Connected Account</span>
+                  <span style={styles.accountValue}>
+                    {isGoogleUser ? 'Google' : 'Email'}
                   </span>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
-        {/* Account Status Card */}
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>Account Status</h3>
-            <span style={styles.cardIcon}>✅</span>
+        {/* Privacy & Data */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Privacy</h3>
           </div>
-          <div style={styles.cardContent}>
-            <div style={styles.statusList}>
-              <div style={styles.statusItem}>
-                <span style={styles.statusIcon}>✅</span>
-                <span style={styles.statusText}>Account Verified</span>
-              </div>
-              <div style={styles.statusItem}>
-                <span style={styles.statusIcon}>
-                  {currentUser?.authProvider === 'google' ? '🔗' : '🔐'}
-                </span>
-                <span style={styles.statusText}>
-                  {currentUser?.authProvider === 'google' 
-                    ? 'Google Account Linked' 
-                    : 'Email Authentication Active'
-                  }
-                </span>
-              </div>
-              <div style={styles.statusItem}>
-                <span style={styles.statusIcon}>
-                  {userArtwork ? '🎨' : '⏳'}
-                </span>
-                <span style={styles.statusText}>
-                  {userArtwork ? 'Artwork Created' : 'Artwork Pending'}
-                </span>
-              </div>
-              <div style={styles.statusItem}>
-                <span style={styles.statusIcon}>
-                  {userReflection ? '💭' : '⏳'}
-                </span>
-                <span style={styles.statusText}>
-                  {userReflection ? 'Reflection Generated' : 'Reflection Pending'}
-                </span>
+          <div className="card-content">
+            <div style={styles.privacyContainer}>
+              <p style={styles.privacyNote}>
+                Your artwork and reflections belong to you.
+              </p>
+              
+              <div style={styles.privacyActions}>
+                <div style={styles.privacyItem}>
+                  <div style={styles.privacyInfo}>
+                    <span style={styles.privacyLabel}>Download my data</span>
+                    <span style={styles.privacyDescription}>Export all your data</span>
+                  </div>
+                  <button className="btn btn-secondary" disabled>
+                    Download
+                  </button>
+                </div>
+
+                <div style={styles.privacyItem}>
+                  <div style={styles.privacyInfo}>
+                    <span style={styles.privacyLabel}>Delete my account</span>
+                    <span style={styles.privacyDescription}>Permanently delete your account and data</span>
+                  </div>
+                  <button 
+                    className="btn btn-secondary" 
+                    disabled
+                    style={styles.deleteButton}
+                  >
+                    Delete Account
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Milestone Progress Card */}
-        <div style={styles.card}>
-          <div style={styles.cardHeader}>
-            <h3 style={styles.cardTitle}>Milestone 1 Progress</h3>
-            <span style={styles.cardIcon}>🎯</span>
-          </div>
-          <div style={styles.cardContent}>
-            <div style={styles.milestoneProgress}>
-              <div style={styles.progressHeader}>
-                <span style={styles.progressTitle}>Creative Identity Foundation</span>
-                <span style={styles.progressPercentage}>
-                  {userReflection ? '100%' : userArtwork ? '50%' : '0%'}
-                </span>
-              </div>
-              <div style={styles.progressBar}>
-                <div 
-                  style={{
-                    ...styles.progressFill,
-                    width: userReflection ? '100%' : userArtwork ? '50%' : '0%'
-                  }}
-                ></div>
-              </div>
-              <div style={styles.milestoneSteps}>
-                <div style={{
-                  ...styles.step,
-                  ...(currentUser ? styles.stepComplete : {})
-                }}>
-                  <span style={styles.stepNumber}>1</span>
-                  <span style={styles.stepText}>Account Created</span>
-                </div>
-                <div style={{
-                  ...styles.step,
-                  ...(userArtwork ? styles.stepComplete : {})
-                }}>
-                  <span style={styles.stepNumber}>2</span>
-                  <span style={styles.stepText}>Artwork Submitted</span>
-                </div>
-                <div style={{
-                  ...styles.step,
-                  ...(userReflection ? styles.stepComplete : {})
-                }}>
-                  <span style={styles.stepNumber}>3</span>
-                  <span style={styles.stepText}>Reflection Generated</span>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Logout */}
+        <div style={styles.logoutSection}>
+          <button 
+            onClick={handleLogout}
+            className="btn btn-primary"
+            style={styles.logoutButton}
+          >
+            Sign Out
+          </button>
         </div>
       </div>
     </div>
@@ -223,225 +245,217 @@ const Profile = ({ currentUser }) => {
 };
 
 const styles = {
-  container: {
-    maxWidth: '1000px',
-    margin: '0 auto',
-  },
-  header: {
-    marginBottom: '32px',
-  },
-  title: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    margin: '0 0 8px 0',
-    letterSpacing: '-0.02em',
-  },
-  subtitle: {
-    fontSize: '16px',
-    color: '#666',
-    margin: 0,
-  },
-  profileGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-    gap: '24px',
-  },
-  card: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '24px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-    border: '1px solid #f0f0f0',
-  },
-  cardHeader: {
+  profileContainer: {
     display: 'flex',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: 'var(--space-6)',
+    maxWidth: '600px',
+  },
+  profileHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 'var(--space-6)',
+  },
+  avatarSection: {
+    display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    marginBottom: '20px',
+    gap: 'var(--space-3)',
+    flexShrink: 0,
   },
-  cardTitle: {
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    margin: 0,
+  avatar: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '50%',
+    background: 'var(--color-gray-200)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 'var(--font-size-2xl)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-700)',
   },
-  cardIcon: {
-    fontSize: '20px',
-  },
-  cardContent: {
-    minHeight: '120px',
+  changeAvatarButton: {
+    fontSize: 'var(--font-size-xs)',
+    padding: 'var(--space-1) var(--space-2)',
+    opacity: 0.5,
+    cursor: 'not-allowed',
   },
   profileInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
+    flex: 1,
+    minWidth: 0,
   },
-  profileField: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
+  nameSection: {
+    marginBottom: 'var(--space-3)',
   },
-  fieldLabel: {
-    fontSize: '12px',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    fontWeight: '500',
-  },
-  fieldValue: {
-    fontSize: '14px',
-    color: '#1a1a1a',
-    fontWeight: '500',
-  },
-  journeyStats: {
-    display: 'flex',
-    gap: '32px',
-    marginBottom: '20px',
-  },
-  stat: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  statValue: {
-    fontSize: '32px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-  },
-  statLabel: {
-    fontSize: '12px',
-    color: '#666',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    fontWeight: '500',
-  },
-  currentArtwork: {
-    padding: '16px',
-    background: '#f8f9fa',
-    borderRadius: '8px',
-    border: '1px solid #e8e8e8',
-  },
-  currentArtworkTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    margin: '0 0 8px 0',
-  },
-  artworkSummary: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  artworkTitle: {
-    fontSize: '14px',
-    color: '#374151',
-    fontWeight: '500',
-  },
-  artworkDate: {
-    fontSize: '12px',
-    color: '#666',
-  },
-  statusList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  statusItem: {
+  nameDisplay: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: 'var(--space-3)',
   },
-  statusIcon: {
-    fontSize: '16px',
-    width: '20px',
-    textAlign: 'center',
+  displayName: {
+    fontSize: 'var(--font-size-2xl)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-900)',
+    margin: 0,
   },
-  statusText: {
-    fontSize: '14px',
-    color: '#374151',
-    fontWeight: '500',
+  editButton: {
+    background: 'none',
+    border: '1px solid var(--color-gray-300)',
+    color: 'var(--color-gray-600)',
+    padding: 'var(--space-1) var(--space-3)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--font-size-sm)',
+    cursor: 'pointer',
+    transition: 'all var(--transition-normal)',
   },
-  milestoneProgress: {
+  editingContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: 'var(--space-3)',
   },
-  progressHeader: {
+  nameInput: {
+    fontSize: 'var(--font-size-xl)',
+    fontWeight: 'var(--font-weight-semibold)',
+    padding: 'var(--space-3)',
+  },
+  editActions: {
+    display: 'flex',
+    gap: 'var(--space-2)',
+  },
+  saveButton: {
+    padding: 'var(--space-2) var(--space-4)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  cancelButton: {
+    padding: 'var(--space-2) var(--space-4)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  emailSection: {
+    marginBottom: 'var(--space-2)',
+  },
+  email: {
+    fontSize: 'var(--font-size-base)',
+    color: 'var(--color-gray-600)',
+  },
+  preferencesGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 'var(--space-6)',
+  },
+  preferenceItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-2)',
+  },
+  preferenceLabel: {
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-700)',
+  },
+  preferenceSelect: {
+    padding: 'var(--space-3)',
+    border: '1px solid var(--color-gray-300)',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--font-size-base)',
+    background: 'var(--color-gray-50)',
+    color: 'var(--color-gray-500)',
+    cursor: 'not-allowed',
+  },
+  accountContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-6)',
+  },
+  accountItem: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 'var(--space-4) 0',
+    borderBottom: '1px solid var(--color-gray-200)',
   },
-  progressTitle: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  progressPercentage: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#059669',
-  },
-  progressBar: {
-    width: '100%',
-    height: '8px',
-    background: '#f0f0f0',
-    borderRadius: '4px',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    background: 'linear-gradient(90deg, #059669, #10b981)',
-    transition: 'width 0.3s ease',
-  },
-  milestoneSteps: {
+  accountInfo: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: 'var(--space-1)',
   },
-  step: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
+  accountLabel: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-900)',
+  },
+  accountDescription: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-500)',
+  },
+  accountNote: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-400)',
+    fontStyle: 'italic',
+  },
+  accountValue: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-600)',
+  },
+  disabledButton: {
     opacity: 0.5,
+    cursor: 'not-allowed',
   },
-  stepComplete: {
-    opacity: 1,
-  },
-  stepNumber: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
-    background: '#f0f0f0',
-    color: '#666',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '12px',
-    fontWeight: '600',
-  },
-  stepText: {
-    fontSize: '14px',
-    color: '#374151',
-    fontWeight: '500',
-  },
-  loadingState: {
+  privacyContainer: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '64px',
-    textAlign: 'center',
+    gap: 'var(--space-6)',
   },
-  spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #f0f0f0',
-    borderTop: '3px solid #1a1a1a',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-    marginBottom: '16px',
+  privacyNote: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-600)',
+    margin: 0,
+    padding: 'var(--space-4)',
+    background: 'var(--color-gray-50)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-gray-200)',
+  },
+  privacyActions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-4)',
+  },
+  privacyItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 'var(--space-4) 0',
+    borderBottom: '1px solid var(--color-gray-200)',
+  },
+  privacyInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-1)',
+  },
+  privacyLabel: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-900)',
+  },
+  privacyDescription: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-500)',
+  },
+  deleteButton: {
+    color: 'var(--color-error)',
+    borderColor: 'var(--color-error)',
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  logoutSection: {
+    display: 'flex',
+    justifyContent: 'center',
+    paddingTop: 'var(--space-8)',
+    borderTop: '1px solid var(--color-gray-200)',
+  },
+  logoutButton: {
+    padding: 'var(--space-3) var(--space-8)',
+    fontSize: 'var(--font-size-base)',
   },
 };
 
