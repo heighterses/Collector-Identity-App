@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { artwork, auth } from '../api.js';
 
-const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayout = false }) => {
+const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayout = false, onNavigate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingExisting, setCheckingExisting] = useState(true);
+  const [hasExistingArtwork, setHasExistingArtwork] = useState(false);
+  const [existingArtwork, setExistingArtwork] = useState(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -25,6 +28,25 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    checkExistingArtwork();
+  }, []);
+
+  const checkExistingArtwork = async () => {
+    setCheckingExisting(true);
+    try {
+      const artworkData = await artwork.getMine();
+      setHasExistingArtwork(true);
+      setExistingArtwork(artworkData.artwork);
+    } catch (err) {
+      // No existing artwork found - user can create one
+      setHasExistingArtwork(false);
+      setExistingArtwork(null);
+    } finally {
+      setCheckingExisting(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -162,6 +184,82 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
   };
 
   const isFormValid = formData.imageFile && formData.title.trim();
+
+  // Show loading state while checking for existing artwork
+  if (checkingExisting) {
+    return (
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">Add Your Artwork</h1>
+        </div>
+        <div className="empty-state">
+          <p>Checking your artwork status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show existing artwork message if user already has one
+  if (hasExistingArtwork && existingArtwork) {
+    return (
+      <div className="dashboard-container">
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">Add Your Artwork</h1>
+          <p className="dashboard-subtitle">Milestone 1: One artwork per user</p>
+        </div>
+
+        <div style={styles.existingArtworkContainer}>
+          <div style={styles.existingArtworkCard}>
+            <div style={styles.existingArtworkHeader}>
+              <h3 style={styles.existingArtworkTitle}>You already have an artwork</h3>
+              <p style={styles.existingArtworkSubtitle}>
+                In Milestone 1, each user can have only one artwork. You can view or remove your current artwork to add a new one.
+              </p>
+            </div>
+
+            <div style={styles.existingArtworkPreview}>
+              <div style={styles.existingArtworkMeta}>
+                <h4 style={styles.artworkTitle}>"{existingArtwork.title}"</h4>
+                {existingArtwork.description && (
+                  <p style={styles.artworkDescription}>{existingArtwork.description}</p>
+                )}
+                <p style={styles.artworkDate}>
+                  Created {new Date(existingArtwork.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div style={styles.existingArtworkActions}>
+              <button 
+                onClick={() => onNavigate && onNavigate('my-artwork')}
+                className="btn btn-primary"
+                style={styles.actionButton}
+              >
+                View My Artwork
+              </button>
+              <button 
+                onClick={() => onNavigate && onNavigate('reflections')}
+                className="btn btn-secondary"
+                style={styles.actionButton}
+              >
+                View Reflections
+              </button>
+            </div>
+
+            <div style={styles.futureNote}>
+              <p style={styles.futureNoteText}>
+                Future versions will support multiple artworks per user.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dashboard-container">
@@ -433,6 +531,84 @@ const styles = {
   submitButtonDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
+  },
+  existingArtworkContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '400px',
+  },
+  existingArtworkCard: {
+    maxWidth: '500px',
+    width: '100%',
+    padding: 'var(--space-8)',
+    backgroundColor: 'var(--color-white)',
+    borderRadius: 'var(--radius-lg)',
+    border: '1px solid var(--color-gray-200)',
+    boxShadow: 'var(--shadow-sm)',
+    textAlign: 'center',
+  },
+  existingArtworkHeader: {
+    marginBottom: 'var(--space-6)',
+  },
+  existingArtworkTitle: {
+    fontSize: 'var(--font-size-xl)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-900)',
+    margin: '0 0 var(--space-3) 0',
+  },
+  existingArtworkSubtitle: {
+    fontSize: 'var(--font-size-base)',
+    color: 'var(--color-gray-600)',
+    lineHeight: 'var(--line-height-relaxed)',
+    margin: 0,
+  },
+  existingArtworkPreview: {
+    padding: 'var(--space-6)',
+    backgroundColor: 'var(--color-gray-50)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-gray-200)',
+    marginBottom: 'var(--space-6)',
+  },
+  existingArtworkMeta: {
+    textAlign: 'left',
+  },
+  artworkTitle: {
+    fontSize: 'var(--font-size-lg)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-800)',
+    margin: '0 0 var(--space-2) 0',
+  },
+  artworkDescription: {
+    fontSize: 'var(--font-size-base)',
+    color: 'var(--color-gray-600)',
+    lineHeight: 'var(--line-height-relaxed)',
+    margin: '0 0 var(--space-3) 0',
+  },
+  artworkDate: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-500)',
+    margin: 0,
+  },
+  existingArtworkActions: {
+    display: 'flex',
+    gap: 'var(--space-3)',
+    justifyContent: 'center',
+    marginBottom: 'var(--space-6)',
+  },
+  actionButton: {
+    padding: 'var(--space-3) var(--space-5)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  futureNote: {
+    paddingTop: 'var(--space-4)',
+    borderTop: '1px solid var(--color-gray-200)',
+  },
+  futureNoteText: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-gray-400)',
+    fontStyle: 'italic',
+    margin: 0,
   },
 };
 

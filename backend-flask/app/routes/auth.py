@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 import bcrypt
 import jwt
+from datetime import datetime, timedelta
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from app import db
@@ -72,9 +73,13 @@ def login():
         if not bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Generate JWT token
+        # Generate JWT token with expiration
         token = jwt.encode(
-            {'userId': user.id, 'email': user.email},
+            {
+                'userId': user.id, 
+                'email': user.email,
+                'exp': datetime.utcnow() + current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
+            },
             current_app.config['JWT_SECRET_KEY'],
             algorithm='HS256'
         )
@@ -146,9 +151,13 @@ def google_signin():
             db.session.add(user)
             db.session.commit()
         
-        # Generate JWT token (same as email login)
+        # Generate JWT token with expiration (same as email login)
         token = jwt.encode(
-            {'userId': user.id, 'email': user.email},
+            {
+                'userId': user.id, 
+                'email': user.email,
+                'exp': datetime.utcnow() + current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
+            },
             current_app.config['JWT_SECRET_KEY'],
             algorithm='HS256'
         )
@@ -233,9 +242,13 @@ def refresh_token():
         user_id = request.current_user['user_id']
         user_email = request.current_user['email']
         
-        # Generate new JWT token
+        # Generate new JWT token with expiration
         new_token = jwt.encode(
-            {'userId': user_id, 'email': user_email},
+            {
+                'userId': user_id, 
+                'email': user_email,
+                'exp': datetime.utcnow() + current_app.config['JWT_ACCESS_TOKEN_EXPIRES']
+            },
             current_app.config['JWT_SECRET_KEY'],
             algorithm='HS256'
         )

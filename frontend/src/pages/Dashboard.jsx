@@ -78,7 +78,8 @@ const Dashboard = ({ currentUser, onNavigate }) => {
                 {onNavigate && (
                   <button 
                     onClick={() => onNavigate('my-artwork')}
-                    className="collection-button collection-button--secondary"
+                    className="btn btn-primary"
+                    style={styles.actionButton}
                   >
                     View details
                   </button>
@@ -91,7 +92,8 @@ const Dashboard = ({ currentUser, onNavigate }) => {
               {onNavigate && (
                 <button 
                   onClick={() => onNavigate('add-artwork')}
-                  className="collection-button collection-button--primary"
+                  className="btn btn-primary"
+                  style={styles.actionButton}
                 >
                   Add artwork
                 </button>
@@ -123,7 +125,8 @@ const Dashboard = ({ currentUser, onNavigate }) => {
                 {onNavigate && (
                   <button 
                     onClick={() => onNavigate('reflections')}
-                    className="collection-button collection-button--secondary"
+                    className="btn btn-primary"
+                    style={styles.actionButton}
                   >
                     Read full reflection
                   </button>
@@ -132,25 +135,34 @@ const Dashboard = ({ currentUser, onNavigate }) => {
             </div>
           ) : userArtwork ? (
             <div className="collection-empty">
-              <p className="empty-message">Generate insights about your artwork.</p>
+              <p className="empty-message">Your reflection is being generated automatically.</p>
               {onNavigate && (
                 <button 
-                  onClick={() => onNavigate('reflection')}
-                  className="collection-button collection-button--secondary"
+                  onClick={() => window.location.reload()}
+                  className="btn btn-secondary"
+                  style={styles.actionButton}
                 >
-                  Create reflection
+                  Refresh page
                 </button>
               )}
             </div>
           ) : (
             <div className="collection-empty collection-empty--quiet">
-              <p className="empty-message">Reflections will appear once you add artwork.</p>
+              <p className="empty-message">Reflections will appear automatically when you add artwork.</p>
             </div>
           )}
         </div>
       </section>
     </div>
   );
+};
+
+const styles = {
+  actionButton: {
+    padding: 'var(--space-3) var(--space-5)',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 'var(--font-weight-medium)',
+  },
 };
 
 export default Dashboard;

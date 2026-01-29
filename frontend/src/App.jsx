@@ -147,6 +147,15 @@ const App = () => {
     setCurrentPage('my-artwork');
   };
 
+  const handleArtworkDeleted = () => {
+    // Reset artwork state when artwork is deleted
+    setHasArtwork(false);
+    setUserArtwork(null);
+    setUserReflection(null);
+    // Navigate to dashboard to show updated state
+    setCurrentPage('dashboard');
+  };
+
   const handleLogout = () => {
     // CLEAN STATE RESET on logout
     auth.logout();
@@ -184,10 +193,11 @@ const App = () => {
             currentUser={currentUser}
             onLogout={confirmLogout}
             isWithinLayout={true}
+            onNavigate={handleNavigation}
           />
         );
       case 'my-artwork':
-        return <MyArtwork onNavigate={handleNavigation} />;
+        return <MyArtwork onNavigate={handleNavigation} onArtworkDeleted={handleArtworkDeleted} />;
       case 'reflections':
         return <Reflections onNavigate={handleNavigation} />;
       case 'reflection':

@@ -335,6 +335,18 @@ p {
   border-color: var(--color-gray-400);
 }
 
+.btn-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.btn-danger:hover {
+  background-color: #fecaca;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -676,6 +688,18 @@ p {
 .dark-theme .btn-secondary:hover {
   background-color: var(--color-gray-200);
   border-color: var(--color-gray-400);
+}
+
+.dark-theme .btn-danger {
+  background-color: #450a0a;
+  color: #f87171;
+  border: 1px solid #7f1d1d;
+}
+
+.dark-theme .btn-danger:hover {
+  background-color: #7f1d1d;
+  border-color: #991b1b;
+  color: #fca5a5;
 }
 
 .dark-theme .app-header {

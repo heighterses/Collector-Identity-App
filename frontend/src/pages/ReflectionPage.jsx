@@ -11,10 +11,25 @@ const ReflectionPage = ({ onLogout, artwork }) => {
     setError('');
 
     try {
+      console.log('Starting reflection generation...');
       const result = await reflection.create();
+      console.log('Reflection generation successful:', result);
       setGeneratedReflection(result.reflection);
     } catch (err) {
-      setError(err.message || 'Failed to generate reflection. Please try again.');
+      console.error('Reflection generation error:', err);
+      
+      // Provide more specific error messages
+      let errorMessage = err.message || 'Failed to generate reflection. Please try again.';
+      
+      if (err.message.includes('Session expired') || err.message.includes('Access token required')) {
+        errorMessage = 'Your session has expired. Please refresh the page and log in again.';
+      } else if (err.message.includes('No artwork found')) {
+        errorMessage = 'Please add an artwork first before generating a reflection.';
+      } else if (err.message.includes('Reflection already exists')) {
+        errorMessage = 'A reflection already exists for your artwork. Only one reflection is allowed.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

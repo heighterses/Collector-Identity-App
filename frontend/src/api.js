@@ -42,33 +42,41 @@ const apiRequest = async (endpoint, options = {}) => {
       console.log('API Error:', endpoint, error);
       
       // If token is invalid/expired, try to refresh it once
-      if (response.status === 401 && token && !isRefreshing) {
-        console.log('Token might be expired, attempting refresh...');
-        isRefreshing = true;
-        
-        try {
-          const newToken = await auth.refreshToken();
-          if (newToken) {
-            // Retry the original request with new token
-            const retryConfig = {
-              ...config,
-              headers: {
-                ...config.headers,
-                Authorization: `Bearer ${newToken}`
+      if (response.status === 401 || response.status === 403) {
+        if (token && !isRefreshing) {
+          console.log('Token might be expired, attempting refresh...');
+          isRefreshing = true;
+          
+          try {
+            const newToken = await auth.refreshToken();
+            if (newToken) {
+              // Retry the original request with new token
+              const retryConfig = {
+                ...config,
+                headers: {
+                  ...config.headers,
+                  Authorization: `Bearer ${newToken}`
+                }
+              };
+              const retryResponse = await fetch(`${API_BASE}${endpoint}`, retryConfig);
+              if (retryResponse.ok) {
+                return retryResponse.json();
+              } else {
+                const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
+                throw new Error(retryError.error || 'Request failed after token refresh');
               }
-            };
-            const retryResponse = await fetch(`${API_BASE}${endpoint}`, retryConfig);
-            if (retryResponse.ok) {
-              return retryResponse.json();
             }
+          } catch (refreshError) {
+            console.log('Token refresh failed:', refreshError);
+            // Force logout if refresh fails
+            removeAuthToken();
+            throw new Error('Session expired. Please log in again.');
+          } finally {
+            isRefreshing = false;
           }
-        } catch (refreshError) {
-          console.log('Token refresh failed:', refreshError);
-          // Force logout if refresh fails
-          removeAuthToken();
-          throw new Error('Session expired. Please log in again.');
-        } finally {
-          isRefreshing = false;
+        } else {
+          // No token or already refreshing
+          throw new Error('Access token required. Please log in again.');
         }
       }
       
@@ -193,6 +201,24 @@ export const auth = {
       return { valid: false, reason: error.message };
     }
   },
+
+  // Force token refresh for debugging
+  forceRefresh: async () => {
+    console.log('Forcing token refresh...');
+    try {
+      const newToken = await auth.refreshToken();
+      if (newToken) {
+        console.log('Token refreshed successfully');
+        return { success: true, token: newToken };
+      } else {
+        console.log('Token refresh failed');
+        return { success: false, reason: 'Refresh failed' };
+      }
+    } catch (error) {
+      console.log('Token refresh error:', error);
+      return { success: false, reason: error.message };
+    }
+  },
 };
 
 // Artwork API
@@ -274,14 +300,50 @@ export const artwork = {
   getMine: async () => {
     return apiRequest('/artwork/mine');
   },
+
+  deleteMine: async () => {
+    console.log('Deleting artwork...');
+    const token = getAuthToken();
+    console.log('Token for artwork deletion:', token ? 'Present' : 'Missing');
+    
+    if (!token) {
+      throw new Error('Access token required. Please log in again.');
+    }
+    
+    try {
+      const result = await apiRequest('/artwork/mine', {
+        method: 'DELETE',
+      });
+      console.log('Artwork deleted successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Artwork deletion failed:', error);
+      throw error;
+    }
+  },
 };
 
 // Reflection API
 export const reflection = {
   create: async () => {
-    return apiRequest('/reflection', {
-      method: 'POST',
-    });
+    console.log('Creating reflection...');
+    const token = getAuthToken();
+    console.log('Token for reflection creation:', token ? 'Present' : 'Missing');
+    
+    if (!token) {
+      throw new Error('Access token required. Please log in again.');
+    }
+    
+    try {
+      const result = await apiRequest('/reflection/', {
+        method: 'POST',
+      });
+      console.log('Reflection created successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Reflection creation failed:', error);
+      throw error;
+    }
   },
 
   getMine: async () => {

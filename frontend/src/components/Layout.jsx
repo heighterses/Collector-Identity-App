@@ -59,7 +59,7 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
   // Navigation items with semantic SVG icons
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: icons.dashboard },
-    ...(!hasArtwork ? [{ id: 'add-artwork', label: 'Add Artwork', icon: icons.addArtwork }] : []),
+    { id: 'add-artwork', label: 'Add Artwork', icon: icons.addArtwork },
     { id: 'my-artwork', label: 'My Artwork', icon: icons.myArtwork },
     { id: 'reflections', label: 'Reflections', icon: icons.reflections },
     { id: 'profile', label: 'Profile', icon: icons.profile },

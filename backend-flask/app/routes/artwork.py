@@ -100,6 +100,28 @@ def create_artwork():
         db.session.add(artwork)
         db.session.commit()
         
+        # AUTO-GENERATE REFLECTION: Create reflection immediately after artwork creation
+        try:
+            from app.services.reflection_service import reflection_service
+            reflection_data = reflection_service.generate_initial_reflection_sync(artwork)
+            
+            from app.models.reflection import Reflection
+            reflection = Reflection(
+                artwork_id=artwork.id,
+                content=reflection_data['content'],
+                type=reflection_data['type']
+            )
+            
+            db.session.add(reflection)
+            db.session.commit()
+            
+            current_app.logger.info(f'Auto-generated reflection: {reflection.id} for artwork: {artwork.id}')
+            
+        except Exception as reflection_error:
+            # Log the error but don't fail the artwork creation
+            current_app.logger.warning(f'Failed to auto-generate reflection: {str(reflection_error)}')
+            # Reflection can be created manually later if auto-generation fails
+        
         # Get user info for response
         user = User.query.filter_by(id=user_id).first()
         
@@ -124,6 +146,49 @@ def create_artwork():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Artwork creation failed: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
+
+@bp.route('/mine', methods=['DELETE'])
+@jwt_required_custom
+def delete_user_artwork():
+    try:
+        user_id = request.current_user['user_id']
+        
+        # Find user's artwork
+        artwork = Artwork.query.filter_by(user_id=user_id).first()
+        if not artwork:
+            return jsonify({'error': 'No artwork found for this user'}), 404
+        
+        # Delete associated reflection first (if exists)
+        from app.models.reflection import Reflection
+        reflection = Reflection.query.filter_by(artwork_id=artwork.id).first()
+        if reflection:
+            db.session.delete(reflection)
+            current_app.logger.info(f'Reflection deleted: {reflection.id}')
+        
+        # Delete image from S3 if it exists
+        if artwork.s3_object_key:
+            try:
+                s3_service.delete_file(artwork.s3_object_key)
+                current_app.logger.info(f'Image deleted from S3: {artwork.s3_object_key}')
+            except Exception as s3_error:
+                current_app.logger.warning(f'Failed to delete image from S3: {str(s3_error)}')
+                # Continue with artwork deletion even if S3 deletion fails
+        
+        # Delete artwork from database
+        artwork_id = artwork.id
+        db.session.delete(artwork)
+        db.session.commit()
+        
+        current_app.logger.info(f'Artwork deleted: {user_id}, {artwork_id}')
+        
+        return jsonify({
+            'message': 'Artwork and associated data deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Artwork deletion failed: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
 
 @bp.route('/mine', methods=['GET'])

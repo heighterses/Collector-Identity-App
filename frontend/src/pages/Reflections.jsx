@@ -19,7 +19,17 @@ const Reflections = ({ onNavigate }) => {
       setUserReflection(reflectionData.reflection);
     } catch (err) {
       if (err.message.includes('No reflection found')) {
-        setUserReflection(null);
+        // Check if user has artwork but no reflection
+        try {
+          const artworkData = await artwork.getMine();
+          // User has artwork but no reflection - this shouldn't happen with auto-generation
+          // but handle it gracefully
+          setUserReflection(null);
+          setError('Reflection not found. This may be due to a processing issue. Please try refreshing the page.');
+        } catch (artworkErr) {
+          // User has no artwork at all
+          setUserReflection(null);
+        }
       } else {
         setError(err.message);
       }
