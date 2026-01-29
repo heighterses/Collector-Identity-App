@@ -36,10 +36,10 @@
   --color-gray-800: #292524;
   --color-gray-900: #1c1917;
   
-  /* Accent - Warm, approachable */
-  --color-accent: #0f172a;
-  --color-accent-light: #334155;
-  --color-accent-hover: #475569;
+  /* Accent - Deep charcoal/ink, warm undertone */
+  --color-accent: #1c1917;
+  --color-accent-light: #44403c;
+  --color-accent-hover: #292524;
   
   /* Semantic colors */
   --color-success: #16a34a;
@@ -215,7 +215,7 @@ p {
 
 .nav-item--active {
   color: var(--color-accent);
-  background-color: rgba(15, 23, 42, 0.04);
+  background-color: rgba(28, 25, 23, 0.04);
 }
 
 /* Navigation Icons */
@@ -382,7 +382,7 @@ p {
 .form-input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.1);
 }
 
 .form-input::placeholder {
@@ -636,10 +636,10 @@ p {
   --color-gray-800: #e5e5e5;
   --color-gray-900: #f5f5f5;
   
-  /* Accent colors remain the same for consistency */
-  --color-accent: #3b82f6;
-  --color-accent-light: #60a5fa;
-  --color-accent-hover: #2563eb;
+  /* Accent colors - Deep charcoal/ink for consistency */
+  --color-accent: #1c1917;
+  --color-accent-light: #44403c;
+  --color-accent-hover: #292524;
   
   /* Semantic colors adjusted for dark theme */
   --color-success: #22c55e;
@@ -666,7 +666,7 @@ p {
 
 .dark-theme .form-input:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.1);
 }
 
 .dark-theme .btn-primary {
@@ -712,7 +712,7 @@ p {
 }
 
 .dark-theme .nav-item--active {
-  background-color: rgba(59, 130, 246, 0.1);
+  background-color: rgba(28, 25, 23, 0.1);
 }
 
 .dark-theme .profile-button {
@@ -743,7 +743,7 @@ p {
 ======================================== */
 
 ::selection {
-  background-color: rgba(15, 23, 42, 0.15);
+  background-color: rgba(28, 25, 23, 0.15);
   color: var(--color-gray-900);
 }
 
@@ -1219,7 +1219,7 @@ p {
 .auth-input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 0 0 3px rgba(28, 25, 23, 0.1);
 }
 
 .auth-password-container {
@@ -1328,7 +1328,7 @@ p {
 }
 
 .auth-switch-button:hover {
-  background: rgba(15, 23, 42, 0.1);
+  background: rgba(28, 25, 23, 0.1);
 }
 
 /* ========================================
