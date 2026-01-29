@@ -85,26 +85,33 @@ const App = () => {
       }
     }
 
-    // SINGLE SOURCE OF TRUTH: Always fetch from backend
+    // SINGLE SOURCE OF TRUTH: Always fetch user profile first
+    try {
+      const profileData = await auth.getProfile();
+      setCurrentUser(profileData.user);
+    } catch (profileErr) {
+      console.error('Failed to load user profile:', profileErr);
+      // If profile fails, user might not be properly authenticated
+      auth.logout();
+      setIsAuthenticated(false);
+      setHasArtwork(false);
+      setUserArtwork(null);
+      setUserReflection(null);
+      setCurrentUser(null);
+      setLoading(false);
+      return;
+    }
+
+    // Then fetch artwork and reflection data
     try {
       const artworkData = await artwork.getMine();
       setHasArtwork(true);
       setUserArtwork(artworkData.artwork);
       
-      // Extract user data from artwork response
-      if (artworkData.artwork && artworkData.artwork.user) {
-        setCurrentUser(artworkData.artwork.user);
-      }
-      
       // If artwork exists, try to load reflection
       try {
         const reflectionData = await reflection.getMine();
         setUserReflection(reflectionData.reflection);
-        
-        // Update user data from reflection response if available
-        if (reflectionData.reflection && reflectionData.reflection.artwork && reflectionData.reflection.artwork.user) {
-          setCurrentUser(reflectionData.reflection.artwork.user);
-        }
       } catch (reflectionErr) {
         // No reflection yet, but we have artwork
         setUserReflection(null);
@@ -114,20 +121,6 @@ const App = () => {
       setHasArtwork(false);
       setUserArtwork(null);
       setUserReflection(null);
-      
-      // Get user profile for authenticated users without artwork
-      try {
-        const profileData = await auth.getProfile();
-        setCurrentUser(profileData.user);
-      } catch (profileErr) {
-        console.error('Failed to load user profile:', profileErr);
-        // Fallback user object
-        setCurrentUser({
-          name: 'User',
-          email: 'user@example.com',
-          authProvider: 'email'
-        });
-      }
     } finally {
       setLoading(false);
     }
@@ -197,9 +190,9 @@ const App = () => {
           />
         );
       case 'my-artwork':
-        return <MyArtwork onNavigate={handleNavigation} onArtworkDeleted={handleArtworkDeleted} />;
+        return <MyArtwork onNavigate={handleNavigation} onArtworkDeleted={handleArtworkDeleted} currentUser={currentUser} />;
       case 'reflections':
-        return <Reflections onNavigate={handleNavigation} />;
+        return <Reflections onNavigate={handleNavigation} currentUser={currentUser} />;
       case 'reflection':
         return (
           <ReflectionPage 
@@ -208,7 +201,7 @@ const App = () => {
           />
         );
       case 'profile':
-        return <Profile currentUser={currentUser} onLogout={confirmLogout} />;
+        return <Profile currentUser={currentUser} onLogout={confirmLogout} onUserUpdate={setCurrentUser} />;
       case 'settings':
         return <Settings currentUser={currentUser} />;
       default:

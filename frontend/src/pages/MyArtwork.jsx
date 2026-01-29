@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { artwork } from '../api.js';
+import { formatDate } from '../utils/dateUtils.js';
 
-const MyArtwork = ({ onNavigate, onArtworkDeleted }) => {
+const MyArtwork = ({ onNavigate, onArtworkDeleted, currentUser }) => {
   const [userArtwork, setUserArtwork] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,12 +31,12 @@ const MyArtwork = ({ onNavigate, onArtworkDeleted }) => {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const formatArtworkDate = (dateString) => {
+    return formatDate(
+      dateString, 
+      currentUser?.timezone || 'UTC', 
+      currentUser?.language || 'en'
+    );
   };
 
   const handleAddArtwork = () => {
@@ -137,7 +138,7 @@ const MyArtwork = ({ onNavigate, onArtworkDeleted }) => {
             <div style={styles.artworkDetails}>
               <h2 style={styles.artworkTitle}>{userArtwork.title}</h2>
               <p style={styles.uploadDate}>
-                Uploaded {formatDate(userArtwork.created_at)}
+                Uploaded {formatArtworkDate(userArtwork.created_at)}
               </p>
 
               {userArtwork.description && (

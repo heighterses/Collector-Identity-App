@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { reflection } from '../api.js';
+import { formatDate } from '../utils/dateUtils.js';
 
-const Reflections = ({ onNavigate }) => {
+const Reflections = ({ onNavigate, currentUser }) => {
   const [userReflection, setUserReflection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,12 +39,12 @@ const Reflections = ({ onNavigate }) => {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const formatReflectionDate = (dateString) => {
+    return formatDate(
+      dateString, 
+      currentUser?.timezone || 'UTC', 
+      currentUser?.language || 'en'
+    );
   };
 
   const handleAddArtwork = () => {
@@ -99,7 +100,7 @@ const Reflections = ({ onNavigate }) => {
               Reflection on "{userReflection.artwork?.title || 'Your Artwork'}"
             </p>
             <p style={styles.generatedDate}>
-              {formatDate(userReflection.createdAt)}
+              {formatReflectionDate(userReflection.created_at)}
             </p>
           </div>
 

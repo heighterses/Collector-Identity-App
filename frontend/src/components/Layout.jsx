@@ -114,7 +114,15 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
               aria-expanded={profileMenuOpen}
             >
               <div className="profile-avatar">
-                {getInitials(currentUser?.name)}
+                {currentUser?.avatar_url ? (
+                  <img 
+                    src={currentUser.avatar_url} 
+                    alt="Avatar" 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                ) : (
+                  getInitials(currentUser?.name)
+                )}
               </div>
               <span className="profile-name">{currentUser?.name || 'User'}</span>
               <span className="profile-chevron">▾</span>

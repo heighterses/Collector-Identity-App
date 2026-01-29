@@ -12,6 +12,12 @@ class User(db.Model):
     auth_provider = db.Column(db.String(50), default='email', nullable=False)
     google_id = db.Column(db.String(255), unique=True, nullable=True)
     onboarding_completed = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Profile fields
+    avatar_url = db.Column(db.String(500), nullable=True)
+    language = db.Column(db.String(10), default='en', nullable=False)
+    timezone = db.Column(db.String(50), default='UTC', nullable=False)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -25,6 +31,9 @@ class User(db.Model):
             'name': self.name,
             'auth_provider': self.auth_provider,
             'onboarding_completed': self.onboarding_completed,
+            'avatar_url': self.avatar_url,
+            'language': self.language,
+            'timezone': self.timezone,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         

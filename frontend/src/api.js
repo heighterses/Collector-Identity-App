@@ -219,6 +219,61 @@ export const auth = {
       return { success: false, reason: error.message };
     }
   },
+
+  // Profile management
+  updateProfile: async (profileData) => {
+    return apiRequest('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  },
+
+  uploadAvatar: async (formData) => {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Access token required. Please log in again.');
+    }
+
+    const config = {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/avatar`, config);
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Network error' }));
+        throw new Error(error.error || 'Avatar upload failed');
+      }
+      
+      return response.json();
+    } catch (fetchError) {
+      throw fetchError;
+    }
+  },
+
+  changePassword: async (passwordData) => {
+    return apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData),
+    });
+  },
+
+  exportData: async () => {
+    return apiRequest('/auth/export-data', {
+      method: 'GET',
+    });
+  },
+
+  deleteAccount: async () => {
+    return apiRequest('/auth/delete-account', {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Artwork API
