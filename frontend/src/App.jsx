@@ -232,7 +232,6 @@ const App = () => {
         onLogout={confirmLogout}
         currentPage={currentPage}
         onNavigate={handleNavigation}
-        hasArtwork={hasArtwork}
       >
         {renderPageContent()}
       </Layout>

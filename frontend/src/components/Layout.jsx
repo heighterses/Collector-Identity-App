@@ -1,10 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasArtwork }) => {
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate }) => {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const wrapperRef = useRef(null);
 
-  const handleLogout = () => {
-    onLogout();
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleAvatarClick = () => {
+    setDropdownOpen(!dropdownOpen);
+  };
+
+  const handleDropdownItemClick = (action) => {
+    setDropdownOpen(false);
+    if (action === 'logout') {
+      onLogout();
+    } else {
+      onNavigate(action);
+    }
+  };
+
+  const getUserInitial = () => {
+    if (currentUser?.name) {
+      return currentUser.name.charAt(0).toUpperCase();
+    }
+    return 'U';
   };
 
   // SVG Icons - Heroicons style, minimal and consistent
@@ -72,11 +103,6 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
     }
   };
 
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   return (
     <div className="app-layout">
       {/* Top Navigation Bar */}
@@ -105,61 +131,39 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, hasA
               </button>
             ))}
           </nav>
-          
-          {/* Right: Profile Section */}
-          <div className="profile-section">
-            <button
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="profile-button"
-              aria-expanded={profileMenuOpen}
+
+          {/* Right: Profile Avatar */}
+          <div className="nav-profile-wrapper" ref={wrapperRef}>
+            <button 
+              className="nav-profile-btn"
+              onClick={handleAvatarClick}
             >
-              <div className="profile-avatar">
+              <div className="nav-avatar">
                 {currentUser?.avatar_url ? (
-                  <img 
-                    src={currentUser.avatar_url} 
-                    alt="Avatar" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-                  />
+                  <img src={currentUser.avatar_url} alt="Avatar" />
                 ) : (
-                  getInitials(currentUser?.name)
+                  <span className="nav-avatar-initial">{getUserInitial()}</span>
                 )}
               </div>
-              <span className="profile-name">{currentUser?.name || 'User'}</span>
-              <span className="profile-chevron">▾</span>
+              <div className="nav-user-info">
+                <span className="nav-user-name">{currentUser?.name || 'User'}</span>
+                <svg className="nav-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="6,9 12,15 18,9"></polyline>
+                </svg>
+              </div>
             </button>
             
-            {profileMenuOpen && (
-              <div className="profile-menu">
-                <div className="profile-menu-header">
-                  <span className="profile-menu-name">{currentUser?.name}</span>
-                  <span className="profile-menu-email">{currentUser?.email}</span>
-                </div>
-                <div className="profile-menu-actions">
-                  <button 
-                    onClick={() => {
-                      handleNavClick('profile');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="profile-menu-action"
-                  >
-                    Profile
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleNavClick('settings');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="profile-menu-action"
-                  >
-                    Settings
-                  </button>
-                  <button 
-                    onClick={handleLogout} 
-                    className="profile-menu-action profile-menu-action--logout"
-                  >
-                    Logout
-                  </button>
-                </div>
+            {dropdownOpen && (
+              <div className="nav-profile-dropdown">
+                <button onClick={() => handleDropdownItemClick('profile')}>
+                  Profile
+                </button>
+                <button onClick={() => handleDropdownItemClick('settings')}>
+                  Settings
+                </button>
+                <button onClick={() => handleDropdownItemClick('logout')}>
+                  Logout
+                </button>
               </div>
             )}
           </div>
