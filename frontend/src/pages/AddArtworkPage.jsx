@@ -7,6 +7,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
   const [checkingExisting, setCheckingExisting] = useState(true);
   const [hasExistingArtwork, setHasExistingArtwork] = useState(false);
   const [existingArtwork, setExistingArtwork] = useState(null);
+  const [artworkMode, setArtworkMode] = useState('image'); // 'image' or 'text'
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -59,17 +60,33 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     setLoading(true);
     setError('');
 
-    // Validation - Image file is required
-    if (!formData.imageFile) {
-      setError('Please select an image file');
-      setLoading(false);
-      return;
-    }
-
-    if (!formData.title.trim()) {
-      setError('Title is required');
-      setLoading(false);
-      return;
+    // Validation based on artwork mode
+    if (artworkMode === 'image') {
+      // Image mode validation - Image file is required
+      if (!formData.imageFile) {
+        setError('Please select an image file');
+        setLoading(false);
+        return;
+      }
+      
+      if (!formData.title.trim()) {
+        setError('Title is required');
+        setLoading(false);
+        return;
+      }
+    } else {
+      // Text mode validation - Title and description are required
+      if (!formData.title.trim()) {
+        setError('Title is required');
+        setLoading(false);
+        return;
+      }
+      
+      if (!formData.description.trim()) {
+        setError('Description is required for text-only artwork');
+        setLoading(false);
+        return;
+      }
     }
 
     // Check token validity before making the request
@@ -91,7 +108,12 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     try {
       const uploadData = new FormData();
       uploadData.append('title', formData.title.trim());
-      uploadData.append('imageFile', formData.imageFile);
+      uploadData.append('artwork_type', artworkMode);
+      
+      if (artworkMode === 'image' && formData.imageFile) {
+        uploadData.append('imageFile', formData.imageFile);
+      }
+      
       if (formData.description.trim()) {
         uploadData.append('description', formData.description.trim());
       }
@@ -183,7 +205,22 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     if (fileInput) fileInput.value = '';
   };
 
-  const isFormValid = formData.imageFile && formData.title.trim();
+  const handleModeChange = (mode) => {
+    setArtworkMode(mode);
+    setError('');
+    // Clear image data when switching to text mode
+    if (mode === 'text') {
+      clearFile();
+    }
+    // Clear description when switching to image mode (since it becomes optional)
+    if (mode === 'image') {
+      setFormData(prev => ({ ...prev, description: '' }));
+    }
+  };
+
+  const isFormValid = artworkMode === 'image' 
+    ? (formData.imageFile && formData.title.trim())
+    : (formData.title.trim() && formData.description.trim());
 
   // Show loading state while checking for existing artwork
   if (checkingExisting) {
@@ -269,68 +306,47 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Image Upload - Hero Section */}
-        <div style={styles.uploadSection}>
-          {!imagePreview ? (
-            <div
+        {/* Mode Toggle */}
+        <div style={styles.modeToggle}>
+          <div style={styles.toggleButtons}>
+            <button
+              type="button"
+              onClick={() => handleModeChange('image')}
               style={{
-                ...styles.uploadArea,
-                ...(dragActive ? styles.uploadAreaActive : {})
+                ...styles.toggleButton,
+                ...(artworkMode === 'image' ? styles.toggleButtonActive : {})
               }}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('imageFile').click()}
             >
-              <input
-                type="file"
-                id="imageFile"
-                accept="image/jpeg,image/jpg,image/png"
-                onChange={handleFileInputChange}
-                style={styles.hiddenInput}
-              />
-              
-              <div style={styles.uploadContent}>
-                <div style={styles.uploadIcon}>
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                    <polyline points="21,15 16,10 5,21"/>
-                  </svg>
-                </div>
-                <div style={styles.uploadText}>
-                  <p style={styles.uploadPrimary}>Click to browse or drag image here</p>
-                  <p style={styles.uploadSecondary}>Supported formats: JPG, PNG • Max size: 10MB</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div style={styles.previewContainer}>
-              <div style={styles.imagePreview}>
-                <img
-                  src={imagePreview}
-                  alt="Artwork preview"
-                  style={styles.previewImage}
-                />
-              </div>
-              <div style={styles.previewActions}>
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('imageFile').click()}
-                  className="btn btn-secondary"
-                  style={styles.replaceButton}
-                >
-                  Replace Image
-                </button>
-                <button
-                  type="button"
-                  onClick={clearFile}
-                  className="btn btn-secondary"
-                  style={styles.removeButton}
-                >
-                  Remove Image
-                </button>
+              Upload Image
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange('text')}
+              style={{
+                ...styles.toggleButton,
+                ...(artworkMode === 'text' ? styles.toggleButtonActive : {})
+              }}
+            >
+              Text Description
+            </button>
+          </div>
+        </div>
+
+        {/* Image Upload Section - Only show in image mode */}
+        {artworkMode === 'image' && (
+          <div style={styles.uploadSection}>
+            {!imagePreview ? (
+              <div
+                style={{
+                  ...styles.uploadArea,
+                  ...(dragActive ? styles.uploadAreaActive : {})
+                }}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById('imageFile').click()}
+              >
                 <input
                   type="file"
                   id="imageFile"
@@ -338,10 +354,59 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
                   onChange={handleFileInputChange}
                   style={styles.hiddenInput}
                 />
+                
+                <div style={styles.uploadContent}>
+                  <div style={styles.uploadIcon}>
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21,15 16,10 5,21"/>
+                    </svg>
+                  </div>
+                  <div style={styles.uploadText}>
+                    <p style={styles.uploadPrimary}>Click to browse or drag image here</p>
+                    <p style={styles.uploadSecondary}>Supported formats: JPG, PNG • Max size: 10MB</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div style={styles.previewContainer}>
+                <div style={styles.imagePreview}>
+                  <img
+                    src={imagePreview}
+                    alt="Artwork preview"
+                    style={styles.previewImage}
+                  />
+                </div>
+                <div style={styles.previewActions}>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('imageFile').click()}
+                    className="btn btn-secondary"
+                    style={styles.replaceButton}
+                  >
+                    Replace Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFile}
+                    className="btn btn-secondary"
+                    style={styles.removeButton}
+                  >
+                    Remove Image
+                  </button>
+                  <input
+                    type="file"
+                    id="imageFile"
+                    accept="image/jpeg,image/jpg,image/png"
+                    onChange={handleFileInputChange}
+                    style={styles.hiddenInput}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Title Field */}
         <div className="form-group">
@@ -360,17 +425,26 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
 
         {/* Description Field */}
         <div className="form-group">
-          <label className="form-label">Description (Optional)</label>
+          <label className="form-label">
+            Description {artworkMode === 'text' ? '' : '(Optional)'}
+          </label>
           <p style={styles.helperText}>
-            Optional context about this piece — what it represents, how it was created, or why it matters to you.
+            {artworkMode === 'text' 
+              ? 'Describe your artwork concept, inspiration, or vision in detail.'
+              : 'Optional context about this piece — what it represents, how it was created, or why it matters to you.'
+            }
           </p>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleChange}
+            required={artworkMode === 'text'}
             className="form-input form-textarea"
-            placeholder="Share the story behind your artwork..."
-            rows={4}
+            placeholder={artworkMode === 'text' 
+              ? "Describe your artistic vision, concept, or inspiration..."
+              : "Share the story behind your artwork..."
+            }
+            rows={artworkMode === 'text' ? 6 : 4}
             style={styles.descriptionInput}
           />
         </div>
@@ -397,9 +471,9 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
           {!isOnline ? (
             'Offline - Check Connection'
           ) : loading ? (
-            'Creating Artwork...'
+            artworkMode === 'text' ? 'Creating Artwork from Description...' : 'Creating Artwork...'
           ) : (
-            'Create Artwork'
+            artworkMode === 'text' ? 'Create Artwork from Description' : 'Create Artwork'
           )}
         </button>
       </form>
@@ -414,6 +488,33 @@ const styles = {
     gap: 'var(--space-8)',
     maxWidth: '600px',
     margin: '0 auto',
+  },
+  modeToggle: {
+    marginBottom: 'var(--space-6)',
+  },
+  toggleButtons: {
+    display: 'flex',
+    backgroundColor: 'var(--color-gray-100)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 'var(--space-1)',
+    gap: 'var(--space-1)',
+  },
+  toggleButton: {
+    flex: 1,
+    padding: 'var(--space-3) var(--space-4)',
+    border: 'none',
+    borderRadius: 'var(--radius-md)',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 'var(--font-weight-medium)',
+    cursor: 'pointer',
+    transition: 'all var(--transition-normal)',
+    backgroundColor: 'transparent',
+    color: 'var(--color-gray-600)',
+  },
+  toggleButtonActive: {
+    backgroundColor: 'var(--color-white)',
+    color: 'var(--color-gray-900)',
+    boxShadow: 'var(--shadow-sm)',
   },
   uploadSection: {
     marginBottom: 'var(--space-4)',

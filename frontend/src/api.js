@@ -42,41 +42,41 @@ const apiRequest = async (endpoint, options = {}) => {
       console.log('API Error:', endpoint, error);
       
       // If token is invalid/expired, try to refresh it once
-      if (response.status === 401 || response.status === 403) {
-        if (token && !isRefreshing) {
-          console.log('Token might be expired, attempting refresh...');
-          isRefreshing = true;
-          
-          try {
-            const newToken = await auth.refreshToken();
-            if (newToken) {
-              // Retry the original request with new token
-              const retryConfig = {
-                ...config,
-                headers: {
-                  ...config.headers,
-                  Authorization: `Bearer ${newToken}`
-                }
-              };
-              const retryResponse = await fetch(`${API_BASE}${endpoint}`, retryConfig);
-              if (retryResponse.ok) {
-                return retryResponse.json();
-              } else {
-                const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
-                throw new Error(retryError.error || 'Request failed after token refresh');
+      // But NOT for auth endpoints (login, signup, google signin)
+      const isAuthEndpoint = endpoint.includes('/auth/login') || 
+                            endpoint.includes('/auth/signup') || 
+                            endpoint.includes('/auth/google');
+      
+      if ((response.status === 401 || response.status === 403) && token && !isRefreshing && !isAuthEndpoint) {
+        console.log('Token might be expired, attempting refresh...');
+        isRefreshing = true;
+        
+        try {
+          const newToken = await auth.refreshToken();
+          if (newToken) {
+            // Retry the original request with new token
+            const retryConfig = {
+              ...config,
+              headers: {
+                ...config.headers,
+                Authorization: `Bearer ${newToken}`
               }
+            };
+            const retryResponse = await fetch(`${API_BASE}${endpoint}`, retryConfig);
+            if (retryResponse.ok) {
+              return retryResponse.json();
+            } else {
+              const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
+              throw new Error(retryError.error || 'Request failed after token refresh');
             }
-          } catch (refreshError) {
-            console.log('Token refresh failed:', refreshError);
-            // Force logout if refresh fails
-            removeAuthToken();
-            throw new Error('Session expired. Please log in again.');
-          } finally {
-            isRefreshing = false;
           }
-        } else {
-          // No token or already refreshing
-          throw new Error('Access token required. Please log in again.');
+        } catch (refreshError) {
+          console.log('Token refresh failed:', refreshError);
+          // Force logout if refresh fails
+          removeAuthToken();
+          throw new Error('Session expired. Please log in again.');
+        } finally {
+          isRefreshing = false;
         }
       }
       

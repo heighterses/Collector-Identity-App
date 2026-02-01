@@ -8,6 +8,7 @@ const MyArtwork = ({ onNavigate, onArtworkDeleted, currentUser }) => {
   const [error, setError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reflectionExpanded, setReflectionExpanded] = useState(false);
 
   useEffect(() => {
     loadArtwork();
@@ -125,7 +126,14 @@ const MyArtwork = ({ onNavigate, onArtworkDeleted, currentUser }) => {
         <div style={styles.artworkContainer}>
           {/* Main Artwork Display */}
           <div style={styles.artworkDisplay}>
-            {userArtwork.image_url && (
+            {/* Show artwork type indicator */}
+            <div style={styles.artworkTypeIndicator}>
+              <span style={styles.typeLabel}>
+                {userArtwork.artwork_type === 'text' ? 'Text-Only Artwork' : 'Image Artwork'}
+              </span>
+            </div>
+
+            {userArtwork.image_url && userArtwork.artwork_type === 'image' && (
               <div style={styles.imageContainer}>
                 <img
                   src={userArtwork.image_url}
@@ -135,34 +143,96 @@ const MyArtwork = ({ onNavigate, onArtworkDeleted, currentUser }) => {
               </div>
             )}
 
+            {userArtwork.artwork_type === 'text' && (
+              <div style={styles.textArtworkContainer}>
+                <div style={styles.textArtworkIcon}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10,9 9,9 8,9"/>
+                  </svg>
+                </div>
+                <p style={styles.textArtworkLabel}>Text-based artwork</p>
+              </div>
+            )}
+
             <div style={styles.artworkDetails}>
               <h2 style={styles.artworkTitle}>{userArtwork.title}</h2>
               <p style={styles.uploadDate}>
-                Uploaded {formatArtworkDate(userArtwork.created_at)}
+                Created {formatArtworkDate(userArtwork.created_at)}
               </p>
 
               {userArtwork.description && (
                 <div style={styles.descriptionSection}>
+                  <h3 style={styles.descriptionTitle}>
+                    {userArtwork.artwork_type === 'text' ? 'Artwork Description' : 'Description'}
+                  </h3>
                   <p style={styles.description}>{userArtwork.description}</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Reflection Section */}
+          {/* Reflection Section - Collapsible */}
           <div style={styles.reflectionSection}>
-            <div style={styles.reflectionStatus}>
-              <span style={styles.reflectionLabel}>Reflection</span>
-              <span style={styles.reflectionValue}>Generated</span>
+            <div style={styles.reflectionHeader}>
+              <div style={styles.reflectionHeaderContent}>
+                <h3 style={styles.reflectionTitle}>Reflection</h3>
+                {userArtwork.reflection ? (
+                  <span style={styles.reflectionStatus}>Generated</span>
+                ) : (
+                  <span style={styles.reflectionStatusPending}>Generating...</span>
+                )}
+              </div>
+              
+              <button
+                onClick={() => setReflectionExpanded(!reflectionExpanded)}
+                className="btn btn-secondary"
+                style={styles.toggleButton}
+                disabled={!userArtwork.reflection}
+              >
+                {reflectionExpanded ? 'Hide Reflection' : 'View Reflection'}
+              </button>
             </div>
-            
-            <button 
-              onClick={handleViewReflection}
-              className="btn btn-primary"
-              style={styles.viewReflectionButton}
-            >
-              View Reflection
-            </button>
+
+            {reflectionExpanded && userArtwork.reflection && (
+              <div style={styles.reflectionContent}>
+                <div style={styles.reflectionText}>
+                  {userArtwork.reflection.content}
+                </div>
+                <div style={styles.reflectionMeta}>
+                  <span style={styles.reflectionDate}>
+                    Generated {formatArtworkDate(userArtwork.reflection.created_at)}
+                  </span>
+                  <span style={styles.reflectionType}>
+                    {userArtwork.reflection.type === 'initial_interpretation' ? 'Initial Interpretation' : userArtwork.reflection.type}
+                  </span>
+                </div>
+                <div style={styles.reflectionActions}>
+                  <button 
+                    onClick={handleViewReflection}
+                    className="btn btn-secondary"
+                    style={styles.viewAllReflectionsButton}
+                  >
+                    View All Reflections
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!userArtwork.reflection && (
+              <div style={styles.reflectionPlaceholder}>
+                <div style={styles.loadingIndicator}>
+                  <div style={styles.loadingSpinner}></div>
+                  <p style={styles.loadingText}>Generating your reflection...</p>
+                </div>
+                <p style={styles.loadingSubtext}>
+                  This usually takes a few moments. Your reflection will appear here once ready.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Actions Section */}
@@ -253,6 +323,41 @@ const styles = {
     flexDirection: 'column',
     gap: 'var(--space-6)',
   },
+  artworkTypeIndicator: {
+    display: 'flex',
+    justifyContent: 'flex-start',
+    marginBottom: 'var(--space-2)',
+  },
+  typeLabel: {
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-600)',
+    backgroundColor: 'var(--color-gray-100)',
+    padding: 'var(--space-1) var(--space-3)',
+    borderRadius: 'var(--radius-full)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  textArtworkContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 'var(--space-12)',
+    backgroundColor: 'var(--color-gray-50)',
+    borderRadius: 'var(--radius-lg)',
+    border: '2px dashed var(--color-gray-300)',
+    gap: 'var(--space-4)',
+  },
+  textArtworkIcon: {
+    color: 'var(--color-gray-400)',
+  },
+  textArtworkLabel: {
+    fontSize: 'var(--font-size-base)',
+    color: 'var(--color-gray-600)',
+    margin: 0,
+    fontStyle: 'italic',
+  },
   imageContainer: {
     borderRadius: 'var(--radius-lg)',
     overflow: 'hidden',
@@ -287,6 +392,12 @@ const styles = {
   descriptionSection: {
     marginTop: 'var(--space-4)',
   },
+  descriptionTitle: {
+    fontSize: 'var(--font-size-lg)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-800)',
+    margin: '0 0 var(--space-3) 0',
+  },
   description: {
     fontSize: 'var(--font-size-base)',
     lineHeight: 'var(--line-height-relaxed)',
@@ -302,28 +413,126 @@ const styles = {
     borderRadius: 'var(--radius-lg)',
     border: '1px solid var(--color-gray-200)',
   },
-  reflectionStatus: {
+  reflectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 'var(--space-4)',
   },
-  reflectionLabel: {
+  reflectionHeaderContent: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+  },
+  reflectionTitle: {
+    fontSize: 'var(--font-size-lg)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-800)',
+    margin: 0,
+  },
+  reflectionStatus: {
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-green-700)',
+    backgroundColor: 'var(--color-green-100)',
+    padding: 'var(--space-1) var(--space-2)',
+    borderRadius: 'var(--radius-sm)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  reflectionStatusPending: {
+    fontSize: 'var(--font-size-xs)',
+    fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-amber-700)',
+    backgroundColor: 'var(--color-amber-100)',
+    padding: 'var(--space-1) var(--space-2)',
+    borderRadius: 'var(--radius-sm)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  toggleButton: {
+    padding: 'var(--space-2) var(--space-4)',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 'var(--font-weight-medium)',
+    whiteSpace: 'nowrap',
+  },
+  reflectionContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-4)',
+    paddingTop: 'var(--space-4)',
+    borderTop: '1px solid var(--color-gray-200)',
+    animation: 'slideDown 0.2s ease-out',
+  },
+  reflectionText: {
+    fontSize: 'var(--font-size-base)',
+    lineHeight: 'var(--line-height-relaxed)',
+    color: 'var(--color-gray-700)',
+    padding: 'var(--space-4)',
+    backgroundColor: 'var(--color-white)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-gray-200)',
+    fontStyle: 'italic',
+  },
+  reflectionMeta: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+    flexWrap: 'wrap',
+  },
+  reflectionDate: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-gray-500)',
+  },
+  reflectionType: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-gray-600)',
+    backgroundColor: 'var(--color-gray-100)',
+    padding: 'var(--space-1) var(--space-2)',
+    borderRadius: 'var(--radius-sm)',
+    fontWeight: 'var(--font-weight-medium)',
+  },
+  reflectionActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  },
+  viewAllReflectionsButton: {
+    padding: 'var(--space-2) var(--space-4)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  reflectionPlaceholder: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 'var(--space-4)',
+    padding: 'var(--space-6)',
+    textAlign: 'center',
+  },
+  loadingIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--space-3)',
+  },
+  loadingSpinner: {
+    width: '20px',
+    height: '20px',
+    border: '2px solid var(--color-gray-200)',
+    borderTop: '2px solid var(--color-accent)',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+  },
+  loadingText: {
     fontSize: 'var(--font-size-base)',
     fontWeight: 'var(--font-weight-medium)',
     color: 'var(--color-gray-700)',
+    margin: 0,
   },
-  reflectionValue: {
+  loadingSubtext: {
     fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-gray-600)',
-    padding: 'var(--space-1) var(--space-3)',
-    backgroundColor: 'var(--color-white)',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--color-gray-200)',
-  },
-  viewReflectionButton: {
-    alignSelf: 'flex-start',
-    padding: 'var(--space-3) var(--space-5)',
-    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-500)',
+    margin: 0,
+    lineHeight: 'var(--line-height-relaxed)',
   },
   futureHint: {
     textAlign: 'center',

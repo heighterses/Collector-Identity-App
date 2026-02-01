@@ -1795,3 +1795,38 @@ p {
     min-height: var(--header-height);
   }
 }
+/* 
+========================================
+🎨 REFLECTION ANIMATIONS
+======================================== */
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 500px;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Additional color variables for reflection status */
+:root {
+  --color-green-100: #dcfce7;
+  --color-green-700: #15803d;
+  --color-amber-100: #fef3c7;
+  --color-amber-700: #b45309;
+  --radius-full: 9999px;
+}

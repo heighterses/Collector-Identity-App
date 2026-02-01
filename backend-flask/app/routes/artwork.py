@@ -24,18 +24,26 @@ def create_artwork():
         # Get form data
         title = request.form.get('title')
         description = request.form.get('description')
+        artwork_type = request.form.get('artwork_type', 'image')  # Default to 'image' for backward compatibility
         image_file = request.files.get('imageFile')
         
-        # Validate input
+        # Validate artwork_type
+        if artwork_type not in ['image', 'text']:
+            return jsonify({'error': 'Invalid artwork type. Must be "image" or "text"'}), 400
+        
+        # Validate input based on artwork type
         if not title or not title.strip():
             return jsonify({'error': 'Title is required'}), 400
         
-        # Must have either description OR imageFile (or both)
-        has_description = description and description.strip()
-        has_image = image_file is not None and image_file.filename != ''
-        
-        if not has_description and not has_image:
-            return jsonify({'error': 'Either description or image file is required'}), 400
+        if artwork_type == 'image':
+            # Image mode: image file is required
+            has_image = image_file is not None and image_file.filename != ''
+            if not has_image:
+                return jsonify({'error': 'Image file is required for image artwork'}), 400
+        else:
+            # Text mode: description is required
+            if not description or not description.strip():
+                return jsonify({'error': 'Description is required for text-only artwork'}), 400
         
         # MILESTONE 1 CONSTRAINT: Check if user already has an artwork
         existing_artwork = Artwork.query.filter_by(user_id=user_id).first()
@@ -44,8 +52,8 @@ def create_artwork():
                 'error': 'User already has an artwork. Only one artwork allowed in Milestone 1.'
             }), 409
         
-        # Validate image file if provided
-        if has_image:
+        # Validate image file if provided (for image type)
+        if artwork_type == 'image' and image_file:
             if not allowed_file(image_file.filename):
                 return jsonify({'error': 'Only image files are allowed'}), 400
             
@@ -57,11 +65,11 @@ def create_artwork():
             if file_size > MAX_FILE_SIZE:
                 return jsonify({'error': 'File size too large. Maximum 10MB allowed.'}), 400
         
-        # Upload image to S3 if provided
+        # Upload image to S3 if provided (only for image type)
         image_url = None
         s3_object_key = None
         
-        if has_image:
+        if artwork_type == 'image' and image_file:
             try:
                 file_buffer = image_file.read()
                 upload_result = s3_service.upload_file(
@@ -92,7 +100,8 @@ def create_artwork():
         artwork = Artwork(
             user_id=user_id,
             title=title.strip(),
-            description=description.strip() if has_description else None,
+            description=description.strip() if description else None,
+            artwork_type=artwork_type,
             image_url=image_url,
             s3_object_key=s3_object_key
         )
@@ -125,16 +134,21 @@ def create_artwork():
         # Get user info for response
         user = User.query.filter_by(id=user_id).first()
         
+        # Refresh artwork to get the reflection relationship
+        db.session.refresh(artwork)
+        
         # Log successful artwork creation
-        current_app.logger.info(f'Artwork created: {user_id}, {artwork.id}, {has_image}')
+        current_app.logger.info(f'Artwork created: {user_id}, {artwork.id}, type: {artwork_type}')
         
         return jsonify({
             'artwork': {
                 'id': artwork.id,
                 'title': artwork.title,
                 'description': artwork.description,
+                'artwork_type': artwork.artwork_type,
                 'image_url': artwork.image_url,
                 'created_at': artwork.created_at.isoformat(),
+                'reflection': artwork.reflection.to_dict() if artwork.reflection else None,
                 'user': {
                     'id': user.id,
                     'name': user.name,
