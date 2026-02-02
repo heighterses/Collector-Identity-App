@@ -53,7 +53,7 @@ const Dashboard = ({ currentUser, onNavigate }) => {
     <div className="collection-overview">
       {/* Header */}
       <div className="collection-header">
-        <h1 className="collection-title">Your Collection</h1>
+        <h1 className="dashboard-title">Your Collection</h1>
         <p className="collection-subtitle">Welcome back, {currentUser?.name}</p>
       </div>
 

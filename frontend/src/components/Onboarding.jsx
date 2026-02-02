@@ -1,134 +1,252 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '../api.js';
 
-const Onboarding = ({ onComplete, onSkip }) => {
-  const [currentScreen, setCurrentScreen] = useState(1);
-  const [isCompleting, setIsCompleting] = useState(false);
+const Onboarding = ({ currentUser, currentPage, onComplete }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
 
-  // Add hover effects via CSS
+  const onboardingSteps = [
+    {
+      id: 'dashboard',
+      targetPage: 'dashboard',
+      title: 'Welcome to Your Dashboard',
+      description: 'This is your creative overview where you can see your progress.',
+      targetSelector: '.dashboard-title',
+      position: 'bottom'
+    },
+    {
+      id: 'add-artwork',
+      targetPage: 'dashboard',
+      title: 'Add Your First Artwork',
+      description: 'Click here to upload and share your creative work.',
+      targetSelector: '[data-nav="add-artwork"]',
+      position: 'bottom'
+    },
+    {
+      id: 'my-artwork',
+      targetPage: 'dashboard',
+      title: 'View Your Collection',
+      description: 'Access all your uploaded artworks in one place.',
+      targetSelector: '[data-nav="my-artwork"]',
+      position: 'bottom'
+    },
+    {
+      id: 'reflections',
+      targetPage: 'dashboard',
+      title: 'Discover Reflections',
+      description: 'AI-generated insights appear after you upload artwork.',
+      targetSelector: '[data-nav="reflections"]',
+      position: 'bottom'
+    },
+    {
+      id: 'profile-settings',
+      targetPage: 'dashboard',
+      title: 'Manage Your Account',
+      description: 'Update your profile and preferences anytime.',
+      targetSelector: '[data-nav="profile"]',
+      position: 'bottom'
+    }
+  ];
+
+  // Show onboarding only if user hasn't completed it and is on dashboard
   useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      .onboarding-skip:hover {
-        color: #666 !important;
-        background: rgba(0, 0, 0, 0.05) !important;
-      }
-      .onboarding-next:hover:not(:disabled) {
-        background: #333 !important;
-        transform: translateY(-1px);
-      }
-    `;
-    document.head.appendChild(style);
-    
-    return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
+    if (currentUser && !currentUser.onboarding_completed && currentPage === 'dashboard') {
+      // Small delay to ensure page is rendered
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsVisible(false);
+    }
+  }, [currentUser, currentPage]);
+
+  // Resume from stored step on refresh
+  useEffect(() => {
+    const storedStep = localStorage.getItem('onboarding_step');
+    if (storedStep && !currentUser?.onboarding_completed) {
+      setCurrentStep(parseInt(storedStep, 10));
+    }
+  }, [currentUser]);
+
+  // Store current step
+  useEffect(() => {
+    if (isVisible && !currentUser?.onboarding_completed) {
+      localStorage.setItem('onboarding_step', currentStep.toString());
+    }
+  }, [currentStep, isVisible, currentUser]);
 
   const handleNext = () => {
-    if (currentScreen < 3) {
-      setCurrentScreen(currentScreen + 1);
+    if (currentStep < onboardingSteps.length - 1) {
+      setCurrentStep(currentStep + 1);
     } else {
       handleComplete();
     }
   };
 
+  const handleSkip = () => {
+    handleComplete();
+  };
+
   const handleComplete = async () => {
-    setIsCompleting(true);
     try {
       await auth.completeOnboarding();
-      onComplete();
+      localStorage.removeItem('onboarding_step');
+      setIsVisible(false);
+      if (onComplete) {
+        onComplete();
+      }
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
-      // Still proceed to avoid blocking the user
-      onComplete();
+      // Still hide onboarding on error to prevent blocking
+      setIsVisible(false);
     }
   };
 
-  const handleSkip = () => {
-    onSkip();
+  const getCurrentStepData = () => {
+    return onboardingSteps[currentStep];
   };
 
-  const screens = [
-    {
-      title: "Welcome to your creative space",
-      content: "This is a place for reflection, not performance. Here, you can explore what your creative work means to you, away from the noise of social media.",
-      visual: "🎨"
-    },
-    {
-      title: "Here's what happens next",
-      content: "You'll add one piece of your work—an image, a description, or both. Then, you'll receive a thoughtful reflection about what it reveals about your creative identity.",
-      visual: "✨"
-    },
-    {
-      title: "This is your private space",
-      content: "Nothing you share here is public by default. This is your personal creative sanctuary. You're in complete control of your experience.",
-      visual: "🔒"
+  const getTooltipPosition = () => {
+    const step = getCurrentStepData();
+    const targetElement = document.querySelector(step.targetSelector);
+    
+    if (!targetElement) {
+      return { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' };
     }
-  ];
 
-  const currentScreenData = screens[currentScreen - 1];
+    const rect = targetElement.getBoundingClientRect();
+    const tooltipWidth = 280;
+    const tooltipHeight = 120;
+    const arrowSize = 8;
+    
+    let top, left, transform = '';
+    
+    switch (step.position) {
+      case 'bottom':
+        top = rect.bottom + arrowSize + 10;
+        left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+        break;
+      case 'top':
+        top = rect.top - tooltipHeight - arrowSize - 10;
+        left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+        break;
+      case 'right':
+        top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+        left = rect.right + arrowSize + 10;
+        break;
+      case 'left':
+        top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+        left = rect.left - tooltipWidth - arrowSize - 10;
+        break;
+      default:
+        top = rect.bottom + arrowSize + 10;
+        left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+    }
+
+    // Keep tooltip within viewport
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    if (left < 10) left = 10;
+    if (left + tooltipWidth > viewportWidth - 10) left = viewportWidth - tooltipWidth - 10;
+    if (top < 10) top = 10;
+    if (top + tooltipHeight > viewportHeight - 10) top = viewportHeight - tooltipHeight - 10;
+
+    return { top: `${top}px`, left: `${left}px` };
+  };
+
+  const getArrowStyle = () => {
+    const step = getCurrentStepData();
+    const baseArrow = {
+      position: 'absolute',
+      width: 0,
+      height: 0,
+      border: '8px solid transparent',
+    };
+
+    switch (step.position) {
+      case 'bottom':
+        return {
+          ...baseArrow,
+          top: '-16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderBottomColor: 'var(--color-white)',
+        };
+      case 'top':
+        return {
+          ...baseArrow,
+          bottom: '-16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderTopColor: 'var(--color-white)',
+        };
+      case 'right':
+        return {
+          ...baseArrow,
+          top: '50%',
+          left: '-16px',
+          transform: 'translateY(-50%)',
+          borderRightColor: 'var(--color-white)',
+        };
+      case 'left':
+        return {
+          ...baseArrow,
+          top: '50%',
+          right: '-16px',
+          transform: 'translateY(-50%)',
+          borderLeftColor: 'var(--color-white)',
+        };
+      default:
+        return {
+          ...baseArrow,
+          top: '-16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderBottomColor: 'var(--color-white)',
+        };
+    }
+  };
+
+  if (!isVisible || currentUser?.onboarding_completed) {
+    return null;
+  }
+
+  const stepData = getCurrentStepData();
+  const tooltipPosition = getTooltipPosition();
+  const arrowStyle = getArrowStyle();
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.container}>
-        <div style={styles.card}>
-          {/* Skip button */}
-          <button onClick={handleSkip} style={styles.skipButton} className="onboarding-skip">
-            Skip
-          </button>
-
-          {/* Progress indicators */}
-          <div style={styles.progressContainer}>
-            {[1, 2, 3].map((step) => (
-              <div
-                key={step}
-                style={{
-                  ...styles.progressDot,
-                  ...(step === currentScreen ? styles.progressDotActive : {}),
-                  ...(step < currentScreen ? styles.progressDotCompleted : {})
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Content */}
-          <div style={styles.content}>
-            <div style={styles.visual}>
-              {currentScreenData.visual}
+    <>
+      {/* Dimmed background overlay */}
+      <div style={styles.overlay} />
+      
+      {/* Tooltip */}
+      <div style={{ ...styles.tooltip, ...tooltipPosition }}>
+        <div style={arrowStyle} />
+        
+        <div style={styles.tooltipContent}>
+          <h3 style={styles.tooltipTitle}>{stepData.title}</h3>
+          <p style={styles.tooltipDescription}>{stepData.description}</p>
+          
+          <div style={styles.tooltipActions}>
+            <div style={styles.stepIndicator}>
+              {currentStep + 1} of {onboardingSteps.length}
             </div>
             
-            <h2 style={styles.title}>
-              {currentScreenData.title}
-            </h2>
-            
-            <p style={styles.description}>
-              {currentScreenData.content}
-            </p>
-          </div>
-
-          {/* Navigation */}
-          <div style={styles.navigation}>
-            <button
-              onClick={handleNext}
-              disabled={isCompleting}
-              className="onboarding-next"
-              style={{
-                ...styles.nextButton,
-                ...(isCompleting ? styles.nextButtonDisabled : {})
-              }}
-            >
-              {currentScreen === 3 
-                ? (isCompleting ? 'Getting started...' : 'Add your artwork')
-                : 'Continue'
-              }
-            </button>
+            <div style={styles.actionButtons}>
+              <button onClick={handleSkip} style={styles.skipButton}>
+                Skip
+              </button>
+              <button onClick={handleNext} style={styles.nextButton}>
+                {currentStep === onboardingSteps.length - 1 ? 'Finish' : 'Next'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -139,104 +257,70 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'rgba(250, 250, 250, 0.95)',
-    backdropFilter: 'blur(8px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 999,
+    pointerEvents: 'none', // Allow interaction with underlying elements
+  },
+  tooltip: {
+    position: 'fixed',
+    width: '280px',
+    backgroundColor: 'var(--color-white)',
+    borderRadius: 'var(--radius-lg)',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
     zIndex: 1000,
-    padding: '24px',
+    padding: 0,
+    border: '1px solid var(--color-gray-200)',
   },
-  container: {
-    width: '100%',
-    maxWidth: '500px',
+  tooltipContent: {
+    padding: 'var(--space-4)',
   },
-  card: {
-    background: 'white',
-    borderRadius: '24px',
-    padding: '48px 40px',
-    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.8)',
-    position: 'relative',
-    textAlign: 'center',
+  tooltipTitle: {
+    fontSize: 'var(--font-size-base)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-900)',
+    margin: '0 0 var(--space-2) 0',
+    lineHeight: 'var(--line-height-tight)',
+  },
+  tooltipDescription: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-600)',
+    margin: '0 0 var(--space-4) 0',
+    lineHeight: 'var(--line-height-normal)',
+  },
+  tooltipActions: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepIndicator: {
+    fontSize: 'var(--font-size-xs)',
+    color: 'var(--color-gray-500)',
+    fontWeight: 'var(--font-weight-medium)',
+  },
+  actionButtons: {
+    display: 'flex',
+    gap: 'var(--space-2)',
   },
   skipButton: {
-    position: 'absolute',
-    top: '24px',
-    right: '24px',
     background: 'none',
     border: 'none',
-    color: '#999',
-    fontSize: '14px',
+    color: 'var(--color-gray-500)',
+    fontSize: 'var(--font-size-sm)',
     cursor: 'pointer',
-    padding: '8px 12px',
-    borderRadius: '6px',
-    transition: 'all 0.2s ease',
-  },
-  progressContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    gap: '12px',
-    marginBottom: '40px',
-  },
-  progressDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background: '#e8e8e8',
-    transition: 'all 0.3s ease',
-  },
-  progressDotActive: {
-    background: '#1a1a1a',
-    transform: 'scale(1.2)',
-  },
-  progressDotCompleted: {
-    background: '#059669',
-  },
-  content: {
-    marginBottom: '48px',
-  },
-  visual: {
-    fontSize: '64px',
-    marginBottom: '32px',
-    lineHeight: 1,
-  },
-  title: {
-    fontSize: '28px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: '20px',
-    letterSpacing: '-0.02em',
-    lineHeight: '1.2',
-  },
-  description: {
-    fontSize: '17px',
-    color: '#666',
-    lineHeight: '1.6',
-    margin: 0,
-    maxWidth: '400px',
-    marginLeft: 'auto',
-    marginRight: 'auto',
-  },
-  navigation: {
-    display: 'flex',
-    justifyContent: 'center',
+    padding: 'var(--space-1) var(--space-2)',
+    borderRadius: 'var(--radius-md)',
+    transition: 'color var(--transition-normal)',
   },
   nextButton: {
-    padding: '16px 32px',
-    background: '#1a1a1a',
-    color: 'white',
+    backgroundColor: 'var(--color-accent)',
+    color: 'var(--color-white)',
     border: 'none',
-    borderRadius: '12px',
-    fontSize: '16px',
-    fontWeight: '600',
+    fontSize: 'var(--font-size-sm)',
+    fontWeight: 'var(--font-weight-medium)',
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    minWidth: '160px',
-  },
-  nextButtonDisabled: {
-    background: '#d1d5db',
-    cursor: 'not-allowed',
+    padding: 'var(--space-2) var(--space-3)',
+    borderRadius: 'var(--radius-md)',
+    transition: 'background-color var(--transition-normal)',
   },
 };
 

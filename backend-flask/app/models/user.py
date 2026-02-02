@@ -18,6 +18,18 @@ class User(db.Model):
     language = db.Column(db.String(10), default='en', nullable=False)
     timezone = db.Column(db.String(50), default='UTC', nullable=False)
     
+    # Settings/Preferences fields
+    privacy_settings = db.Column(db.JSON, default=lambda: {
+        'profile_visibility': 'private',
+        'data_sharing': False,
+        'analytics': True
+    }, nullable=False)
+    notification_settings = db.Column(db.JSON, default=lambda: {
+        'email_notifications': True,
+        'push_notifications': False,
+        'marketing_emails': False
+    }, nullable=False)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -34,6 +46,8 @@ class User(db.Model):
             'avatar_url': self.avatar_url,
             'language': self.language,
             'timezone': self.timezone,
+            'privacy_settings': self.privacy_settings,
+            'notification_settings': self.notification_settings,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         

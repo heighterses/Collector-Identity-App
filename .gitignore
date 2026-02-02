@@ -137,6 +137,11 @@ desktop.ini
 secrets/
 config/secrets.py
 
+# OAuth2 credentials (Gmail API)
+credentials.json
+token.pickle
+client_secret*.json
+
 # ========================================
 # 📦 PACKAGE MANAGERS
 # ========================================

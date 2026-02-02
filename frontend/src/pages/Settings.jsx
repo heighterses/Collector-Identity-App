@@ -1,15 +1,56 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth } from '../api.js';
 
-const Settings = ({ currentUser }) => {
+const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
   const [activeSection, setActiveSection] = useState('account');
   const [theme, setTheme] = useState('light');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  
+  // Password change state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  
+  // Preferences state
+  const [privacySettings, setPrivacySettings] = useState({
+    profile_visibility: 'private',
+    data_sharing: false,
+    analytics: true
+  });
+  const [notificationSettings, setNotificationSettings] = useState({
+    email_notifications: true,
+    push_notifications: false,
+    marketing_emails: false
+  });
+  
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     // Load theme from localStorage on component mount
     const savedTheme = localStorage.getItem('theme') || 'light';
     setTheme(savedTheme);
     applyTheme(savedTheme);
-  }, []);
+    
+    // Load user preferences
+    if (currentUser) {
+      if (currentUser.privacy_settings) {
+        setPrivacySettings(currentUser.privacy_settings);
+      }
+      if (currentUser.notification_settings) {
+        setNotificationSettings(currentUser.notification_settings);
+      }
+    }
+  }, [currentUser]);
 
   const applyTheme = (selectedTheme) => {
     if (selectedTheme === 'dark') {
@@ -26,12 +67,387 @@ const Settings = ({ currentUser }) => {
     applyTheme(newTheme);
   };
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+    
+    setPasswordLoading(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    try {
+      await auth.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      
+      setPasswordSuccess('Password updated successfully');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordForm(false);
+      
+      setTimeout(() => setPasswordSuccess(''), 3000);
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handlePrivacyChange = async (key, value) => {
+    const newSettings = { ...privacySettings, [key]: value };
+    setPrivacySettings(newSettings);
+    
+    try {
+      setError('');
+      const result = await auth.updatePreferences({ privacy_settings: newSettings });
+      setSuccess('Privacy settings updated');
+      
+      if (onUserUpdate) {
+        onUserUpdate(result.user);
+      }
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to update privacy settings');
+      // Revert on error
+      setPrivacySettings(privacySettings);
+    }
+  };
+
+  const handleNotificationChange = async (key, value) => {
+    const newSettings = { ...notificationSettings, [key]: value };
+    setNotificationSettings(newSettings);
+    
+    try {
+      setError('');
+      const result = await auth.updatePreferences({ notification_settings: newSettings });
+      setSuccess('Notification settings updated');
+      
+      if (onUserUpdate) {
+        onUserUpdate(result.user);
+      }
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to update notification settings');
+      // Revert on error
+      setNotificationSettings(notificationSettings);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      const data = await auth.exportData();
+      
+      // Create and download file
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `collector-identity-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      setSuccess('Data exported successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to export data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setError('');
+    
+    try {
+      await auth.deleteAccount();
+      // Logout and redirect will be handled by the parent component
+      onLogout();
+    } catch (err) {
+      setError(err.message || 'Failed to delete account');
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const isGoogleUser = currentUser?.auth_provider === 'google';
+
   const settingSections = [
-    { id: 'account', label: 'Account & Security', icon: 'Security' },
-    { id: 'privacy', label: 'Privacy', icon: 'Shield' },
-    { id: 'notifications', label: 'Notifications', icon: 'Bell' },
-    { id: 'preferences', label: 'Preferences', icon: 'Settings' },
+    { id: 'account', label: 'Account & Security', icon: '🔐' },
+    { id: 'privacy', label: 'Privacy', icon: '🛡️' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
+    { id: 'preferences', label: 'Preferences', icon: '⚙️' },
   ];
+
+  const renderAccountSection = () => (
+    <div style={styles.sectionContent}>
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Password</span>
+          {isGoogleUser ? (
+            <span style={styles.settingNote}>Managed by Google</span>
+          ) : (
+            <span style={styles.settingDescription}>Change your account password</span>
+          )}
+        </div>
+        <button 
+          className="btn btn-secondary" 
+          disabled={isGoogleUser}
+          onClick={() => setShowPasswordForm(!showPasswordForm)}
+          style={isGoogleUser ? styles.disabledButton : {}}
+        >
+          Change Password
+        </button>
+      </div>
+
+      {showPasswordForm && !isGoogleUser && (
+        <form onSubmit={handlePasswordChange} style={styles.passwordForm}>
+          <div style={styles.passwordField}>
+            <label style={styles.passwordLabel}>Current Password</label>
+            <input
+              type="password"
+              value={passwordData.currentPassword}
+              onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+              className="form-input"
+              required
+            />
+          </div>
+          <div style={styles.passwordField}>
+            <label style={styles.passwordLabel}>New Password</label>
+            <input
+              type="password"
+              value={passwordData.newPassword}
+              onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+              className="form-input"
+              required
+              minLength={8}
+            />
+          </div>
+          <div style={styles.passwordField}>
+            <label style={styles.passwordLabel}>Confirm New Password</label>
+            <input
+              type="password"
+              value={passwordData.confirmPassword}
+              onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+              className="form-input"
+              required
+            />
+          </div>
+          {passwordError && (
+            <div style={styles.passwordError}>{passwordError}</div>
+          )}
+          {passwordSuccess && (
+            <div style={styles.passwordSuccess}>{passwordSuccess}</div>
+          )}
+          <div style={styles.passwordActions}>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={passwordLoading}
+            >
+              {passwordLoading ? 'Updating...' : 'Update Password'}
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowPasswordForm(false);
+                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                setPasswordError('');
+                setPasswordSuccess('');
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Connected Account</span>
+          <span style={styles.settingValue}>
+            {isGoogleUser ? 'Google' : 'Email'}
+          </span>
+        </div>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Export Data</span>
+          <span style={styles.settingDescription}>Download all your data</span>
+        </div>
+        <button 
+          className="btn btn-secondary" 
+          onClick={handleExportData}
+          disabled={loading}
+        >
+          {loading ? 'Exporting...' : 'Download'}
+        </button>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Delete Account</span>
+          <span style={styles.settingDescription}>Permanently delete your account and data</span>
+        </div>
+        <button 
+          className="btn btn-danger" 
+          onClick={() => setShowDeleteConfirm(true)}
+          style={styles.deleteButton}
+        >
+          Delete Account
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderPrivacySection = () => (
+    <div style={styles.sectionContent}>
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Profile Visibility</span>
+          <span style={styles.settingDescription}>Control who can see your profile</span>
+        </div>
+        <select 
+          value={privacySettings.profile_visibility}
+          onChange={(e) => handlePrivacyChange('profile_visibility', e.target.value)}
+          style={styles.settingSelect}
+        >
+          <option value="private">Private</option>
+          <option value="public">Public</option>
+        </select>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Data Sharing</span>
+          <span style={styles.settingDescription}>Allow sharing anonymized data for research</span>
+        </div>
+        <label style={styles.toggleSwitch}>
+          <input
+            type="checkbox"
+            checked={privacySettings.data_sharing}
+            onChange={(e) => handlePrivacyChange('data_sharing', e.target.checked)}
+          />
+          <span style={styles.toggleSlider}></span>
+        </label>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Analytics</span>
+          <span style={styles.settingDescription}>Help improve the app with usage analytics</span>
+        </div>
+        <label style={styles.toggleSwitch}>
+          <input
+            type="checkbox"
+            checked={privacySettings.analytics}
+            onChange={(e) => handlePrivacyChange('analytics', e.target.checked)}
+          />
+          <span style={styles.toggleSlider}></span>
+        </label>
+      </div>
+    </div>
+  );
+
+  const renderNotificationsSection = () => (
+    <div style={styles.sectionContent}>
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Email Notifications</span>
+          <span style={styles.settingDescription}>Receive important updates via email</span>
+        </div>
+        <label style={styles.toggleSwitch}>
+          <input
+            type="checkbox"
+            checked={notificationSettings.email_notifications}
+            onChange={(e) => handleNotificationChange('email_notifications', e.target.checked)}
+          />
+          <span style={styles.toggleSlider}></span>
+        </label>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Push Notifications</span>
+          <span style={styles.settingDescription}>Receive push notifications in your browser</span>
+        </div>
+        <label style={styles.toggleSwitch}>
+          <input
+            type="checkbox"
+            checked={notificationSettings.push_notifications}
+            onChange={(e) => handleNotificationChange('push_notifications', e.target.checked)}
+          />
+          <span style={styles.toggleSlider}></span>
+        </label>
+      </div>
+
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Marketing Emails</span>
+          <span style={styles.settingDescription}>Receive promotional emails and updates</span>
+        </div>
+        <label style={styles.toggleSwitch}>
+          <input
+            type="checkbox"
+            checked={notificationSettings.marketing_emails}
+            onChange={(e) => handleNotificationChange('marketing_emails', e.target.checked)}
+          />
+          <span style={styles.toggleSlider}></span>
+        </label>
+      </div>
+    </div>
+  );
+
+  const renderPreferencesSection = () => (
+    <div style={styles.sectionContent}>
+      <div style={styles.settingItem}>
+        <div style={styles.settingInfo}>
+          <span style={styles.settingLabel}>Theme</span>
+          <span style={styles.settingDescription}>Choose your preferred theme</span>
+        </div>
+        <select 
+          value={theme}
+          onChange={handleThemeChange}
+          style={styles.settingSelect}
+        >
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </div>
+  );
+
+  const renderActiveSection = () => {
+    switch (activeSection) {
+      case 'account':
+        return renderAccountSection();
+      case 'privacy':
+        return renderPrivacySection();
+      case 'notifications':
+        return renderNotificationsSection();
+      case 'preferences':
+        return renderPreferencesSection();
+      default:
+        return renderAccountSection();
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -48,317 +464,86 @@ const Settings = ({ currentUser }) => {
               key={section.id}
               onClick={() => setActiveSection(section.id)}
               className={`btn ${activeSection === section.id ? 'btn-primary' : 'btn-secondary'}`}
-              style={styles.navButton}
+              style={{
+                ...styles.navButton,
+                ...(activeSection === section.id ? styles.activeNavButton : {})
+              }}
             >
-              <span style={styles.navLabel}>{section.label}</span>
+              <span style={styles.navIcon}>{section.icon}</span>
+              {section.label}
             </button>
           ))}
         </nav>
 
         {/* Settings Content */}
-        <div className="card">
-          <div className="card-content">
-            {activeSection === 'account' && (
-              <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Account & Security</h2>
-                
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Personal Information</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Full Name</span>
-                      <span style={styles.settingValue}>{currentUser?.name}</span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Edit
-                    </button>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Email Address</span>
-                      <span style={styles.settingValue}>{currentUser?.email}</span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Change
-                    </button>
-                  </div>
-                </div>
-
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Authentication</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Sign-in Method</span>
-                      <span style={styles.settingValue}>
-                        {currentUser?.authProvider === 'google' ? 'Google Sign-In' : 'Email & Password'}
-                      </span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Manage
-                    </button>
-                  </div>
-                  {currentUser?.authProvider === 'email' && (
-                    <div style={styles.settingItem}>
-                      <div style={styles.settingInfo}>
-                        <span style={styles.settingLabel}>Password</span>
-                        <span style={styles.settingValue}>••••••••</span>
-                      </div>
-                      <button className="btn btn-secondary" disabled>
-                        Change
-                      </button>
-                    </div>
-                  )}
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Connected Accounts</span>
-                      <span style={styles.settingValue}>
-                        {currentUser?.authProvider === 'google' ? 'Google' : 'Email'}
-                      </span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Manage
-                    </button>
-                  </div>
-                </div>
-
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Active Sessions</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>This device</span>
-                      <span style={styles.settingDescription}>
-                        Current session • Last active now
-                      </span>
-                    </div>
-                    <span style={styles.currentDevice}>Current</span>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Sign out from all devices</span>
-                      <span style={styles.settingDescription}>
-                        End all active sessions except this one
-                      </span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Sign Out All
-                    </button>
-                  </div>
-                </div>
-
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Account Actions</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Download Data</span>
-                      <span style={styles.settingDescription}>
-                        Export your artwork and reflections
-                      </span>
-                    </div>
-                    <button className="btn btn-secondary" disabled>
-                      Export
-                    </button>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Delete Account</span>
-                      <span style={styles.settingDescription}>
-                        Permanently delete your account and all data
-                      </span>
-                    </div>
-                    <button style={styles.dangerButton} disabled>
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'privacy' && (
-              <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Privacy</h2>
-                
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Profile Visibility</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Profile visibility</span>
-                      <span style={styles.settingDescription}>
-                        Control who can see your profile (future feature)
-                      </span>
-                    </div>
-                    <select style={styles.settingSelect} disabled>
-                      <option>Private</option>
-                      <option>Public</option>
-                    </select>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Artwork visibility</span>
-                      <span style={styles.settingDescription}>
-                        Choose who can view your artwork
-                      </span>
-                    </div>
-                    <select style={styles.settingSelect} disabled>
-                      <option>Only me</option>
-                      <option>Public</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Data Usage</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>How we use your data</span>
-                      <span style={styles.settingDescription}>
-                        Your artwork and reflections are used only to generate personalized insights. We never share your creative work with third parties or use it for training AI models.
-                      </span>
-                    </div>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Analytics</span>
-                      <span style={styles.settingDescription}>
-                        Help improve the app by sharing usage data
-                      </span>
-                    </div>
-                    <label style={styles.toggle}>
-                      <input type="checkbox" defaultChecked disabled />
-                      <span style={styles.toggleSlider}></span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'notifications' && (
-              <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Notifications</h2>
-                
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Email Notifications</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Email notifications for reflections</span>
-                      <span style={styles.settingDescription}>
-                        Get notified when new reflections are generated
-                      </span>
-                    </div>
-                    <label style={styles.toggle}>
-                      <input type="checkbox" defaultChecked disabled />
-                      <span style={styles.toggleSlider}></span>
-                    </label>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Email notifications for account activity</span>
-                      <span style={styles.settingDescription}>
-                        Security alerts and account changes
-                      </span>
-                    </div>
-                    <label style={styles.toggle}>
-                      <input type="checkbox" defaultChecked disabled />
-                      <span style={styles.toggleSlider}></span>
-                    </label>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Marketing emails</span>
-                      <span style={styles.settingDescription}>
-                        Product updates and feature announcements
-                      </span>
-                    </div>
-                    <label style={styles.toggle}>
-                      <input type="checkbox" disabled />
-                      <span style={styles.toggleSlider}></span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeSection === 'preferences' && (
-              <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Preferences</h2>
-                
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Interface</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Language</span>
-                      <span style={styles.settingDescription}>
-                        Choose your preferred language
-                      </span>
-                    </div>
-                    <select style={styles.settingSelect} disabled>
-                      <option>English</option>
-                      <option>Spanish</option>
-                      <option>French</option>
-                      <option>German</option>
-                    </select>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Timezone</span>
-                      <span style={styles.settingDescription}>
-                        Used for timestamps and scheduling
-                      </span>
-                    </div>
-                    <select style={styles.settingSelect} disabled>
-                      <option>Auto-detect</option>
-                      <option>Pacific Time (PT)</option>
-                      <option>Eastern Time (ET)</option>
-                      <option>Central Time (CT)</option>
-                      <option>Mountain Time (MT)</option>
-                    </select>
-                  </div>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Theme</span>
-                      <span style={styles.settingDescription}>
-                        Choose your preferred color scheme
-                      </span>
-                    </div>
-                    <select 
-                      style={styles.settingSelect} 
-                      value={theme}
-                      onChange={handleThemeChange}
-                    >
-                      <option value="light">Light</option>
-                      <option value="dark">Dark</option>
-                      <option value="auto">Auto</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div style={styles.settingGroup}>
-                  <h3 style={styles.groupTitle}>Dashboard</h3>
-                  <div style={styles.settingItem}>
-                    <div style={styles.settingInfo}>
-                      <span style={styles.settingLabel}>Default dashboard landing</span>
-                      <span style={styles.settingDescription}>
-                        Choose what you see first when you sign in
-                      </span>
-                    </div>
-                    <select style={styles.settingSelect} disabled>
-                      <option>Dashboard overview</option>
-                      <option>My artwork</option>
-                      <option>Recent reflections</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Settings Note */}
-            <div style={styles.settingsNote}>
-              <p style={styles.noteText}>
-                Settings functionality is currently in development. These options will be available in future updates.
-              </p>
+        <div style={styles.settingsContent}>
+          <div className="card">
+            <div className="card-header">
+              <h3 className="card-title">
+                {settingSections.find(s => s.id === activeSection)?.label}
+              </h3>
+            </div>
+            <div className="card-content">
+              {renderActiveSection()}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div style={styles.errorMessage}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={styles.successMessage}>
+          {success}
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div style={styles.modalBackdrop} onClick={() => setShowDeleteConfirm(false)}>
+          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Delete Account</h3>
+            </div>
+            <div style={styles.modalContent}>
+              <p style={styles.modalMessage}>
+                Are you sure you want to permanently delete your account? This will remove:
+              </p>
+              <ul style={styles.deleteList}>
+                <li>Your profile and settings</li>
+                <li>All uploaded artworks</li>
+                <li>All generated reflections</li>
+                <li>All stored media files</li>
+              </ul>
+              <p style={styles.modalWarning}>
+                This action cannot be undone.
+              </p>
+            </div>
+            <div style={styles.modalActions}>
+              <button 
+                onClick={() => setShowDeleteConfirm(false)}
+                className="btn btn-secondary"
+                style={styles.modalCancelButton}
+                disabled={deleteLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDeleteAccount}
+                className="btn btn-danger"
+                style={styles.confirmButton}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? 'Deleting...' : 'Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -366,8 +551,9 @@ const Settings = ({ currentUser }) => {
 const styles = {
   settingsLayout: {
     display: 'grid',
-    gridTemplateColumns: '240px 1fr',
-    gap: 'var(--space-8)',
+    gridTemplateColumns: '250px 1fr',
+    gap: 'var(--space-6)',
+    alignItems: 'start',
   },
   settingsNav: {
     display: 'flex',
@@ -381,37 +567,30 @@ const styles = {
     padding: 'var(--space-3) var(--space-4)',
     textAlign: 'left',
     justifyContent: 'flex-start',
+    borderRadius: 'var(--radius-md)',
+    transition: 'all var(--transition-normal)',
   },
-  navLabel: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 'var(--font-weight-medium)',
+  activeNavButton: {
+    backgroundColor: 'var(--color-accent)',
+    color: 'var(--color-white)',
   },
-  section: {
-    marginBottom: 'var(--space-8)',
-  },
-  sectionTitle: {
-    fontSize: 'var(--font-size-2xl)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-gray-900)',
-    marginBottom: 'var(--space-6)',
-  },
-  settingGroup: {
-    marginBottom: 'var(--space-8)',
-    paddingBottom: 'var(--space-6)',
-    borderBottom: '1px solid var(--color-gray-200)',
-  },
-  groupTitle: {
+  navIcon: {
     fontSize: 'var(--font-size-lg)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-gray-900)',
-    marginBottom: 'var(--space-4)',
+  },
+  settingsContent: {
+    minHeight: '400px',
+  },
+  sectionContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-6)',
   },
   settingItem: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 'var(--space-4) 0',
-    borderBottom: '1px solid var(--color-gray-100)',
+    borderBottom: '1px solid var(--color-gray-200)',
   },
   settingInfo: {
     display: 'flex',
@@ -420,48 +599,40 @@ const styles = {
     flex: 1,
   },
   settingLabel: {
-    fontSize: 'var(--font-size-sm)',
+    fontSize: 'var(--font-size-base)',
     fontWeight: 'var(--font-weight-medium)',
     color: 'var(--color-gray-900)',
+  },
+  settingDescription: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-500)',
+  },
+  settingNote: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-400)',
+    fontStyle: 'italic',
   },
   settingValue: {
     fontSize: 'var(--font-size-sm)',
     color: 'var(--color-gray-600)',
-  },
-  settingDescription: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-gray-500)',
-    lineHeight: 'var(--line-height-normal)',
-  },
-  dangerButton: {
-    padding: 'var(--space-2) var(--space-4)',
-    background: 'rgba(220, 38, 38, 0.1)',
-    border: '1px solid rgba(220, 38, 38, 0.2)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-error)',
-    cursor: 'not-allowed',
-    opacity: 0.6,
   },
   settingSelect: {
     padding: 'var(--space-2) var(--space-3)',
     border: '1px solid var(--color-gray-300)',
     borderRadius: 'var(--radius-md)',
     fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-gray-600)',
     background: 'var(--color-white)',
     cursor: 'pointer',
   },
-  toggle: {
+  toggleSwitch: {
     position: 'relative',
     display: 'inline-block',
-    width: '44px',
+    width: '50px',
     height: '24px',
   },
   toggleSlider: {
     position: 'absolute',
-    cursor: 'not-allowed',
+    cursor: 'pointer',
     top: 0,
     left: 0,
     right: 0,
@@ -469,29 +640,141 @@ const styles = {
     backgroundColor: 'var(--color-gray-300)',
     transition: 'var(--transition-normal)',
     borderRadius: '24px',
-    opacity: 0.6,
   },
-  currentDevice: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-gray-500)',
-    padding: 'var(--space-1) var(--space-2)',
-    background: 'var(--color-gray-100)',
-    borderRadius: 'var(--radius-sm)',
-    fontWeight: 'var(--font-weight-medium)',
+  disabledButton: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
   },
-  settingsNote: {
-    padding: 'var(--space-5)',
-    background: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid rgba(59, 130, 246, 0.2)',
-    marginTop: 'var(--space-8)',
+  deleteButton: {
+    color: 'var(--color-error)',
+    borderColor: 'var(--color-error)',
   },
-  noteText: {
+  passwordForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-4)',
+    padding: 'var(--space-4)',
+    backgroundColor: 'var(--color-gray-50)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid var(--color-gray-200)',
+    marginTop: 'var(--space-4)',
+  },
+  passwordField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'var(--space-2)',
+  },
+  passwordLabel: {
     fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-accent)',
-    margin: 0,
-    textAlign: 'center',
     fontWeight: 'var(--font-weight-medium)',
+    color: 'var(--color-gray-700)',
+  },
+  passwordActions: {
+    display: 'flex',
+    gap: 'var(--space-3)',
+    justifyContent: 'flex-end',
+  },
+  passwordError: {
+    color: 'var(--color-error)',
+    fontSize: 'var(--font-size-sm)',
+    padding: 'var(--space-2)',
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid rgba(220, 38, 38, 0.2)',
+  },
+  passwordSuccess: {
+    color: 'var(--color-success)',
+    fontSize: 'var(--font-size-sm)',
+    padding: 'var(--space-2)',
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid rgba(22, 163, 74, 0.2)',
+  },
+  errorMessage: {
+    color: 'var(--color-error)',
+    fontSize: 'var(--font-size-sm)',
+    textAlign: 'center',
+    padding: 'var(--space-4)',
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid rgba(220, 38, 38, 0.2)',
+    marginTop: 'var(--space-4)',
+  },
+  successMessage: {
+    color: 'var(--color-success)',
+    fontSize: 'var(--font-size-sm)',
+    textAlign: 'center',
+    padding: 'var(--space-4)',
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+    borderRadius: 'var(--radius-md)',
+    border: '1px solid rgba(22, 163, 74, 0.2)',
+    marginTop: 'var(--space-4)',
+  },
+  modalBackdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(4px)',
+    zIndex: 1000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 'var(--space-6)',
+  },
+  modal: {
+    backgroundColor: 'var(--color-white)',
+    borderRadius: 'var(--radius-lg)',
+    width: '100%',
+    maxWidth: '500px',
+    boxShadow: 'var(--shadow-xl)',
+    animation: 'modalSlideIn 0.2s ease-out',
+  },
+  modalHeader: {
+    padding: 'var(--space-6) var(--space-6) var(--space-4) var(--space-6)',
+    borderBottom: '1px solid var(--color-gray-200)',
+  },
+  modalTitle: {
+    fontSize: 'var(--font-size-xl)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--color-gray-900)',
+    margin: 0,
+  },
+  modalContent: {
+    padding: 'var(--space-6)',
+  },
+  modalMessage: {
+    fontSize: 'var(--font-size-base)',
+    color: 'var(--color-gray-700)',
+    lineHeight: 'var(--line-height-relaxed)',
+    margin: '0 0 var(--space-4) 0',
+  },
+  deleteList: {
+    margin: '0 0 var(--space-4) var(--space-4)',
+    color: 'var(--color-gray-600)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  modalWarning: {
+    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-error)',
+    fontWeight: 'var(--font-weight-medium)',
+    margin: 0,
+  },
+  modalActions: {
+    display: 'flex',
+    gap: 'var(--space-3)',
+    padding: 'var(--space-4) var(--space-6) var(--space-6) var(--space-6)',
+    justifyContent: 'flex-end',
+  },
+  modalCancelButton: {
+    padding: 'var(--space-3) var(--space-5)',
+    fontSize: 'var(--font-size-sm)',
+  },
+  confirmButton: {
+    padding: 'var(--space-3) var(--space-5)',
+    fontSize: 'var(--font-size-sm)',
   },
 };
 

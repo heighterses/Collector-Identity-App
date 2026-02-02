@@ -125,6 +125,7 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate }) =>
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
                 className={`nav-item ${currentPage === item.id ? 'nav-item--active' : ''}`}
+                data-nav={item.id}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>

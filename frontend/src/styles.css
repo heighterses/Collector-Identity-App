@@ -1829,4 +1829,190 @@ p {
   --color-amber-100: #fef3c7;
   --color-amber-700: #b45309;
   --radius-full: 9999px;
+}/* Toggle 
+Switch Styles */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-gray-300);
+  transition: var(--transition-normal);
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: var(--transition-normal);
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--color-accent);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+/* Settings Layout Responsive */
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  
+  .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: var(--space-2);
+  }
+  
+  .nav-button {
+    white-space: nowrap;
+    min-width: fit-content;
+  }
+}/* O
+nboarding Styles */
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  pointer-events: none;
+}
+
+.onboarding-tooltip {
+  position: fixed;
+  background-color: var(--color-white);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  border: 1px solid var(--color-gray-200);
+  max-width: 280px;
+  width: 280px;
+}
+
+.onboarding-tooltip-content {
+  padding: var(--space-4);
+}
+
+.onboarding-tooltip-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-gray-900);
+  margin: 0 0 var(--space-2) 0;
+  line-height: var(--line-height-tight);
+}
+
+.onboarding-tooltip-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-600);
+  margin: 0 0 var(--space-4) 0;
+  line-height: var(--line-height-normal);
+}
+
+.onboarding-tooltip-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.onboarding-step-indicator {
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-500);
+  font-weight: var(--font-weight-medium);
+}
+
+.onboarding-action-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.onboarding-skip-button {
+  background: none;
+  border: none;
+  color: var(--color-gray-500);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-normal);
+}
+
+.onboarding-skip-button:hover {
+  color: var(--color-gray-700);
+}
+
+.onboarding-next-button {
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  border: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-normal);
+}
+
+.onboarding-next-button:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Mobile responsive onboarding */
+@media (max-width: 768px) {
+  .onboarding-tooltip {
+    max-width: calc(100vw - 32px);
+    width: calc(100vw - 32px);
+    left: 16px !important;
+    right: 16px;
+  }
+  
+  .onboarding-tooltip-title {
+    font-size: var(--font-size-sm);
+  }
+  
+  .onboarding-tooltip-description {
+    font-size: var(--font-size-xs);
+  }
+  
+  .onboarding-tooltip-actions {
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+  
+  .onboarding-action-buttons {
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .onboarding-step-indicator {
+    text-align: center;
+  }
 }

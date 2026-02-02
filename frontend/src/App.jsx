@@ -9,6 +9,8 @@ import MyArtwork from './pages/MyArtwork.jsx';
 import Reflections from './pages/Reflections.jsx';
 import Profile from './pages/Profile.jsx';
 import Settings from './pages/Settings.jsx';
+import Onboarding from './components/Onboarding.jsx';
+import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -19,8 +21,18 @@ const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   useEffect(() => {
+    // Check for reset password token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('token');
+    
+    if (resetToken) {
+      setShowResetPassword(true);
+      return;
+    }
+    
     checkAuthAndArtworkStatus();
   }, []);
 
@@ -47,110 +59,95 @@ const App = () => {
       const profileData = await auth.getProfile();
       console.log('Token valid, user authenticated:', profileData);
       setIsAuthenticated(true);
-      
-      // Set user data from profile response
-      if (profileData && profileData.user) {
-        setCurrentUser(profileData.user);
+      setCurrentUser(profileData.user);
+
+      // Try to get user's artwork
+      try {
+        const artworkResponse = await artwork.getMine();
+        console.log('User has artwork:', artworkResponse);
+        setUserArtwork(artworkResponse.artwork);
+        setHasArtwork(true);
+        setCurrentPage('my-artwork');
+
+        // Try to get reflection for this artwork
+        try {
+          const reflectionResponse = await reflection.getByArtworkId(artworkResponse.artwork.id);
+          console.log('User has reflection:', reflectionResponse);
+          setUserReflection(reflectionResponse.reflection);
+        } catch (reflectionError) {
+          console.log('No reflection found:', reflectionError.message);
+          setUserReflection(null);
+        }
+      } catch (artworkError) {
+        if (artworkError.message.includes('No artwork found')) {
+          console.log('User has no artwork, showing dashboard');
+          setHasArtwork(false);
+          setUserArtwork(null);
+          setUserReflection(null);
+          setCurrentPage('dashboard');
+        } else {
+          console.error('Error fetching artwork:', artworkError);
+          setCurrentPage('dashboard');
+        }
       }
     } catch (error) {
-      console.log('Token validation failed, trying to refresh...', error.message);
-      
-      // Try to refresh the token
-      try {
-        const newToken = await auth.refreshToken();
-        if (newToken) {
-          console.log('Token refreshed successfully');
-          // Try the profile call again with new token
-          const profileData = await auth.getProfile();
-          console.log('Token valid after refresh, user authenticated:', profileData);
-          setIsAuthenticated(true);
-          
-          if (profileData && profileData.user) {
-            setCurrentUser(profileData.user);
-          }
-        } else {
-          throw new Error('Token refresh failed');
-        }
-      } catch (refreshError) {
-        console.log('Token refresh failed, clearing auth:', refreshError.message);
-        // Both original token and refresh failed, clear auth
-        auth.logout();
-        setIsAuthenticated(false);
-        setHasArtwork(false);
-        setUserArtwork(null);
-        setUserReflection(null);
-        setCurrentUser(null);
-        setLoading(false);
-        return;
-      }
-    }
-
-    // SINGLE SOURCE OF TRUTH: Always fetch user profile first
-    try {
-      const profileData = await auth.getProfile();
-      setCurrentUser(profileData.user);
-    } catch (profileErr) {
-      console.error('Failed to load user profile:', profileErr);
-      // If profile fails, user might not be properly authenticated
+      console.log('Token invalid, clearing auth:', error.message);
       auth.logout();
       setIsAuthenticated(false);
       setHasArtwork(false);
       setUserArtwork(null);
       setUserReflection(null);
       setCurrentUser(null);
-      setLoading(false);
-      return;
-    }
-
-    // Then fetch artwork and reflection data
-    try {
-      const artworkData = await artwork.getMine();
-      setHasArtwork(true);
-      setUserArtwork(artworkData.artwork);
-      
-      // If artwork exists, try to load reflection
-      try {
-        const reflectionData = await reflection.getMine();
-        setUserReflection(reflectionData.reflection);
-      } catch (reflectionErr) {
-        // No reflection yet, but we have artwork
-        setUserReflection(null);
-      }
-    } catch (err) {
-      // User is authenticated but has no artwork
-      setHasArtwork(false);
-      setUserArtwork(null);
-      setUserReflection(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAuthSuccess = async () => {
+  const handleAuthSuccess = async (userData) => {
+    console.log('Auth success, checking artwork status...');
     setIsAuthenticated(true);
-    // Re-check artwork status after auth to ensure consistency
+    setCurrentUser(userData.user);
+    
+    // After successful auth, check if user has artwork
     await checkAuthAndArtworkStatus();
   };
 
+  const handleOnboardingComplete = (updatedUser) => {
+    // Update user state with completed onboarding
+    if (updatedUser) {
+      setCurrentUser(updatedUser);
+    } else {
+      // Fallback: just mark as completed locally
+      setCurrentUser(prev => prev ? { ...prev, onboarding_completed: true } : prev);
+    }
+  };
+
+  const handleResetPasswordComplete = () => {
+    // Clear reset password state and redirect to login
+    setShowResetPassword(false);
+    // Clear URL parameters
+    window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
   const handleArtworkCreated = (newArtwork) => {
-    // IMMUTABLE STATE: Once artwork is created, it cannot be changed
-    setHasArtwork(true);
+    console.log('Artwork created:', newArtwork);
     setUserArtwork(newArtwork);
+    setHasArtwork(true);
     // Navigate to My Artwork page to show the newly created artwork
     setCurrentPage('my-artwork');
   };
 
   const handleArtworkDeleted = () => {
-    // Reset artwork state when artwork is deleted
-    setHasArtwork(false);
+    console.log('Artwork deleted, resetting state');
     setUserArtwork(null);
+    setHasArtwork(false);
     setUserReflection(null);
     // Navigate to dashboard to show updated state
     setCurrentPage('dashboard');
   };
 
-  const handleLogout = () => {
-    // CLEAN STATE RESET on logout
+  const confirmLogout = () => {
+    console.log('Logging out...');
     auth.logout();
     setIsAuthenticated(false);
     setHasArtwork(false);
@@ -161,7 +158,7 @@ const App = () => {
     setShowLogoutConfirm(false);
   };
 
-  const confirmLogout = () => {
+  const requestLogout = () => {
     setShowLogoutConfirm(true);
   };
 
@@ -219,164 +216,61 @@ const App = () => {
     );
   }
 
-  // Show landing page for unauthenticated users
+  // Show reset password page if token is present
+  if (showResetPassword) {
+    return <ResetPasswordPage onNavigateToLogin={handleResetPasswordComplete} />;
+  }
+
+  // Show landing page if not authenticated
   if (!isAuthenticated) {
     return <LandingPage onAuthSuccess={handleAuthSuccess} />;
   }
 
-  // All authenticated users get the enhanced navigation UI
+  // Show main app layout if authenticated
   return (
-    <>
-      <Layout 
+    <div className="App">
+      <Layout
         currentUser={currentUser}
         onLogout={confirmLogout}
         currentPage={currentPage}
+        showLogoutConfirm={showLogoutConfirm}
         onNavigate={handleNavigation}
       >
         {renderPageContent()}
       </Layout>
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div style={styles.modalBackdrop} onClick={cancelLogout}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalTitle}>Sign Out</h3>
-            </div>
-            <div style={styles.modalContent}>
-              <p style={styles.modalMessage}>
-                Are you sure you want to sign out of your account?
-              </p>
-            </div>
-            <div style={styles.modalActions}>
-              <button 
-                onClick={cancelLogout}
-                className="btn btn-secondary"
-                style={styles.cancelButton}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="btn btn-primary"
-                style={styles.confirmButton}
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
-  // Fallback loading state (should not reach here)
-  return (
-    <div style={styles.loadingContainer}>
-      <div style={styles.spinner}></div>
-      <p style={styles.loadingText}>Loading...</p>
+      
+      {/* Onboarding overlay */}
+      <Onboarding 
+        currentUser={currentUser}
+        currentPage={currentPage}
+        onComplete={handleOnboardingComplete}
+      />
     </div>
   );
 };
 
 const styles = {
   loadingContainer: {
-    minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '20px',
-    background: '#fafafa',
+    height: '100vh',
+    backgroundColor: 'var(--color-gray-50)',
   },
   spinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid #e1e1e1',
-    borderTop: '3px solid #1a1a1a',
+    width: '40px',
+    height: '40px',
+    border: '4px solid var(--color-gray-200)',
+    borderTop: '4px solid var(--color-accent)',
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
   loadingText: {
-    color: '#666',
-    fontSize: '16px',
-  },
-  modalBackdrop: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    backdropFilter: 'blur(4px)',
-    zIndex: 1000,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 'var(--space-6)',
-  },
-  modal: {
-    backgroundColor: 'var(--color-white)',
-    borderRadius: 'var(--radius-lg)',
-    width: '100%',
-    maxWidth: '400px',
-    boxShadow: 'var(--shadow-xl)',
-    animation: 'modalSlideIn 0.2s ease-out',
-  },
-  modalHeader: {
-    padding: 'var(--space-6) var(--space-6) var(--space-4) var(--space-6)',
-    borderBottom: '1px solid var(--color-gray-200)',
-  },
-  modalTitle: {
-    fontSize: 'var(--font-size-xl)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-gray-900)',
-    margin: 0,
-  },
-  modalContent: {
-    padding: 'var(--space-6)',
-  },
-  modalMessage: {
+    marginTop: 'var(--space-4)',
     fontSize: 'var(--font-size-base)',
-    color: 'var(--color-gray-700)',
-    lineHeight: 'var(--line-height-relaxed)',
-    margin: 0,
-  },
-  modalActions: {
-    display: 'flex',
-    gap: 'var(--space-3)',
-    padding: 'var(--space-4) var(--space-6) var(--space-6) var(--space-6)',
-    justifyContent: 'flex-end',
-  },
-  cancelButton: {
-    padding: 'var(--space-3) var(--space-5)',
-    fontSize: 'var(--font-size-sm)',
-  },
-  confirmButton: {
-    padding: 'var(--space-3) var(--space-5)',
-    fontSize: 'var(--font-size-sm)',
+    color: 'var(--color-gray-600)',
   },
 };
-
-// Add CSS animation for spinner and modal
-const styleSheet = document.createElement('style');
-styleSheet.textContent = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  @keyframes modalSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-20px) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default App;

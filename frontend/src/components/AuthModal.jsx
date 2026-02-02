@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { auth } from '../api.js';
+import ForgotPasswordModal from './ForgotPasswordModal.jsx';
 
 const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
   const [loading, setLoading] = useState(false);
@@ -7,6 +8,7 @@ const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [googleLoaded, setGoogleLoaded] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -74,8 +76,8 @@ const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
     setSuccessMessage('');
 
     try {
-      await auth.googleSignIn(response.credential);
-      onAuthSuccess();
+      const googleResponse = await auth.googleSignIn(response.credential);
+      onAuthSuccess(googleResponse);
     } catch (err) {
       setError(err.message || 'Google Sign-In failed');
     } finally {
@@ -103,11 +105,11 @@ const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
 
     try {
       if (isLogin) {
-        await auth.login({ 
+        const loginResponse = await auth.login({ 
           email: formData.email.trim(), 
           password: formData.password 
         });
-        onAuthSuccess();
+        onAuthSuccess(loginResponse);
       } else {
         const response = await auth.signup({
           email: formData.email.trim(),
@@ -293,7 +295,11 @@ const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
           {/* Section 5: Secondary actions */}
           <div className="auth-secondary-section">
             {isLogin && (
-              <button type="button" className="auth-forgot-password">
+              <button 
+                type="button" 
+                className="auth-forgot-password"
+                onClick={() => setShowForgotPassword(true)}
+              >
                 Forgot your password?
               </button>
             )}
@@ -313,6 +319,11 @@ const AuthModal = ({ mode, onClose, onAuthSuccess, onSwitchMode }) => {
           </div>
         </div>
       </div>
+      
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 };
