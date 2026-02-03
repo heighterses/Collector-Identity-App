@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 from app import db
 from app.models.user import User
 from app.models.password_reset import PasswordResetToken
-from app.services.oauth2_email_service import oauth2_email_service
+from app.services.sendgrid_email_service import sendgrid_email_service
 from app.services.s3_service import s3_service
 from app.middleware.auth import jwt_required_custom
 import re
@@ -259,7 +259,7 @@ def forgot_password():
                 reset_token = PasswordResetToken.create_reset_token(user.id)
                 
                 # Send reset email
-                email_sent = oauth2_email_service.send_password_reset_email(
+                email_sent = sendgrid_email_service.send_password_reset_email(
                     user.email, 
                     user.name, 
                     reset_token
@@ -332,6 +332,27 @@ def reset_password():
         db.session.rollback()
         current_app.logger.error(f'Password reset failed: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
+
+@bp.route('/verify-reset-token', methods=['POST'])
+def verify_reset_token():
+    """Verify reset token without using it"""
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        
+        if not token:
+            return jsonify({'valid': False, 'error': 'Token is required'}), 400
+        
+        # Validate token
+        reset_token = PasswordResetToken.validate_token(token)
+        if not reset_token:
+            return jsonify({'valid': False, 'error': 'Invalid or expired token'}), 200
+        
+        return jsonify({'valid': True}), 200
+        
+    except Exception as e:
+        current_app.logger.error(f'Token verification failed: {str(e)}')
+        return jsonify({'valid': False, 'error': 'Internal server error'}), 500
 
 @bp.route('/validate-reset-token', methods=['POST'])
 def validate_reset_token():

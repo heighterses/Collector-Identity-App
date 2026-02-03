@@ -22,14 +22,14 @@ class PasswordResetToken(db.Model):
         return secrets.token_urlsafe(32)
     
     @staticmethod
-    def create_reset_token(user_id, expires_in_hours=1):
+    def create_reset_token(user_id, expires_in_minutes=30):
         """Create a new password reset token for a user"""
         # Invalidate any existing tokens for this user
         PasswordResetToken.query.filter_by(user_id=user_id, used=False).update({'used': True})
         
         # Create new token
         token = PasswordResetToken.generate_token()
-        expires_at = datetime.utcnow() + timedelta(hours=expires_in_hours)
+        expires_at = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
         
         reset_token = PasswordResetToken(
             user_id=user_id,

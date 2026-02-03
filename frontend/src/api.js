@@ -345,6 +345,13 @@ export const auth = {
     });
   },
 
+  verifyResetToken: async (token) => {
+    return apiRequest('/auth/verify-reset-token', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  },
+
   validateResetToken: async (token) => {
     return apiRequest('/auth/validate-reset-token', {
       method: 'POST',
