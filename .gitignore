@@ -8,51 +8,10 @@ __pycache__/
 *$py.class
 *.so
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
-
 # Virtual environments
-.env
-.venv
-env/
+.venv/
 venv/
+env/
 ENV/
 env.bak/
 venv.bak/
@@ -68,136 +27,102 @@ logs/
 *.sqlite
 *.sqlite3
 
+# PyInstaller
+*.manifest
+*.spec
+
+# Testing / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.hypothesis/
+
 # ========================================
 # 🌐 NODE.JS / REACT FRONTEND
 # ========================================
 
 # Dependencies
 node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Build outputs
-dist/
-dist-ssr/
-*.local
-
-# Editor directories and files
-.vscode/
-.idea/
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
 # ========================================
 # 🐳 DOCKER
 # ========================================
 
-# Docker volumes
+# Override files
 docker-compose.override.yml
 
 # ========================================
-# 🗂️ SYSTEM FILES
+# 🔐 ENVIRONMENT VARIABLES & SECRETS
 # ========================================
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Windows
-*.tmp
-*.temp
-desktop.ini
-
-# ========================================
-# 🔐 SECURITY & SECRETS
-# ========================================
-
-# Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-env
-
-# API keys and secrets
+.env.*
 *.pem
 *.key
 secrets/
 config/secrets.py
 
-# OAuth2 credentials (Gmail API)
+# OAuth credentials
 credentials.json
 token.pickle
 client_secret*.json
 
 # ========================================
-# 📦 PACKAGE MANAGERS
+# 🖥 SYSTEM FILES
 # ========================================
 
-# npm
-package-lock.json
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 
-# yarn
-yarn.lock
-
-# pnpm
-pnpm-lock.yaml
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+*.tmp
+*.temp
 
 # ========================================
-# 🎨 DEVELOPMENT
+# 🧠 IDE / EDITOR
 # ========================================
 
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# ========================================
+# 📊 COVERAGE / TEST OUTPUT
+# ========================================
 
-# Testing
 .nyc_output/
 coverage/
 
 # ========================================
-# 🚀 DEPLOYMENT
+# 🚀 PRODUCTION / DEPLOYMENT
 # ========================================
 
-# Production builds
-build/
-dist/
-
-# Deployment configs (keep templates)
-docker-compose.prod.yml
 kubernetes/
 .kubernetes/
-
-# ========================================
-# 📊 ANALYTICS & MONITORING
-# ========================================
-
-# Logs
-*.log
-logs/
-log/
-
-# Monitoring
 .monitoring/
 metrics/

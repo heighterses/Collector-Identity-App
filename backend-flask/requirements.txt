@@ -12,3 +12,4 @@ Pillow==10.1.0
 SQLAlchemy==2.0.23
 Werkzeug==3.0.1
 sendgrid==6.12.5
+requests
