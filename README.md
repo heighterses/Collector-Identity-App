@@ -109,6 +109,7 @@ collector-identity/
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
+
 ### Key Commands
 ```bash
 # Setup project
@@ -148,6 +149,15 @@ docker-compose up -d
 2. Build frontend: `cd frontend && npm run build`
 3. Configure reverse proxy (nginx)
 4. Start Flask with production WSGI server
+
+
+   ## AI Setup
+Install Ollama:
+https://ollama.com
+
+Pull model:
+ollama pull gemma:2b
+
 
 ## 🤝 Contributing
 
