@@ -7,6 +7,10 @@ const Reflections = ({ onNavigate, currentUser }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // ✅ NEW STATE
+  const [userInput, setUserInput] = useState('');
+  const [loadingAI, setLoadingAI] = useState(false);
+
   useEffect(() => {
     loadReflection();
   }, []);
@@ -19,23 +23,54 @@ const Reflections = ({ onNavigate, currentUser }) => {
       const reflectionData = await reflection.getMine();
       setUserReflection(reflectionData.reflection);
     } catch (err) {
-      if (err.message.includes('No reflection found')) {
-        // Check if user has artwork but no reflection
-        try {
-          const artworkData = await artwork.getMine();
-          // User has artwork but no reflection - this shouldn't happen with auto-generation
-          // but handle it gracefully
-          setUserReflection(null);
-          setError('Reflection not found. This may be due to a processing issue. Please try refreshing the page.');
-        } catch (artworkErr) {
-          // User has no artwork at all
-          setUserReflection(null);
-        }
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ REFINE FUNCTION
+  const handleRefine = async () => {
+    if (!userInput.trim()) {
+      alert("Please enter your thoughts");
+      return;
+    }
+
+    try {
+      setLoadingAI(true);
+
+      const res = await reflection.refine({
+        user_input: userInput
+      });
+
+      if (res?.reflection) {
+        setUserReflection(res.reflection);
+      }
+
+      setUserInput('');
+    } catch (err) {
+      console.error(err);
+      alert("Refinement failed");
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  // ✅ REGENERATE FUNCTION
+  const handleRegenerate = async () => {
+    try {
+      setLoadingAI(true);
+
+      const res = await reflection.regenerate();
+
+      if (res?.reflection) {
+        setUserReflection(res.reflection);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Regeneration failed");
+    } finally {
+      setLoadingAI(false);
     }
   };
 
@@ -48,15 +83,11 @@ const Reflections = ({ onNavigate, currentUser }) => {
   };
 
   const handleAddArtwork = () => {
-    if (onNavigate) {
-      onNavigate('add-artwork');
-    }
+    if (onNavigate) onNavigate('add-artwork');
   };
 
   const handleBackToArtwork = () => {
-    if (onNavigate) {
-      onNavigate('my-artwork');
-    }
+    if (onNavigate) onNavigate('my-artwork');
   };
 
   if (loading) {
@@ -94,7 +125,8 @@ const Reflections = ({ onNavigate, currentUser }) => {
 
       {userReflection ? (
         <div style={styles.reflectionContainer}>
-          {/* Context Header */}
+          
+          {/* HEADER */}
           <div style={styles.contextHeader}>
             <p style={styles.contextLine}>
               Reflection on "{userReflection.artwork?.title || 'Your Artwork'}"
@@ -104,21 +136,49 @@ const Reflections = ({ onNavigate, currentUser }) => {
             </p>
           </div>
 
-          {/* Main Reflection Content */}
+          {/* CONTENT */}
           <div style={styles.reflectionContent}>
             <div style={styles.reflectionText}>
               {userReflection.content}
             </div>
           </div>
 
-          {/* Context Note */}
+          {/* ✅ NEW AI INPUT SECTION */}
+          <div style={styles.aiBox}>
+            <textarea
+              placeholder="Add your thoughts to refine this reflection..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              style={styles.textarea}
+            />
+
+            <div style={styles.buttonRow}>
+              <button 
+                onClick={handleRefine} 
+                disabled={loadingAI}
+                className="btn btn-primary"
+              >
+                {loadingAI ? "Refining..." : "Refine"}
+              </button>
+
+              <button 
+                onClick={handleRegenerate} 
+                disabled={loadingAI}
+                className="btn btn-secondary"
+              >
+                {loadingAI ? "Generating..." : "Regenerate"}
+              </button>
+            </div>
+          </div>
+
+          {/* NOTE */}
           <div style={styles.contextNote}>
             <p style={styles.noteText}>
-              This reflection is an interpretation, not a judgment. It may evolve as your creative work grows.
+              This reflection evolves with your input.
             </p>
           </div>
 
-          {/* Actions */}
+          {/* ACTIONS */}
           <div style={styles.actions}>
             <button 
               onClick={handleBackToArtwork}
@@ -131,14 +191,8 @@ const Reflections = ({ onNavigate, currentUser }) => {
         </div>
       ) : (
         <div className="empty-state">
-          <h3 className="empty-state-title">No reflections yet</h3>
-          <p className="empty-state-description">
-            Reflections become available after you upload an artwork.
-          </p>
-          <button 
-            onClick={handleAddArtwork}
-            className="btn btn-primary"
-          >
+          <h3>No reflections yet</h3>
+          <button onClick={handleAddArtwork} className="btn btn-primary">
             Add Artwork
           </button>
         </div>
@@ -153,57 +207,37 @@ const styles = {
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: 'var(--space-8)',
+    gap: '20px',
   },
   contextHeader: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-2)',
-    paddingBottom: 'var(--space-6)',
-    borderBottom: '1px solid var(--color-gray-200)',
+    borderBottom: '1px solid #ddd',
+    paddingBottom: '10px',
   },
-  contextLine: {
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-gray-600)',
-    margin: 0,
-  },
-  generatedDate: {
-    fontSize: 'var(--font-size-xs)',
-    color: 'var(--color-gray-400)',
-    margin: 0,
-  },
-  reflectionContent: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
+  reflectionContent: {},
   reflectionText: {
-    fontSize: 'var(--font-size-lg)',
-    lineHeight: 'var(--line-height-relaxed)',
-    color: 'var(--color-gray-800)',
-    textAlign: 'left',
+    fontSize: '18px',
     whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
   },
-  contextNote: {
-    paddingTop: 'var(--space-6)',
-    borderTop: '1px solid var(--color-gray-200)',
+
+  // ✅ NEW STYLES
+  aiBox: {
+    marginTop: '20px',
   },
-  noteText: {
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-gray-500)',
-    margin: 0,
-    lineHeight: 'var(--line-height-normal)',
-    fontStyle: 'italic',
+  textarea: {
+    width: '100%',
+    minHeight: '80px',
+    padding: '10px',
+    marginBottom: '10px',
   },
-  actions: {
+  buttonRow: {
     display: 'flex',
-    justifyContent: 'flex-start',
-    paddingTop: 'var(--space-4)',
+    gap: '10px',
   },
-  backButton: {
-    padding: 'var(--space-3) var(--space-5)',
-    fontSize: 'var(--font-size-sm)',
-  },
+
+  contextNote: {},
+  noteText: {},
+  actions: {},
+  backButton: {},
 };
 
 export default Reflections;

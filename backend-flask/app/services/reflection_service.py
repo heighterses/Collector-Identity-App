@@ -10,32 +10,22 @@ class ReflectionService:
         self.pipeline = ReflectionPipeline()
         logger.info("ReflectionService initialized")
 
-    # ==========================================================
-    # PRIMARY METHOD USED WHEN ARTWORK IS CREATED
-    # ==========================================================
+    # =========================
+    # INITIAL REFLECTION
+    # =========================
     def generate_initial_reflection_sync(self, artwork):
-        """
-        Generate a reflection synchronously when artwork is created.
-        This is the method your artwork route expects.
-        """
-
         try:
             logger.info(f"Generating reflection for artwork {artwork.id}")
 
-            # Build prompt
             prompt = self.pipeline.build_initial_prompt(artwork)
+            result = self.pipeline.generate(prompt)
 
-            # Call LLM
-            reflection_text = self.pipeline.generate(prompt)
-
-            if not reflection_text:
-                raise ValueError("Empty reflection returned from model")
-
-            logger.info("Reflection generated successfully")
+            if not result:
+                raise ValueError("Empty response")
 
             return {
-                "content": reflection_text,
-                "status": "completed",
+                "content": result,
+                "type": "initial",
                 "generated_at": datetime.utcnow()
             }
 
@@ -43,37 +33,33 @@ class ReflectionService:
             logger.error(f"Reflection generation failed: {str(e)}")
             return None
 
-    # ==========================================================
-    # OPTIONAL: Manual regeneration (if you add button later)
-    # ==========================================================
-    def regenerate_reflection_sync(self, artwork, previous_reflection=None):
-        """
-        Regenerate reflection (if you later support retry button).
-        """
-
+    # =========================
+    # REFINE REFLECTION (NEW)
+    # =========================
+    def refine_reflection(self, artwork, previous_reflection, user_input):
         try:
-            logger.info(f"Regenerating reflection for artwork {artwork.id}")
+            logger.info(f"Refining reflection for artwork {artwork.id}")
 
-            prompt = self.pipeline.build_regeneration_prompt(
+            prompt = self.pipeline.build_refinement_prompt(
                 artwork,
-                previous_reflection
+                previous_reflection,
+                user_input
             )
 
-            reflection_text = self.pipeline.generate(prompt)
+            result = self.pipeline.generate(prompt)
 
-            if not reflection_text:
-                raise ValueError("Empty reflection returned from model")
+            if not result:
+                raise ValueError("Empty response")
 
             return {
-                "content": reflection_text,
-                "status": "completed",
-                "generated_at": datetime.utcnow()
+                "content": result,
+                "type": "refined"
             }
 
         except Exception as e:
-            logger.error(f"Reflection regeneration failed: {str(e)}")
+            logger.error(f"Refinement failed: {str(e)}")
             return None
 
 
-# Global instance (important — your routes import this)
+# GLOBAL INSTANCE
 reflection_service = ReflectionService()

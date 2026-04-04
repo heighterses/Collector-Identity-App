@@ -474,17 +474,15 @@ export const reflection = {
   create: async () => {
     console.log('Creating reflection...');
     const token = getAuthToken();
-    console.log('Token for reflection creation:', token ? 'Present' : 'Missing');
-    
+
     if (!token) {
       throw new Error('Access token required. Please log in again.');
     }
-    
+
     try {
       const result = await apiRequest('/reflection/', {
         method: 'POST',
       });
-      console.log('Reflection created successfully:', result);
       return result;
     } catch (error) {
       console.error('Reflection creation failed:', error);
@@ -495,4 +493,23 @@ export const reflection = {
   getMine: async () => {
     return apiRequest('/reflection/mine');
   },
+
+  // ✅ ADD THIS (THIS IS YOUR MISSING PIECE)
+  refine: async (data) => {
+    console.log("Refining reflection with:", data);
+
+    return apiRequest('/reflection/refine', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // (optional but useful)
+  regenerate: async () => {
+    return apiRequest('/reflection/regenerate', {
+      method: 'POST',
+    });
+  }
 };
+
+ 

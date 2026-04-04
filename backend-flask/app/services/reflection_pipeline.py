@@ -1,80 +1,75 @@
 import logging
-from app.services.ollama_provider import OllamaProvider
+import requests
+import os
 
 logger = logging.getLogger(__name__)
 
 
 class ReflectionPipeline:
     def __init__(self):
-        self.provider = OllamaProvider()
+        self.base_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        self.model = os.getenv("OLLAMA_MODEL", "gemma:2b")
         logger.info("ReflectionPipeline initialized")
 
-    # ==========================================================
-    # INITIAL PROMPT BUILDER
-    # ==========================================================
+    # =========================
+    # INITIAL PROMPT
+    # =========================
     def build_initial_prompt(self, artwork):
-        """
-        Build prompt depending on artwork type.
-        """
-
-        if artwork.artwork_type == "image":
-            return self._build_image_prompt(artwork)
-
-        elif artwork.artwork_type == "text":
-            return self._build_text_prompt(artwork)
-
-        else:
-            raise ValueError(f"Unsupported artwork_type: {artwork.artwork_type}")
-
-    # ==========================================================
-    # IMAGE REFLECTION PROMPT
-    # ==========================================================
-    def _build_image_prompt(self, artwork):
         return f"""
-You are an art reflection assistant.
+You are an AI assistant helping a user reflect on their artwork.
 
-An artist has uploaded an image artwork.
+Artwork Title: {artwork.title}
+Artwork Description: {artwork.description or "N/A"}
+Artwork Type: {artwork.artwork_type}
 
-Title: {artwork.title}
-Description: {artwork.description or "No description provided."}
-
-Write a thoughtful reflection about what this artwork could represent,
-the emotions it might evoke, and possible interpretations.
-
-Keep it insightful but concise.
+Write a thoughtful, personal reflection about this artwork.
+Keep it emotional, introspective, and meaningful.
 """
 
-    # ==========================================================
-    # TEXT REFLECTION PROMPT
-    # ==========================================================
-    def _build_text_prompt(self, artwork):
+    # =========================
+    # REFINEMENT PROMPT (NEW)
+    # =========================
+    def build_refinement_prompt(self, artwork, previous_reflection, user_input):
         return f"""
-You are an art reflection assistant.
+You are refining an existing reflection based on user feedback.
 
-An artist has written the following text-based artwork.
+Artwork Title: {artwork.title}
+Artwork Description: {artwork.description or "N/A"}
+Artwork Type: {artwork.artwork_type}
 
-Title: {artwork.title}
+Previous Reflection:
+{previous_reflection}
 
-Content:
-{artwork.description or "No text provided."}
+User Feedback:
+{user_input}
 
-Write a thoughtful reflection on this piece.
-Discuss themes, emotions, and interpretation.
+Rewrite the reflection by improving it using the user's feedback.
 
-Keep it insightful but concise.
+Rules:
+- Keep meaning from previous reflection
+- Apply user's feedback clearly
+- Make it natural and human
+
+Return ONLY the improved reflection.
 """
 
-    # ==========================================================
-    # GENERATE USING LLM
-    # ==========================================================
+    # =========================
+    # LLM CALL
+    # =========================
     def generate(self, prompt):
-        """
-        Send prompt to Ollama and return generated text.
-        """
         try:
-            response = self.provider.generate(prompt)
-            return response
+            response = requests.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False
+                }
+            )
+
+            data = response.json()
+            return data.get("response", "")
 
         except Exception as e:
-            logger.error(f"LLM generation failed: {str(e)}")
+            logger.error(f"LLM call failed: {str(e)}")
             return None
