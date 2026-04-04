@@ -64,7 +64,7 @@ class S3Service:
         return f"artworks/user-{user_id}/{timestamp}-{random_id}{extension}"
     
     def upload_file(self, file_buffer, original_filename, mime_type, user_id):
-        """Upload file buffer to S3"""
+        """Upload file buffer to S3 (key auto-generated under artworks/)"""
         if not self._initialized:
             self._initialize_client()
             
@@ -85,6 +85,27 @@ class S3Service:
             
             current_app.logger.info(f'File uploaded to S3 successfully: {object_key}')
             
+            return {
+                'object_key': object_key,
+                'url': self.get_object_url(object_key)
+            }
+        except Exception as e:
+            current_app.logger.error(f'Failed to upload file to S3: {str(e)}')
+            raise Exception(f'Failed to upload file to S3: {str(e)}')
+
+    def upload_file_with_key(self, file_buffer, object_key, mime_type):
+        """Upload file buffer to S3 using an explicit object key (used for avatars)"""
+        if not self._initialized:
+            self._initialize_client()
+
+        try:
+            self.client.put_object(
+                Bucket=self.bucket_name,
+                Key=object_key,
+                Body=file_buffer,
+                ContentType=mime_type,
+            )
+            current_app.logger.info(f'File uploaded to S3 with explicit key: {object_key}')
             return {
                 'object_key': object_key,
                 'url': self.get_object_url(object_key)

@@ -4,202 +4,98 @@ const ReflectionPage = ({ onLogout, artwork }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedReflection, setGeneratedReflection] = useState(null);
-
-  // NEW STATES
   const [userInput, setUserInput] = useState('');
   const [refineLoading, setRefineLoading] = useState(false);
 
-  // =========================
-  // GENERATE INITIAL REFLECTION
-  // =========================
   const handleGenerateReflection = async () => {
-    setLoading(true);
-    setError('');
-
+    setLoading(true); setError('');
     try {
-      const res = await fetch('/api/reflection', {
-        method: 'POST'
-      });
-
+      const res = await fetch('/api/reflection', { method: 'POST' });
       const data = await res.json();
       setGeneratedReflection(data.reflection);
-
-    } catch (err) {
-      setError('Failed to generate reflection');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('Failed to generate reflection'); }
+    finally { setLoading(false); }
   };
 
-  // =========================
-  // REFINE REFLECTION (NEW)
-  // =========================
   const handleRefineReflection = async () => {
     if (!userInput.trim()) return;
-
-    setRefineLoading(true);
-    setError('');
-
+    setRefineLoading(true); setError('');
     try {
       const res = await fetch('/api/reflection/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          artwork_id: artwork.id,
-          user_input: userInput
-        })
+        body: JSON.stringify({ artwork_id: artwork?.id, user_input: userInput })
       });
-
       const data = await res.json();
-
-      if (data.reflection) {
-        setGeneratedReflection(data.reflection);
-        setUserInput('');
-      }
-
-    } catch (err) {
-      setError('Failed to refine reflection');
-    } finally {
-      setRefineLoading(false);
-    }
+      if (data.reflection) { setGeneratedReflection(data.reflection); setUserInput(''); }
+    } catch { setError('Failed to refine reflection'); }
+    finally { setRefineLoading(false); }
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Generate Reflection</h1>
-        <p className="dashboard-subtitle">Create insights about your artwork</p>
+    <div className="reading-page">
+      <div className="reading-page-header">
+        <p className="reading-eyebrow">Reflection</p>
+        <h1 className="reading-title">Generate Reflection</h1>
+        <p className="reading-context">Create an interpretation of your artwork</p>
       </div>
 
       {!generatedReflection ? (
-        <div className="card">
-          <div className="card-content">
+        <div>
+          {artwork && (
+            <div style={{ marginBottom: 'var(--sp-10)', padding: 'var(--sp-6)', background: 'var(--paper-2)', borderRadius: 'var(--r-xs)', border: '1px solid var(--line-soft)' }}>
+              <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--sp-4)' }}>Your Artwork</p>
+              {artwork.image_url && (
+                <img src={`http://localhost:3001${artwork.image_url}`} alt="artwork" style={{ width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 'var(--r-xs)', marginBottom: 'var(--sp-4)', background: 'var(--ink)' }} />
+              )}
+              <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--ink)', margin: '0 0 var(--sp-2) 0', letterSpacing: '-0.02em' }}>{artwork.title}</p>
+              {artwork.description && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: 0 }}>{artwork.description}</p>}
+            </div>
+          )}
 
-            {artwork && (
-              <div style={styles.artworkPreview}>
-                <h3 style={styles.previewTitle}>Your Artwork</h3>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--gray-500)', marginBottom: 'var(--sp-8)', textAlign: 'center', fontStyle: 'italic' }}>
+            Generate a thoughtful reflection about your artwork.
+          </p>
 
-                {/* IMAGE FIX */}
-                {artwork.image_url && (
-                  <img
-                    src={`http://localhost:3001${artwork.image_url}`}
-                    alt="artwork"
-                    style={{ width: '300px', marginBottom: '10px' }}
-                  />
-                )}
+          {error && <div className="alert alert-error" style={{ marginBottom: 'var(--sp-4)' }}>{error}</div>}
 
-                <div style={styles.artworkInfo}>
-                  <span style={styles.artworkTitle}>{artwork.title}</span>
-                  {artwork.description && (
-                    <p style={styles.artworkDescription}>{artwork.description}</p>
-                  )}
-                </div>
-              </div>
-            )}
+          <button onClick={handleGenerateReflection} disabled={loading} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
+            {loading
+              ? <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Generating…</>
+              : 'Generate Reflection'}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="reading-body">
+            <p className="reading-text">{generatedReflection.content}</p>
+          </div>
 
-            <div style={styles.generateSection}>
-              <p style={styles.generateDescription}>
-                Generate a thoughtful reflection about your artwork.
-              </p>
-
-              {error && <div style={styles.error}>{error}</div>}
-
-              <button
-                onClick={handleGenerateReflection}
-                disabled={loading}
-                className="btn btn-primary"
-              >
-                {loading ? 'Generating...' : 'Generate Reflection'}
+          <div className="reading-ai-panel">
+            <p className="reading-ai-label">
+              <span className="reading-ai-pulse" />
+              Refine this reflection
+            </p>
+            <textarea
+              className="reading-ai-textarea"
+              placeholder="Tell the AI how to improve this reflection…"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              disabled={refineLoading}
+            />
+            {error && <div className="alert alert-error" style={{ marginBottom: 'var(--sp-4)' }}>{error}</div>}
+            <div className="reading-ai-actions">
+              <button onClick={handleRefineReflection} disabled={refineLoading || !userInput.trim()} className="btn btn-primary">
+                {refineLoading
+                  ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Refining…</>
+                  : 'Refine'}
               </button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">Your Reflection</h2>
-          </div>
-
-          <div className="card-content">
-            <div style={styles.reflectionContent}>
-              <p style={styles.reflectionText}>
-                {generatedReflection.content}
-              </p>
-            </div>
-
-            {/* =========================
-                NEW: USER INPUT BOX
-            ========================= */}
-            <textarea
-              placeholder="Tell AI how to improve this reflection..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              style={styles.textarea}
-            />
-
-            {/* =========================
-                NEW: REFINE BUTTON
-            ========================= */}
-            <button
-              onClick={handleRefineReflection}
-              disabled={refineLoading}
-              className="btn btn-secondary"
-              style={{ marginTop: '10px' }}
-            >
-              {refineLoading ? 'Refining...' : 'Refine Reflection'}
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
-};
-
-const styles = {
-  artworkPreview: {
-    padding: '20px',
-    background: '#f9fafb',
-    borderRadius: '10px',
-    marginBottom: '20px'
-  },
-  previewTitle: {
-    fontWeight: 'bold',
-    marginBottom: '10px'
-  },
-  artworkInfo: {
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  artworkTitle: {
-    fontWeight: 'bold'
-  },
-  artworkDescription: {
-    color: '#666'
-  },
-  generateSection: {
-    textAlign: 'center'
-  },
-  generateDescription: {
-    marginBottom: '20px'
-  },
-  error: {
-    color: 'red',
-    marginBottom: '10px'
-  },
-  reflectionContent: {
-    marginBottom: '20px'
-  },
-  reflectionText: {
-    fontStyle: 'italic'
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '100px',
-    padding: '10px',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    marginTop: '15px'
-  }
 };
 
 export default ReflectionPage;

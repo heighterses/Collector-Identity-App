@@ -6,238 +6,140 @@ const Reflections = ({ onNavigate, currentUser }) => {
   const [userReflection, setUserReflection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // ✅ NEW STATE
   const [userInput, setUserInput] = useState('');
   const [loadingAI, setLoadingAI] = useState(false);
+  const [aiAction, setAiAction] = useState('');
 
-  useEffect(() => {
-    loadReflection();
-  }, []);
+  useEffect(() => { loadReflection(); }, []);
 
   const loadReflection = async () => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const reflectionData = await reflection.getMine();
-      setUserReflection(reflectionData.reflection);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setError('');
+    try { const d = await reflection.getMine(); setUserReflection(d.reflection); }
+    catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  // ✅ REFINE FUNCTION
   const handleRefine = async () => {
-    if (!userInput.trim()) {
-      alert("Please enter your thoughts");
-      return;
-    }
-
+    if (!userInput.trim()) return;
+    setLoadingAI(true); setAiAction('refine');
     try {
-      setLoadingAI(true);
-
-      const res = await reflection.refine({
-        user_input: userInput
-      });
-
-      if (res?.reflection) {
-        setUserReflection(res.reflection);
-      }
-
+      const res = await reflection.refine({ user_input: userInput });
+      if (res?.reflection) setUserReflection(res.reflection);
       setUserInput('');
-    } catch (err) {
-      console.error(err);
-      alert("Refinement failed");
-    } finally {
-      setLoadingAI(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoadingAI(false); setAiAction(''); }
   };
 
-  // ✅ REGENERATE FUNCTION
   const handleRegenerate = async () => {
+    setLoadingAI(true); setAiAction('regenerate');
     try {
-      setLoadingAI(true);
-
       const res = await reflection.regenerate();
-
-      if (res?.reflection) {
-        setUserReflection(res.reflection);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Regeneration failed");
-    } finally {
-      setLoadingAI(false);
-    }
+      if (res?.reflection) setUserReflection(res.reflection);
+    } catch (err) { console.error(err); }
+    finally { setLoadingAI(false); setAiAction(''); }
   };
 
-  const formatReflectionDate = (dateString) => {
-    return formatDate(
-      dateString, 
-      currentUser?.timezone || 'UTC', 
-      currentUser?.language || 'en'
-    );
-  };
-
-  const handleAddArtwork = () => {
-    if (onNavigate) onNavigate('add-artwork');
-  };
-
-  const handleBackToArtwork = () => {
-    if (onNavigate) onNavigate('my-artwork');
-  };
+  const fmtDate = (d) => formatDate(d, currentUser?.timezone || 'UTC', currentUser?.language || 'en');
 
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="empty-state">
-          <p>Loading...</p>
+      <div className="reading-page">
+        <div className="reading-page-header">
+          <div style={{ height: 12, width: 100, background: 'var(--paper-3)', borderRadius: 2, marginBottom: 'var(--sp-4)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ height: 44, width: 260, background: 'var(--paper-2)', borderRadius: 2, animation: 'pulse 1.5s ease-in-out infinite' }} />
+        </div>
+        <div className="ghost-cards">
+          <div className="ghost-card ghost-card--tall" style={{ height: 300 }} />
+          <div className="ghost-card ghost-card--short" style={{ width: '80%' }} />
+          <div className="ghost-card ghost-card--short" style={{ width: '65%' }} />
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !userReflection) {
     return (
-      <div className="dashboard-container">
-        <div className="dashboard-header">
-          <h1 className="dashboard-title">Reflections</h1>
+      <div className="reading-page">
+        <div className="reading-page-header">
+          <p className="reading-eyebrow">Reflections</p>
+          <h1 className="reading-title">Your Reflection</h1>
         </div>
         <div className="empty-state">
-          <h3 className="empty-state-title">Unable to load reflections</h3>
-          <p className="empty-state-description">{error}</p>
-          <button onClick={loadReflection} className="btn btn-primary">
-            Try Again
-          </button>
+          <div className="empty-state-frame" />
+          <h3 className="empty-state-title">{error ? 'Unable to load' : 'No reflection yet'}</h3>
+          <p className="empty-state-description">
+            {error || 'Add your artwork and a reflection will be generated — a thoughtful reading of your creative identity.'}
+          </p>
+          {error
+            ? <button onClick={loadReflection} className="btn btn-primary">Try again</button>
+            : <button onClick={() => onNavigate('add-artwork')} className="btn btn-primary btn-lg">Add artwork</button>
+          }
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Reflections</h1>
+    <div className="reading-page">
+      {/* Header */}
+      <div className="reading-page-header">
+        <p className="reading-eyebrow">Reflection</p>
+        <h1 className="reading-title">
+          {userReflection.artwork?.title || 'Your Artwork'}
+        </h1>
+        <p className="reading-context">A reading of your work</p>
+        <p className="reading-date">{fmtDate(userReflection.created_at)}</p>
       </div>
 
-      {userReflection ? (
-        <div style={styles.reflectionContainer}>
-          
-          {/* HEADER */}
-          <div style={styles.contextHeader}>
-            <p style={styles.contextLine}>
-              Reflection on "{userReflection.artwork?.title || 'Your Artwork'}"
-            </p>
-            <p style={styles.generatedDate}>
-              {formatReflectionDate(userReflection.created_at)}
-            </p>
-          </div>
+      {/* The reading */}
+      <div className="reading-body">
+        <p className="reading-text">{userReflection.content}</p>
+      </div>
 
-          {/* CONTENT */}
-          <div style={styles.reflectionContent}>
-            <div style={styles.reflectionText}>
-              {userReflection.content}
-            </div>
-          </div>
-
-          {/* ✅ NEW AI INPUT SECTION */}
-          <div style={styles.aiBox}>
-            <textarea
-              placeholder="Add your thoughts to refine this reflection..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              style={styles.textarea}
-            />
-
-            <div style={styles.buttonRow}>
-              <button 
-                onClick={handleRefine} 
-                disabled={loadingAI}
-                className="btn btn-primary"
-              >
-                {loadingAI ? "Refining..." : "Refine"}
-              </button>
-
-              <button 
-                onClick={handleRegenerate} 
-                disabled={loadingAI}
-                className="btn btn-secondary"
-              >
-                {loadingAI ? "Generating..." : "Regenerate"}
-              </button>
-            </div>
-          </div>
-
-          {/* NOTE */}
-          <div style={styles.contextNote}>
-            <p style={styles.noteText}>
-              This reflection evolves with your input.
-            </p>
-          </div>
-
-          {/* ACTIONS */}
-          <div style={styles.actions}>
-            <button 
-              onClick={handleBackToArtwork}
-              className="btn btn-secondary"
-              style={styles.backButton}
-            >
-              Back to My Artwork
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="empty-state">
-          <h3>No reflections yet</h3>
-          <button onClick={handleAddArtwork} className="btn btn-primary">
-            Add Artwork
+      {/* AI panel */}
+      <div className="reading-ai-panel">
+        <p className="reading-ai-label">
+          <span className="reading-ai-pulse" />
+          Refine this reflection
+        </p>
+        <textarea
+          className="reading-ai-textarea"
+          placeholder="Share your thoughts, feelings, or context to guide the next version…"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          disabled={loadingAI}
+        />
+        <div className="reading-ai-actions">
+          <button
+            onClick={handleRefine}
+            disabled={loadingAI || !userInput.trim()}
+            className="btn btn-primary"
+          >
+            {loadingAI && aiAction === 'refine'
+              ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Refining…</>
+              : 'Refine'}
+          </button>
+          <button
+            onClick={handleRegenerate}
+            disabled={loadingAI}
+            className="btn btn-secondary"
+          >
+            {loadingAI && aiAction === 'regenerate'
+              ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</>
+              : 'Regenerate'}
           </button>
         </div>
-      )}
+      </div>
+
+      <p className="reading-note">This reflection evolves with your input.</p>
+
+      <div className="reading-back">
+        <button onClick={() => onNavigate('my-artwork')} className="btn btn-ghost btn-sm" style={{ paddingLeft: 0 }}>
+          ← Back to artwork
+        </button>
+      </div>
     </div>
   );
-};
-
-const styles = {
-  reflectionContainer: {
-    maxWidth: '700px',
-    margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-  },
-  contextHeader: {
-    borderBottom: '1px solid #ddd',
-    paddingBottom: '10px',
-  },
-  reflectionContent: {},
-  reflectionText: {
-    fontSize: '18px',
-    whiteSpace: 'pre-wrap',
-  },
-
-  // ✅ NEW STYLES
-  aiBox: {
-    marginTop: '20px',
-  },
-  textarea: {
-    width: '100%',
-    minHeight: '80px',
-    padding: '10px',
-    marginBottom: '10px',
-  },
-  buttonRow: {
-    display: 'flex',
-    gap: '10px',
-  },
-
-  contextNote: {},
-  noteText: {},
-  actions: {},
-  backButton: {},
 };
 
 export default Reflections;

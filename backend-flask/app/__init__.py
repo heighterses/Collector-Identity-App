@@ -61,13 +61,34 @@ def create_app(config_class=Config):
         try:
             if not object_key:
                 return {'error': 'Object key is required'}, 400
-            
-            # Generate signed URL for the image
-            signed_url = s3_service.get_signed_url(object_key)
-            
-            # Redirect to signed URL
-            from flask import redirect
-            return redirect(signed_url)
+
+            from flask import Response
+            import requests as req_lib
+
+            # Generate signed URL then stream the bytes back through Flask
+            # so the browser never needs to reach MinIO directly
+            signed_url = s3_service.get_signed_url(object_key, expires_in=300)
+            r = req_lib.get(signed_url, timeout=15, stream=True)
+
+            if r.status_code != 200:
+                app.logger.warning(f'MinIO returned {r.status_code} for {object_key}')
+                return {'error': 'Image not found'}, 404
+
+            content_type = r.headers.get('Content-Type', 'image/jpeg')
+
+            def generate():
+                for chunk in r.iter_content(chunk_size=8192):
+                    yield chunk
+
+            return Response(
+                generate(),
+                status=200,
+                content_type=content_type,
+                headers={
+                    'Cache-Control': 'public, max-age=3600',
+                    'Access-Control-Allow-Origin': '*',
+                }
+            )
         except Exception as error:
             app.logger.error(f'Image serving failed: {str(error)}')
             return {'error': 'Image not found'}, 404

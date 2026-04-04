@@ -141,10 +141,21 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate }) =>
             >
               <div className="nav-avatar">
                 {currentUser?.avatar_url ? (
-                  <img src={currentUser.avatar_url} alt="Avatar" />
-                ) : (
-                  <span className="nav-avatar-initial">{getUserInitial()}</span>
-                )}
+                  <img
+                    src={currentUser.avatar_url}
+                    alt="Avatar"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling && (e.target.nextSibling.style.display = 'flex');
+                    }}
+                  />
+                ) : null}
+                <span
+                  className="nav-avatar-initial"
+                  style={{ display: currentUser?.avatar_url ? 'none' : 'flex' }}
+                >
+                  {getUserInitial()}
+                </span>
               </div>
               <div className="nav-user-info">
                 <span className="nav-user-name">{currentUser?.name || 'User'}</span>

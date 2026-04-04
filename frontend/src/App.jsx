@@ -104,12 +104,46 @@ const App = () => {
   };
 
   const handleAuthSuccess = async (userData) => {
-    console.log('Auth success, checking artwork status...');
-    setIsAuthenticated(true);
-    setCurrentUser(userData.user);
-    
-    // After successful auth, check if user has artwork
-    await checkAuthAndArtworkStatus();
+    // userData from login/google contains a partial user object (id, email, name).
+    // Immediately fetch the full profile so avatar_url, language, timezone etc. are present.
+    try {
+      const profileData = await auth.getProfile();
+      const fullUser = profileData.user;
+      console.log('Full user after login:', fullUser);
+
+      setIsAuthenticated(true);
+      setCurrentUser(fullUser);
+
+      // Check artwork status without triggering the full-page loading spinner
+      try {
+        const artworkResponse = await artwork.getMine();
+        setUserArtwork(artworkResponse.artwork);
+        setHasArtwork(true);
+        setCurrentPage('my-artwork');
+
+        try {
+          const reflectionResponse = await reflection.getByArtworkId(artworkResponse.artwork.id);
+          setUserReflection(reflectionResponse.reflection);
+        } catch {
+          setUserReflection(null);
+        }
+      } catch (artworkError) {
+        if (artworkError.message.includes('No artwork found')) {
+          setHasArtwork(false);
+          setUserArtwork(null);
+          setUserReflection(null);
+          setCurrentPage('dashboard');
+        } else {
+          setCurrentPage('dashboard');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch full profile after login:', error);
+      // Fall back to whatever the login response gave us
+      setIsAuthenticated(true);
+      setCurrentUser(userData.user || userData);
+      setCurrentPage('dashboard');
+    }
   };
 
   const handleOnboardingComplete = (updatedUser) => {

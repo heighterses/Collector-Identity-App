@@ -1,18 +1,11 @@
 const API_BASE = '/api';
 
-// Flag to prevent multiple simultaneous token refresh attempts
 let isRefreshing = false;
 
-// Get auth token from localStorage
 const getAuthToken = () => localStorage.getItem('authToken');
-
-// Set auth token in localStorage
 const setAuthToken = (token) => localStorage.setItem('authToken', token);
-
-// Remove auth token from localStorage and clean up any other auth-related storage
 const removeAuthToken = () => {
   localStorage.removeItem('authToken');
-  // Clean up any other potential auth storage
   localStorage.removeItem('user');
   localStorage.removeItem('token');
   sessionStorage.removeItem('authToken');
@@ -20,11 +13,9 @@ const removeAuthToken = () => {
   sessionStorage.removeItem('token');
 };
 
-// API request helper with auth
 const apiRequest = async (endpoint, options = {}) => {
   const token = getAuthToken();
-  console.log('API Request:', endpoint, 'Token:', token ? 'Present' : 'Missing');
-  
+
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -36,74 +27,54 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, config);
-    
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Network error' }));
-      console.log('API Error:', endpoint, error);
-      
-      // If token is invalid/expired, try to refresh it once
-      // But NOT for auth endpoints (login, signup, google signin)
-      const isAuthEndpoint = endpoint.includes('/auth/login') || 
-                            endpoint.includes('/auth/signup') || 
-                            endpoint.includes('/auth/google');
-      
-      if ((response.status === 401 || response.status === 403) && token && !isRefreshing && !isAuthEndpoint) {
-        console.log('Token might be expired, attempting refresh...');
+
+      const isAuthEndpoint =
+        endpoint.includes('/auth/login') ||
+        endpoint.includes('/auth/signup') ||
+        endpoint.includes('/auth/google');
+
+      if (
+        (response.status === 401 || response.status === 403) &&
+        token && !isRefreshing && !isAuthEndpoint
+      ) {
         isRefreshing = true;
-        
         try {
           const newToken = await auth.refreshToken();
           if (newToken) {
-            // Retry the original request with new token
             const retryConfig = {
               ...config,
-              headers: {
-                ...config.headers,
-                Authorization: `Bearer ${newToken}`
-              }
+              headers: { ...config.headers, Authorization: `Bearer ${newToken}` },
             };
             const retryResponse = await fetch(`${API_BASE}${endpoint}`, retryConfig);
-            if (retryResponse.ok) {
-              return retryResponse.json();
-            } else {
-              const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
-              throw new Error(retryError.error || 'Request failed after token refresh');
-            }
+            if (retryResponse.ok) return retryResponse.json();
+            const retryError = await retryResponse.json().catch(() => ({ error: 'Request failed after token refresh' }));
+            throw new Error(retryError.error || 'Request failed after token refresh');
           }
         } catch (refreshError) {
-          console.log('Token refresh failed:', refreshError);
-          // Force logout if refresh fails
           removeAuthToken();
           throw new Error('Session expired. Please log in again.');
         } finally {
           isRefreshing = false;
         }
       }
-      
+
       throw new Error(error.error || 'Request failed');
     }
-    
+
     return response.json();
   } catch (fetchError) {
-    console.log('Fetch Error:', endpoint, fetchError);
     throw fetchError;
   }
 };
 
-// Auth API
+// ── Auth ─────────────────────────────────────────────────────────────────────
 export const auth = {
   signup: async (userData) => {
-    // CRITICAL: Ensure no auth state exists before signup
     removeAuthToken();
-    
-    const result = await apiRequest('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-    
-    // CRITICAL: Ensure no token is set after signup
-    // Signup does NOT log user in - just returns success message
-    return result;
+    return apiRequest('/auth/signup', { method: 'POST', body: JSON.stringify(userData) });
   },
 
   login: async (credentials) => {
@@ -124,392 +95,156 @@ export const auth = {
     return result;
   },
 
-  getProfile: async () => {
-    return apiRequest('/auth/me');
-  },
+  // Returns { user: { id, email, name, avatar_url, language, timezone, ... } }
+  getProfile: async () => apiRequest('/auth/me'),
 
-  completeOnboarding: async () => {
-    return apiRequest('/auth/complete-onboarding', {
-      method: 'POST',
-    });
-  },
-
-  logout: () => {
-    removeAuthToken();
-  },
-
-  refreshToken: async () => {
-    const token = getAuthToken();
-    if (!token) {
-      return null;
-    }
-
-    try {
-      // Make direct fetch call to avoid infinite loop with apiRequest
-      const response = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.token) {
-          setAuthToken(result.token);
-          return result.token;
-        }
-      }
-      
-      // If refresh failed, remove token
-      removeAuthToken();
-      return null;
-    } catch (error) {
-      console.log('Token refresh error:', error);
-      // Refresh failed, user needs to login again
-      removeAuthToken();
-      return null;
-    }
-  },
+  logout: () => removeAuthToken(),
 
   isAuthenticated: () => !!getAuthToken(),
 
-  // Debug function to check token validity
+  refreshToken: async () => {
+    const token = getAuthToken();
+    if (!token) return null;
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const result = await response.json();
+        if (result.token) { setAuthToken(result.token); return result.token; }
+      }
+      removeAuthToken();
+      return null;
+    } catch {
+      removeAuthToken();
+      return null;
+    }
+  },
+
   validateToken: async () => {
     const token = getAuthToken();
-    if (!token) {
-      return { valid: false, reason: 'No token found' };
-    }
-    
+    if (!token) return { valid: false, reason: 'No token found' };
     try {
       const response = await fetch(`${API_BASE}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
-      
       if (response.ok) {
         const data = await response.json();
         return { valid: true, user: data.user };
-      } else {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-        return { valid: false, reason: error.error };
       }
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      return { valid: false, reason: error.error };
     } catch (error) {
       return { valid: false, reason: error.message };
     }
   },
 
-  // Force token refresh for debugging
-  forceRefresh: async () => {
-    console.log('Forcing token refresh...');
-    try {
-      const newToken = await auth.refreshToken();
-      if (newToken) {
-        console.log('Token refreshed successfully');
-        return { success: true, token: newToken };
-      } else {
-        console.log('Token refresh failed');
-        return { success: false, reason: 'Refresh failed' };
-      }
-    } catch (error) {
-      console.log('Token refresh error:', error);
-      return { success: false, reason: error.message };
-    }
-  },
-
-  // Profile management
-  updateProfile: async (profileData) => {
-    return apiRequest('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
-  },
+  updateProfile: async (profileData) =>
+    apiRequest('/auth/profile', { method: 'PUT', body: JSON.stringify(profileData) }),
 
   uploadAvatar: async (formData) => {
     const token = getAuthToken();
-    if (!token) {
-      throw new Error('Access token required. Please log in again.');
-    }
-
-    const config = {
+    if (!token) throw new Error('Access token required. Please log in again.');
+    const response = await fetch(`${API_BASE}/auth/avatar`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
-    };
-
-    try {
-      const response = await fetch(`${API_BASE}/auth/avatar`, config);
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Network error' }));
-        throw new Error(error.error || 'Avatar upload failed');
-      }
-      
-      return response.json();
-    } catch (fetchError) {
-      throw fetchError;
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+      throw new Error(error.error || 'Avatar upload failed');
     }
+    return response.json();
   },
 
-  changePassword: async (passwordData) => {
-    return apiRequest('/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify(passwordData),
-    });
-  },
+  changePassword: async (passwordData) =>
+    apiRequest('/auth/change-password', { method: 'POST', body: JSON.stringify(passwordData) }),
 
-  exportData: async () => {
-    return apiRequest('/auth/export-data', {
-      method: 'GET',
-    });
-  },
+  updatePreferences: async (preferences) =>
+    apiRequest('/auth/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
 
-  deleteAccount: async () => {
-    return apiRequest('/auth/delete-account', {
-      method: 'DELETE',
-    });
-  },
+  exportData: async () => apiRequest('/auth/export-data'),
 
-  // Profile management
-  updateProfile: async (profileData) => {
-    return apiRequest('/auth/profile', {
-      method: 'PUT',
-      body: JSON.stringify(profileData),
-    });
-  },
+  deleteAccount: async () => apiRequest('/auth/delete-account', { method: 'DELETE' }),
 
-  uploadAvatar: async (formData) => {
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('Access token required. Please log in again.');
-    }
+  completeOnboarding: async () =>
+    apiRequest('/auth/complete-onboarding', { method: 'POST' }),
 
-    const config = {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    };
+  forgotPassword: async (email) =>
+    apiRequest('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
 
-    try {
-      const response = await fetch(`${API_BASE}/auth/avatar`, config);
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Network error' }));
-        throw new Error(error.error || 'Avatar upload failed');
-      }
-      
-      return response.json();
-    } catch (fetchError) {
-      throw fetchError;
-    }
-  },
+  verifyResetToken: async (token) =>
+    apiRequest('/auth/verify-reset-token', { method: 'POST', body: JSON.stringify({ token }) }),
 
-  changePassword: async (passwordData) => {
-    return apiRequest('/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify(passwordData),
-    });
-  },
+  validateResetToken: async (token) =>
+    apiRequest('/auth/validate-reset-token', { method: 'POST', body: JSON.stringify({ token }) }),
 
-  updatePreferences: async (preferences) => {
-    return apiRequest('/auth/preferences', {
-      method: 'PUT',
-      body: JSON.stringify(preferences),
-    });
-  },
-
-  exportData: async () => {
-    return apiRequest('/auth/export-data', {
-      method: 'GET',
-    });
-  },
-
-  completeOnboarding: async () => {
-    return apiRequest('/auth/complete-onboarding', {
-      method: 'POST',
-    });
-  },
-
-  // Password reset methods
-  forgotPassword: async (email) => {
-    return apiRequest('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  },
-
-  verifyResetToken: async (token) => {
-    return apiRequest('/auth/verify-reset-token', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    });
-  },
-
-  validateResetToken: async (token) => {
-    return apiRequest('/auth/validate-reset-token', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    });
-  },
-
-  resetPassword: async (token, password) => {
-    return apiRequest('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password }),
-    });
-  },
+  resetPassword: async (token, password) =>
+    apiRequest('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
 };
 
-// Artwork API
+// ── Artwork ───────────────────────────────────────────────────────────────────
 export const artwork = {
-  create: async (artworkData) => {
-    return apiRequest('/artwork/', {
-      method: 'POST',
-      body: JSON.stringify(artworkData),
-    });
-  },
+  create: async (artworkData) =>
+    apiRequest('/artwork/', { method: 'POST', body: JSON.stringify(artworkData) }),
 
   createWithFile: async (formData) => {
     const token = getAuthToken();
-    console.log('CreateWithFile - Token:', token ? 'Present' : 'Missing');
-    
-    if (!token) {
-      throw new Error('Access token required. Please log in again.');
-    }
+    if (!token) throw new Error('Access token required. Please log in again.');
 
-    const config = {
+    const response = await fetch(`${API_BASE}/artwork/`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
-    };
+    });
 
-    try {
-      const response = await fetch(`${API_BASE}/artwork/`, config);
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Network error' }));
-        console.log('CreateWithFile Error:', error);
-        
-        // If token is invalid/expired, try to refresh it once
-        if (response.status === 401 && !isRefreshing) {
-          console.log('Token might be expired, attempting refresh...');
-          isRefreshing = true;
-          
-          try {
-            const newToken = await auth.refreshToken();
-            if (newToken) {
-              // Retry the original request with new token
-              const retryConfig = {
-                ...config,
-                headers: {
-                  ...config.headers,
-                  Authorization: `Bearer ${newToken}`
-                }
-              };
-              const retryResponse = await fetch(`${API_BASE}/artwork/`, retryConfig);
-              if (retryResponse.ok) {
-                return retryResponse.json();
-              } else {
-                const retryError = await retryResponse.json().catch(() => ({ error: 'Network error' }));
-                throw new Error(retryError.error || 'Request failed after token refresh');
-              }
-            }
-          } catch (refreshError) {
-            console.log('Token refresh failed:', refreshError);
-            // Force logout if refresh fails
-            removeAuthToken();
-            throw new Error('Session expired. Please log in again.');
-          } finally {
-            isRefreshing = false;
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Network error' }));
+
+      if (response.status === 401 && !isRefreshing) {
+        isRefreshing = true;
+        try {
+          const newToken = await auth.refreshToken();
+          if (newToken) {
+            const retryResponse = await fetch(`${API_BASE}/artwork/`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${newToken}` },
+              body: formData,
+            });
+            if (retryResponse.ok) return retryResponse.json();
+            const retryError = await retryResponse.json().catch(() => ({ error: 'Network error' }));
+            throw new Error(retryError.error || 'Request failed after token refresh');
           }
+        } catch (refreshError) {
+          removeAuthToken();
+          throw new Error('Session expired. Please log in again.');
+        } finally {
+          isRefreshing = false;
         }
-        
-        throw new Error(error.error || 'Request failed');
       }
-      
-      return response.json();
-    } catch (fetchError) {
-      console.log('CreateWithFile Fetch Error:', fetchError);
-      throw fetchError;
+
+      throw new Error(error.error || 'Request failed');
     }
+
+    return response.json();
   },
 
-  getMine: async () => {
-    return apiRequest('/artwork/mine');
-  },
+  getMine: async () => apiRequest('/artwork/mine'),
 
-  deleteMine: async () => {
-    console.log('Deleting artwork...');
-    const token = getAuthToken();
-    console.log('Token for artwork deletion:', token ? 'Present' : 'Missing');
-    
-    if (!token) {
-      throw new Error('Access token required. Please log in again.');
-    }
-    
-    try {
-      const result = await apiRequest('/artwork/mine', {
-        method: 'DELETE',
-      });
-      console.log('Artwork deleted successfully:', result);
-      return result;
-    } catch (error) {
-      console.error('Artwork deletion failed:', error);
-      throw error;
-    }
-  },
+  deleteMine: async () => apiRequest('/artwork/mine', { method: 'DELETE' }),
 };
 
-// Reflection API
+// ── Reflection ────────────────────────────────────────────────────────────────
 export const reflection = {
-  create: async () => {
-    console.log('Creating reflection...');
-    const token = getAuthToken();
+  create: async () => apiRequest('/reflection/', { method: 'POST' }),
 
-    if (!token) {
-      throw new Error('Access token required. Please log in again.');
-    }
+  getMine: async () => apiRequest('/reflection/mine'),
 
-    try {
-      const result = await apiRequest('/reflection/', {
-        method: 'POST',
-      });
-      return result;
-    } catch (error) {
-      console.error('Reflection creation failed:', error);
-      throw error;
-    }
-  },
+  getByArtworkId: async (artworkId) => apiRequest(`/reflection/artwork/${artworkId}`),
 
-  getMine: async () => {
-    return apiRequest('/reflection/mine');
-  },
+  refine: async (data) =>
+    apiRequest('/reflection/refine', { method: 'POST', body: JSON.stringify(data) }),
 
-  // ✅ ADD THIS (THIS IS YOUR MISSING PIECE)
-  refine: async (data) => {
-    console.log("Refining reflection with:", data);
-
-    return apiRequest('/reflection/refine', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // (optional but useful)
-  regenerate: async () => {
-    return apiRequest('/reflection/regenerate', {
-      method: 'POST',
-    });
-  }
+  regenerate: async () => apiRequest('/reflection/regenerate', { method: 'POST' }),
 };
-
- 

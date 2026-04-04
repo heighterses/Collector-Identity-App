@@ -432,67 +432,74 @@ def update_profile():
 @bp.route('/avatar', methods=['POST'])
 @jwt_required_custom
 def upload_avatar():
-    """Upload user avatar"""
+    """Upload user avatar to MinIO and save proxy URL in DB"""
     try:
         user_id = request.current_user['user_id']
-        
+
         user = User.query.get(user_id)
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
+
         if 'avatar' not in request.files:
             return jsonify({'error': 'No avatar file provided'}), 400
-        
+
         file = request.files['avatar']
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
+
         # Validate file type
         allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-        if not ('.' in file.filename and 
-                file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+        if ext not in allowed_extensions:
             return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
-        
-        # Validate file size (2MB max)
+
+        # Validate file size (2 MB max)
         file.seek(0, os.SEEK_END)
         file_size = file.tell()
         file.seek(0)
-        
-        if file_size > 2 * 1024 * 1024:  # 2MB
+        if file_size > 2 * 1024 * 1024:
             return jsonify({'error': 'File too large. Maximum size is 2MB'}), 400
-        
-        # Generate secure filename
-        filename = secure_filename(file.filename)
-        file_extension = filename.rsplit('.', 1)[1].lower()
-        avatar_filename = f"avatars/{user_id}_{datetime.utcnow().timestamp()}.{file_extension}"
-        
-        # Upload to S3
+
+        # Build a unique object key inside the avatars/ prefix
+        object_key = f"avatars/user-{user_id}/{int(datetime.utcnow().timestamp())}.{ext}"
+
+        # Read bytes and upload via s3_service
+        file_bytes = file.read()
+        mime_type = file.mimetype or f"image/{ext}"
+
         try:
-            avatar_url = s3_service.upload_file(file, avatar_filename)
-            
-            # Delete old avatar if exists
-            if user.avatar_url:
-                try:
-                    old_key = user.avatar_url.split('/')[-1]
-                    s3_service.delete_file(f"avatars/{old_key}")
-                except:
-                    pass  # Don't fail if old avatar deletion fails
-            
-            # Update user avatar URL
-            user.avatar_url = avatar_url
-            user.updated_at = datetime.utcnow()
-            db.session.commit()
-            
-            current_app.logger.info(f'Avatar uploaded for user: {user_id}')
-            return jsonify({
-                'message': 'Avatar uploaded successfully',
-                'user': user.to_dict()
-            }), 200
-            
+            # Use explicit key upload so avatars go to avatars/ prefix, not artworks/
+            upload_result = s3_service.upload_file_with_key(
+                file_bytes,
+                object_key,
+                mime_type
+            )
+            saved_key = upload_result['object_key']
+            current_app.logger.info(f'Avatar uploaded to S3: {saved_key}')
         except Exception as upload_error:
-            current_app.logger.error(f'Avatar upload to S3 failed: {str(upload_error)}')
+            current_app.logger.error(f'Avatar S3 upload failed: {str(upload_error)}')
             return jsonify({'error': 'Failed to upload avatar'}), 500
-        
+
+        # Delete old avatar from S3 if it exists
+        if user.avatar_url:
+            try:
+                # avatar_url is stored as /api/images/<object_key>
+                old_key = user.avatar_url.replace('/api/images/', '', 1)
+                s3_service.delete_file(old_key)
+            except Exception:
+                pass  # Non-fatal
+
+        # Store as a proxy path — never store raw MinIO URLs
+        user.avatar_url = f'/api/images/{saved_key}'
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        current_app.logger.info(f'Avatar saved for user {user_id}: {user.avatar_url}')
+        return jsonify({
+            'message': 'Avatar uploaded successfully',
+            'user': user.to_dict()
+        }), 200
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Avatar upload failed: {str(e)}')

@@ -10,516 +10,202 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  
-  // General error/success state
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    if (currentUser) {
-      setDisplayName(currentUser.name || '');
-      setLanguage(currentUser.language || 'en');
-      setTimezone(currentUser.timezone || 'UTC');
-    }
-    const timer = setTimeout(() => setLoading(false), 300);
-    return () => clearTimeout(timer);
+    if (currentUser) { setDisplayName(currentUser.name || ''); setLanguage(currentUser.language || 'en'); setTimezone(currentUser.timezone || 'UTC'); }
+    const t = setTimeout(() => setLoading(false), 200);
+    return () => clearTimeout(t);
   }, [currentUser]);
 
-  // Sync local state when currentUser changes (e.g., after updates)
   useEffect(() => {
-    if (currentUser) {
-      setDisplayName(currentUser.name || '');
-      setLanguage(currentUser.language || 'en');
-      setTimezone(currentUser.timezone || 'UTC');
-    }
-  }, [currentUser.name, currentUser.language, currentUser.timezone, currentUser.avatar_url]);
+    if (currentUser) { setDisplayName(currentUser.name || ''); setLanguage(currentUser.language || 'en'); setTimezone(currentUser.timezone || 'UTC'); }
+  }, [currentUser?.name, currentUser?.language, currentUser?.timezone]);
 
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name) => { if (!name) return 'U'; return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2); };
+
+  const notify = (msg, isError = false) => {
+    if (isError) setError(msg); else setSuccess(msg);
+    setTimeout(() => { setError(''); setSuccess(''); }, 3000);
   };
 
-  const handleSaveDisplayName = async () => {
-    if (!displayName.trim()) {
-      setError('Name cannot be empty');
-      return;
-    }
-    
-    try {
-      setError('');
-      const result = await auth.updateProfile({ name: displayName.trim() });
-      setIsEditing(false);
-      setSuccess('Name updated successfully');
-      
-      // Update parent component with fresh user data
-      if (onUserUpdate) {
-        onUserUpdate(result.user);
-      }
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to update name');
-    }
+  const handleSaveName = async () => {
+    if (!displayName.trim()) { notify('Name cannot be empty', true); return; }
+    try { const r = await auth.updateProfile({ name: displayName.trim() }); setIsEditing(false); notify('Name updated'); if (onUserUpdate) onUserUpdate(r.user); }
+    catch (err) { notify(err.message || 'Failed to update name', true); }
   };
 
-  const handleCancelEdit = () => {
-    setDisplayName(currentUser?.name || '');
-    setIsEditing(false);
-    setError('');
+  const handleLanguageChange = async (val) => {
+    try { const r = await auth.updateProfile({ language: val }); setLanguage(val); notify('Language updated'); if (onUserUpdate) onUserUpdate(r.user); }
+    catch (err) { notify(err.message || 'Failed to update language', true); }
   };
 
-  const handleLanguageChange = async (newLanguage) => {
-    try {
-      setError('');
-      const result = await auth.updateProfile({ language: newLanguage });
-      setLanguage(newLanguage);
-      setSuccess('Language updated successfully');
-      
-      // Update parent component with fresh user data
-      if (onUserUpdate) {
-        onUserUpdate(result.user);
-      }
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to update language');
-    }
-  };
-
-  const handleTimezoneChange = async (newTimezone) => {
-    try {
-      setError('');
-      const result = await auth.updateProfile({ timezone: newTimezone });
-      setTimezone(newTimezone);
-      setSuccess('Timezone updated successfully');
-      
-      // Update parent component with fresh user data
-      if (onUserUpdate) {
-        onUserUpdate(result.user);
-      }
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to update timezone');
-    }
+  const handleTimezoneChange = async (val) => {
+    try { const r = await auth.updateProfile({ timezone: val }); setTimezone(val); notify('Timezone updated'); if (onUserUpdate) onUserUpdate(r.user); }
+    catch (err) { notify(err.message || 'Failed to update timezone', true); }
   };
 
   const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      
-      if (file.size > 2 * 1024 * 1024) {
-        setError('Image must be smaller than 2MB');
-        return;
-      }
-      
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setAvatarPreview(e.target.result);
-      reader.readAsDataURL(file);
-      setError('');
-    }
+    const file = e.target.files[0]; if (!file) return;
+    if (!file.type.startsWith('image/')) { notify('Please select an image file', true); return; }
+    if (file.size > 2 * 1024 * 1024) { notify('Image must be smaller than 2MB', true); return; }
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setAvatarPreview(e.target.result);
+    reader.readAsDataURL(file);
   };
 
   const handleAvatarUpload = async () => {
     if (!avatarFile) return;
-    
     setIsUploading(true);
-    setError('');
-    
     try {
-      const formData = new FormData();
-      formData.append('avatar', avatarFile);
-      
-      const result = await auth.uploadAvatar(formData);
-      setSuccess('Avatar updated successfully');
+      const fd = new FormData();
+      fd.append('avatar', avatarFile);
+      const r = await auth.uploadAvatar(fd);
+      console.log('Avatar upload response:', r);
+      console.log('Saved avatar_url:', r.user?.avatar_url);
+      notify('Photo updated');
       setAvatarFile(null);
       setAvatarPreview(null);
-      
-      // Update parent component with fresh user data
-      if (onUserUpdate) {
-        onUserUpdate(result.user);
-      }
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || 'Failed to upload avatar');
-    } finally {
-      setIsUploading(false);
+      if (onUserUpdate) onUserUpdate(r.user);
     }
+    catch (err) { notify(err.message || 'Failed to upload photo', true); }
+    finally { setIsUploading(false); }
   };
 
   if (loading) {
     return (
-      <div className="dashboard-container">
-        <div className="empty-state">
-          <p>Loading...</p>
+      <div className="gallery-profile">
+        <div className="ghost-cards">
+          <div className="ghost-card" style={{ height: 220 }} />
+          <div className="ghost-card" style={{ height: 160 }} />
         </div>
       </div>
     );
   }
 
+  // avatarPreview = local blob (just selected, not yet uploaded)
+  // currentUser.avatar_url = /api/images/... proxy path (persisted)
+  const avatarSrc = avatarPreview || currentUser?.avatar_url || null;
+
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Profile</h1>
-        <p className="dashboard-subtitle">Manage your identity and personal information</p>
+    <div className="gallery-profile">
+      <div className="gallery-profile-header">
+        <h1 className="gallery-profile-title">Profile</h1>
+        <p className="gallery-profile-sub">Your identity and preferences</p>
       </div>
 
-      <div style={styles.profileContainer}>
-        {/* Profile Header - Identity */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Identity</h3>
-          </div>
-          <div className="card-content">
-            <div style={styles.profileHeader}>
-              <div style={styles.avatarSection}>
-                <div style={styles.avatar}>
-                  {currentUser?.avatar_url ? (
-                    <img 
-                      src={currentUser.avatar_url} 
-                      alt="Avatar" 
-                      style={styles.avatarImage}
-                    />
-                  ) : avatarPreview ? (
-                    <img 
-                      src={avatarPreview} 
-                      alt="Avatar preview" 
-                      style={styles.avatarImage}
-                    />
-                  ) : (
-                    getInitials(currentUser?.name)
-                  )}
-                </div>
-                <input
-                  type="file"
-                  id="avatar-upload"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  style={styles.hiddenInput}
+      {/* Identity card */}
+      <div className="gallery-identity-card">
+        <div className="gallery-identity-banner" />
+        <div className="gallery-identity-body">
+          <div className="gallery-avatar-row">
+            <div className="gallery-avatar">
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt="Avatar"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
-                {avatarFile ? (
-                  <div style={styles.avatarActions}>
-                    <button 
-                      onClick={handleAvatarUpload}
-                      className="btn btn-primary"
-                      style={styles.uploadButton}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? 'Uploading...' : 'Upload'}
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setAvatarFile(null);
-                        setAvatarPreview(null);
-                      }}
-                      className="btn btn-secondary"
-                      style={styles.cancelAvatarButton}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => document.getElementById('avatar-upload').click()}
-                    className="btn btn-secondary"
-                    style={styles.changeAvatarButton}
-                  >
-                    Change Avatar
+              ) : null}
+              {/* Initials shown when no avatar or image fails */}
+              <span style={{
+                position: avatarSrc ? 'absolute' : 'static',
+                fontSize: 'var(--text-xl)',
+                fontWeight: 'var(--weight-bold)',
+                color: 'var(--white)',
+              }}>
+                {getInitials(currentUser?.name)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
+              {avatarFile ? (
+                <>
+                  <button onClick={handleAvatarUpload} className="btn btn-primary btn-sm" disabled={isUploading}>
+                    {isUploading ? 'Uploading…' : 'Upload'}
                   </button>
-                )}
-              </div>
-              
-              <div style={styles.profileInfo}>
-                <div style={styles.nameSection}>
-                  {isEditing ? (
-                    <div style={styles.editingContainer}>
-                      <input
-                        type="text"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        className="form-input"
-                        style={styles.nameInput}
-                        placeholder="Enter your name"
-                      />
-                      <div style={styles.editActions}>
-                        <button 
-                          onClick={handleSaveDisplayName}
-                          className="btn btn-primary"
-                          style={styles.saveButton}
-                        >
-                          Save
-                        </button>
-                        <button 
-                          onClick={handleCancelEdit}
-                          className="btn btn-secondary"
-                          style={styles.cancelButton}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={styles.nameDisplay}>
-                      <h2 style={styles.displayName}>{displayName || 'No name set'}</h2>
-                      <button 
-                        onClick={() => setIsEditing(true)}
-                        style={styles.editButton}
-                        className="profile-edit-button"
-                      >
-                        Edit
-                      </button>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={styles.emailSection}>
-                  <span style={styles.email}>{currentUser?.email}</span>
-                  <span style={styles.authProvider}>
-                    {currentUser?.auth_provider === 'google' ? 'Google Account' : 'Email Account'}
-                  </span>
-                </div>
-              </div>
+                  <button onClick={() => { setAvatarFile(null); setAvatarPreview(null); }} className="btn btn-secondary btn-sm">Cancel</button>
+                </>
+              ) : (
+                <button onClick={() => document.getElementById('avatar-upload').click()} className="btn btn-secondary btn-sm">
+                  Change photo
+                </button>
+              )}
+              <input type="file" id="avatar-upload" accept="image/*" onChange={handleAvatarChange} style={{ display: 'none' }} />
             </div>
           </div>
-        </div>
 
-        {/* Localization Preferences */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Localization</h3>
-          </div>
-          <div className="card-content">
-            <div style={styles.preferencesGrid}>
-              <div style={styles.preferenceItem}>
-                <label style={styles.preferenceLabel}>Language</label>
-                <select 
-                  style={styles.preferenceSelect} 
-                  value={language}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
-                >
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                  <option value="fr">Français</option>
-                  <option value="de">Deutsch</option>
-                  <option value="it">Italiano</option>
-                  <option value="pt">Português</option>
-                  <option value="ja">日本語</option>
-                  <option value="ko">한국어</option>
-                  <option value="zh">中文</option>
-                </select>
-              </div>
-              
-              <div style={styles.preferenceItem}>
-                <label style={styles.preferenceLabel}>Timezone</label>
-                <select 
-                  style={styles.preferenceSelect} 
-                  value={timezone}
-                  onChange={(e) => handleTimezoneChange(e.target.value)}
-                >
-                  <option value="UTC">UTC</option>
-                  <option value="America/New_York">Eastern Time (ET)</option>
-                  <option value="America/Chicago">Central Time (CT)</option>
-                  <option value="America/Denver">Mountain Time (MT)</option>
-                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                  <option value="Europe/London">London (GMT)</option>
-                  <option value="Europe/Paris">Paris (CET)</option>
-                  <option value="Europe/Berlin">Berlin (CET)</option>
-                  <option value="Asia/Tokyo">Tokyo (JST)</option>
-                  <option value="Asia/Shanghai">Shanghai (CST)</option>
-                  <option value="Asia/Seoul">Seoul (KST)</option>
-                  <option value="Australia/Sydney">Sydney (AEDT)</option>
-                </select>
+          {isEditing ? (
+            <div className="gallery-name-edit">
+              <input
+                type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                className="form-input" placeholder="Your name"
+                style={{ fontSize: 'var(--text-lg)', fontWeight: 'var(--weight-semibold)' }}
+              />
+              <div className="gallery-name-edit-actions">
+                <button onClick={handleSaveName} className="btn btn-primary btn-sm">Save</button>
+                <button onClick={() => { setDisplayName(currentUser?.name || ''); setIsEditing(false); }} className="btn btn-secondary btn-sm">Cancel</button>
               </div>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div className="gallery-name-row">
+              <h2 className="gallery-display-name">{displayName || 'No name set'}</h2>
+              <button onClick={() => setIsEditing(true)} className="btn btn-ghost btn-sm">Edit</button>
+            </div>
+          )}
 
-        {/* Error/Success Messages */}
-        {error && (
-          <div style={styles.errorMessage}>
-            {error}
-          </div>
-        )}
-        {success && (
-          <div style={styles.successMessage}>
-            {success}
-          </div>
-        )}
+          <p className="gallery-email">{currentUser?.email}</p>
+          <span className="gallery-provider-badge">
+            {currentUser?.auth_provider === 'google' ? 'Google Account' : 'Email Account'}
+          </span>
+        </div>
       </div>
+
+      {/* Localization */}
+      <div className="gallery-prefs-card">
+        <div className="gallery-prefs-header">
+          <h3 className="gallery-prefs-label">Localization</h3>
+        </div>
+        <div className="gallery-prefs-body">
+          <div className="pref-item">
+            <label className="pref-label">Language</label>
+            <select className="form-input" value={language} onChange={(e) => handleLanguageChange(e.target.value)}>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+              <option value="ja">日本語</option>
+              <option value="ko">한국어</option>
+              <option value="zh">中文</option>
+            </select>
+          </div>
+          <div className="pref-item">
+            <label className="pref-label">Timezone</label>
+            <select className="form-input" value={timezone} onChange={(e) => handleTimezoneChange(e.target.value)}>
+              <option value="UTC">UTC</option>
+              <option value="America/New_York">Eastern (ET)</option>
+              <option value="America/Chicago">Central (CT)</option>
+              <option value="America/Denver">Mountain (MT)</option>
+              <option value="America/Los_Angeles">Pacific (PT)</option>
+              <option value="Europe/London">London (GMT)</option>
+              <option value="Europe/Paris">Paris (CET)</option>
+              <option value="Europe/Berlin">Berlin (CET)</option>
+              <option value="Asia/Tokyo">Tokyo (JST)</option>
+              <option value="Asia/Shanghai">Shanghai (CST)</option>
+              <option value="Asia/Seoul">Seoul (KST)</option>
+              <option value="Australia/Sydney">Sydney (AEDT)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {error   && <div className="alert alert-error">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
     </div>
   );
-};
-
-const styles = {
-  profileContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-6)',
-    maxWidth: '600px',
-  },
-  profileHeader: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 'var(--space-6)',
-  },
-  avatarSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-    flexShrink: 0,
-  },
-  avatar: {
-    width: '80px',
-    height: '80px',
-    borderRadius: '50%',
-    background: 'var(--color-gray-200)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 'var(--font-size-2xl)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-gray-700)',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    borderRadius: '50%',
-  },
-  changeAvatarButton: {
-    fontSize: 'var(--font-size-xs)',
-    padding: 'var(--space-1) var(--space-2)',
-  },
-  avatarActions: {
-    display: 'flex',
-    gap: 'var(--space-2)',
-    flexDirection: 'column',
-  },
-  uploadButton: {
-    fontSize: 'var(--font-size-xs)',
-    padding: 'var(--space-1) var(--space-2)',
-  },
-  cancelAvatarButton: {
-    fontSize: 'var(--font-size-xs)',
-    padding: 'var(--space-1) var(--space-2)',
-  },
-  hiddenInput: {
-    display: 'none',
-  },
-  profileInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  nameSection: {
-    marginBottom: 'var(--space-3)',
-  },
-  nameDisplay: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--space-3)',
-  },
-  displayName: {
-    fontSize: 'var(--font-size-2xl)',
-    fontWeight: 'var(--font-weight-semibold)',
-    color: 'var(--color-gray-900)',
-    margin: 0,
-  },
-  editButton: {
-    background: 'none',
-    border: '1px solid var(--color-gray-300)',
-    color: 'var(--color-gray-600)',
-    padding: 'var(--space-1) var(--space-3)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 'var(--font-size-sm)',
-    cursor: 'pointer',
-    transition: 'all var(--transition-normal)',
-  },
-  editingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-3)',
-  },
-  nameInput: {
-    fontSize: 'var(--font-size-xl)',
-    fontWeight: 'var(--font-weight-semibold)',
-    padding: 'var(--space-3)',
-  },
-  editActions: {
-    display: 'flex',
-    gap: 'var(--space-2)',
-  },
-  saveButton: {
-    padding: 'var(--space-2) var(--space-4)',
-    fontSize: 'var(--font-size-sm)',
-  },
-  cancelButton: {
-    padding: 'var(--space-2) var(--space-4)',
-    fontSize: 'var(--font-size-sm)',
-  },
-  emailSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-1)',
-  },
-  email: {
-    fontSize: 'var(--font-size-base)',
-    color: 'var(--color-gray-600)',
-  },
-  authProvider: {
-    fontSize: 'var(--font-size-sm)',
-    color: 'var(--color-gray-500)',
-  },
-  preferencesGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 'var(--space-6)',
-  },
-  preferenceItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 'var(--space-2)',
-  },
-  preferenceLabel: {
-    fontSize: 'var(--font-size-sm)',
-    fontWeight: 'var(--font-weight-medium)',
-    color: 'var(--color-gray-700)',
-  },
-  preferenceSelect: {
-    padding: 'var(--space-3)',
-    border: '1px solid var(--color-gray-300)',
-    borderRadius: 'var(--radius-md)',
-    fontSize: 'var(--font-size-base)',
-    background: 'var(--color-white)',
-    color: 'var(--color-gray-900)',
-    cursor: 'pointer',
-  },
-  errorMessage: {
-    color: 'var(--color-error)',
-    fontSize: 'var(--font-size-sm)',
-    textAlign: 'center',
-    padding: 'var(--space-4)',
-    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid rgba(220, 38, 38, 0.2)',
-    marginTop: 'var(--space-4)',
-  },
-  successMessage: {
-    color: 'var(--color-success)',
-    fontSize: 'var(--font-size-sm)',
-    textAlign: 'center',
-    padding: 'var(--space-4)',
-    backgroundColor: 'rgba(22, 163, 74, 0.1)',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid rgba(22, 163, 74, 0.2)',
-    marginTop: 'var(--space-4)',
-  },
 };
 
 export default Profile;

@@ -37,13 +37,37 @@ class User(db.Model):
     artworks = db.relationship('Artwork', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self, include_sensitive=False):
+        # Normalize avatar_url: always return a /api/images/ proxy path
+        # so the frontend never needs to hit MinIO directly
+        raw_avatar = self.avatar_url
+        if raw_avatar:
+            if raw_avatar.startswith('/api/images/'):
+                avatar_url_out = raw_avatar
+            elif raw_avatar.startswith('http://') or raw_avatar.startswith('https://'):
+                # Legacy raw MinIO URL — extract the object key after the bucket name
+                # e.g. http://localhost:9002/artworks/avatars/user-x/123.jpg
+                # → /api/images/avatars/user-x/123.jpg
+                try:
+                    # Split on bucket name 'artworks/'
+                    parts = raw_avatar.split('/artworks/', 1)
+                    if len(parts) == 2:
+                        avatar_url_out = f'/api/images/{parts[1]}'
+                    else:
+                        avatar_url_out = raw_avatar
+                except Exception:
+                    avatar_url_out = raw_avatar
+            else:
+                avatar_url_out = raw_avatar
+        else:
+            avatar_url_out = None
+
         data = {
             'id': self.id,
             'email': self.email,
             'name': self.name,
             'auth_provider': self.auth_provider,
             'onboarding_completed': self.onboarding_completed,
-            'avatar_url': self.avatar_url,
+            'avatar_url': avatar_url_out,
             'language': self.language,
             'timezone': self.timezone,
             'privacy_settings': self.privacy_settings,
