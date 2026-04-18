@@ -17,7 +17,6 @@ class Artwork(db.Model):
     
     # Relationships
     reflection = db.relationship('Reflection', backref='artwork', uselist=False, cascade='all, delete-orphan')
-    identity_template = db.relationship('IdentityTemplate', backref='artwork', uselist=False, cascade='all, delete-orphan')
     
     def to_dict(self, include_user=False):
         data = {

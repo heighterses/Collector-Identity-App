@@ -12,15 +12,10 @@ class IdentityTemplate(db.Model):
     __tablename__ = 'identity_templates'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    artwork_id = db.Column(db.String(36), db.ForeignKey('artworks.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    artwork_id = db.Column(db.String(36), db.ForeignKey('artworks.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    # Enforce one template per user+artwork combination
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'artwork_id', name='uq_identity_template_user_artwork'),
-    )
 
     # Relationships
     traits = db.relationship('IdentityTrait', backref='template', lazy=True,
@@ -55,18 +50,14 @@ class IdentityTrait(db.Model):
     __tablename__ = 'identity_traits'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    template_id = db.Column(db.String(36), db.ForeignKey('identity_templates.id', ondelete='CASCADE'), nullable=False, index=True)
+    template_id = db.Column(db.String(36), db.ForeignKey('identity_templates.id', ondelete='CASCADE'), nullable=False)
     label = db.Column(db.String(255), nullable=False)
-    value = db.Column(db.Text, nullable=True)               # Text to support numeric, boolean, or string values
+    value = db.Column(db.String(500), nullable=True)        # stored as string, interpreted by trait_type
     trait_type = db.Column(db.String(10), nullable=False)   # 'slider' | 'chip' | 'text'
     position = db.Column(db.Integer, default=0, nullable=False)
     ai_generated = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    __table_args__ = (
-        db.CheckConstraint("trait_type IN ('slider', 'chip', 'text')", name='valid_trait_type'),
-    )
 
     def to_dict(self):
         return {
