@@ -126,3 +126,8 @@ kubernetes/
 .kubernetes/
 .monitoring/
 metrics/
+env
+env/
+backend-flask/env
+backend-flask/env/
+GOOGLE_AUTH_SETUP.md
