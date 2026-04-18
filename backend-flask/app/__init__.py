@@ -36,11 +36,14 @@ def create_app(config_class=Config):
         app.logger.setLevel(logging.INFO)
         app.logger.info('Flask app startup')
     
+    # Import models so Flask-Migrate can detect them
+    from app.models import identity  # noqa: F401
+
     # Register blueprints
     from app.routes.auth import bp as auth_bp
     from app.routes.artwork import bp as artwork_bp
     from app.routes.reflection import bp as reflection_bp
-    
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(artwork_bp, url_prefix='/api/artwork')
     app.register_blueprint(reflection_bp, url_prefix='/api/reflection')
