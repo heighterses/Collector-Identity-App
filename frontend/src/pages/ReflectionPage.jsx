@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const ReflectionPage = ({ onLogout, artwork }) => {
   const [loading, setLoading] = useState(false);
@@ -7,29 +7,95 @@ const ReflectionPage = ({ onLogout, artwork }) => {
   const [userInput, setUserInput] = useState('');
   const [refineLoading, setRefineLoading] = useState(false);
 
+  // ✅ LOAD EXISTING REFLECTION (IMPORTANT FIX)
+  useEffect(() => {
+    if (!artwork?.id) return;
+
+    const loadReflection = async () => {
+      try {
+        const res = await fetch(`/api/reflection/artwork/${artwork.id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data.reflection) {
+          setGeneratedReflection(data.reflection);
+        }
+      } catch {
+        // silently ignore (no reflection yet)
+      }
+    };
+
+    loadReflection();
+  }, [artwork]);
+
+  // ✅ GENERATE (FIXED ENDPOINT)
   const handleGenerateReflection = async () => {
-    setLoading(true); setError('');
+    if (!artwork?.id) {
+      setError('No artwork selected');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
     try {
-      const res = await fetch('/api/reflection', { method: 'POST' });
+      const res = await fetch(`/api/reflection/generate/${artwork.id}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+
       const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
       setGeneratedReflection(data.reflection);
-    } catch { setError('Failed to generate reflection'); }
-    finally { setLoading(false); }
+    } catch (err) {
+      setError(err.message || 'Failed to generate reflection');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // ✅ REFINE (FIXED PAYLOAD)
   const handleRefineReflection = async () => {
-    if (!userInput.trim()) return;
-    setRefineLoading(true); setError('');
+    if (!userInput.trim() || !generatedReflection?.id) return;
+
+    setRefineLoading(true);
+    setError('');
+
     try {
       const res = await fetch('/api/reflection/refine', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ artwork_id: artwork?.id, user_input: userInput })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: JSON.stringify({
+          reflection_id: generatedReflection.id, // ✅ FIXED
+          input: userInput // ✅ FIXED
+        })
       });
+
       const data = await res.json();
-      if (data.reflection) { setGeneratedReflection(data.reflection); setUserInput(''); }
-    } catch { setError('Failed to refine reflection'); }
-    finally { setRefineLoading(false); }
+
+      if (!res.ok) throw new Error(data.error || 'Failed');
+
+      if (data.reflection) {
+        setGeneratedReflection(data.reflection);
+        setUserInput('');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to refine reflection');
+    } finally {
+      setRefineLoading(false);
+    }
   };
 
   return (

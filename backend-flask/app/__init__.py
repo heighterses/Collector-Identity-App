@@ -12,6 +12,7 @@ db = SQLAlchemy()
 jwt = JWTManager()
 migrate = Migrate()
 
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -36,61 +37,33 @@ def create_app(config_class=Config):
         app.logger.setLevel(logging.INFO)
         app.logger.info('Flask app startup')
     
-    # Import models so Flask-Migrate can detect them
+    # Import models (for migrations)
     from app.models import identity  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import bp as auth_bp
     from app.routes.artwork import bp as artwork_bp
     from app.routes.reflection import bp as reflection_bp
-
+    from app.routes.images import bp as images_bp
+    from app.routes.identity import bp as identity_bp
+   
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(artwork_bp, url_prefix='/api/artwork')
     app.register_blueprint(reflection_bp, url_prefix='/api/reflection')
-    
+    app.register_blueprint(images_bp, url_prefix='/api/images')
+    app.register_blueprint(identity_bp, url_prefix='/api/identity')
+     
+    # ✅ FIX: Initialize S3 inside app context
+    from app.services.s3_service import s3_service
+    with app.app_context():
+        s3_service.initialize()
+
     # Health check route
     @app.route('/health')
     def health_check():
-        return {'status': 'OK', 'message': 'Collector Identity API is running'}
-    
-    # Image serving route
-    from app.services.s3_service import s3_service
-    
-    @app.route('/api/images/<path:object_key>')
-    def serve_image(object_key):
-        try:
-            if not object_key:
-                return {'error': 'Object key is required'}, 400
+        return {
+            'status': 'OK',
+            'message': 'Collector Identity API is running'
+        }
 
-            from flask import Response
-            import requests as req_lib
-
-            # Generate signed URL then stream the bytes back through Flask
-            # so the browser never needs to reach MinIO directly
-            signed_url = s3_service.get_signed_url(object_key, expires_in=300)
-            r = req_lib.get(signed_url, timeout=15, stream=True)
-
-            if r.status_code != 200:
-                app.logger.warning(f'MinIO returned {r.status_code} for {object_key}')
-                return {'error': 'Image not found'}, 404
-
-            content_type = r.headers.get('Content-Type', 'image/jpeg')
-
-            def generate():
-                for chunk in r.iter_content(chunk_size=8192):
-                    yield chunk
-
-            return Response(
-                generate(),
-                status=200,
-                content_type=content_type,
-                headers={
-                    'Cache-Control': 'public, max-age=3600',
-                    'Access-Control-Allow-Origin': '*',
-                }
-            )
-        except Exception as error:
-            app.logger.error(f'Image serving failed: {str(error)}')
-            return {'error': 'Image not found'}, 404
-    
     return app

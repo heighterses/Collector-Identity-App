@@ -6,7 +6,7 @@ bp = Blueprint('reflection', __name__, url_prefix='/api/reflection')
 
 
 # ==========================================================
-# ✅ GET USER REFLECTION
+# ✅ GET USER REFLECTION (LATEST)
 # ==========================================================
 @bp.route('/mine', methods=['GET'])
 @jwt_required_custom
@@ -17,7 +17,12 @@ def get_my_reflection():
         from app.models.artwork import Artwork
         from app.models.reflection import Reflection
 
-        artwork = Artwork.query.filter_by(user_id=user_id).first()
+        artwork = (
+            Artwork.query
+            .filter_by(user_id=user_id)
+            .order_by(Artwork.created_at.desc())
+            .first()
+        )
 
         if not artwork:
             return jsonify({'error': 'No artwork found'}), 404
@@ -37,55 +42,118 @@ def get_my_reflection():
 
 
 # ==========================================================
-# ✅ REFINE REFLECTION (USER INPUT + AI)
+# ✅ GET BY ARTWORK ID
+# ==========================================================
+@bp.route('/artwork/<artwork_id>', methods=['GET'])
+@jwt_required_custom
+def get_by_artwork(artwork_id):
+    try:
+        from app.models.reflection import Reflection
+
+        reflection = Reflection.query.filter_by(artwork_id=artwork_id).first()
+
+        if not reflection:
+            return jsonify({'error': 'Reflection not found'}), 404
+
+        return jsonify({
+            'reflection': reflection.to_dict()
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f'Fetch by artwork failed: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ==========================================================
+# 🔥 GENERATE FOR SPECIFIC ARTWORK
+# ==========================================================
+@bp.route('/generate/<artwork_id>', methods=['POST'])
+@jwt_required_custom
+def generate_reflection_for_artwork(artwork_id):
+    try:
+        from app.models.artwork import Artwork
+        from app.services.reflection_service import reflection_service
+        from app.services.identity_service import identity_service
+
+        user_id = request.current_user['user_id']
+
+        artwork = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+
+        if not artwork:
+            return jsonify({'error': 'Artwork not found'}), 404
+
+        # ✅ Generate reflection
+        reflection = reflection_service.generate_for_artwork(artwork)
+
+        if not reflection:
+            return jsonify({'error': 'Reflection generation failed'}), 500
+
+        # ✅ Generate identity
+        identity = identity_service.generate_for_reflection(
+            user_id=user_id,
+            artwork_id=artwork.id,
+            reflection_text=reflection.content
+        )
+
+        return jsonify({
+            'reflection': reflection.to_dict(),
+            'identity': identity.to_dict()
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f'Generate reflection failed: {str(e)}')
+        return jsonify({'error': 'Failed to generate reflection'}), 500
+
+
+# ==========================================================
+# 🔥 FIXED: REFINE REFLECTION + GENERATE IDENTITY
 # ==========================================================
 @bp.route('/refine', methods=['POST'])
 @jwt_required_custom
 def refine_reflection():
     try:
-        user_id = request.current_user['user_id']
         data = request.get_json()
 
-        user_input = data.get('user_input')
+        reflection_id = data.get('reflection_id')
+        user_input = data.get('input')
 
-        if not user_input or not user_input.strip():
+        if not reflection_id or not user_input or not user_input.strip():
             return jsonify({'error': 'User input is required'}), 400
 
-        from app.models.artwork import Artwork
         from app.models.reflection import Reflection
-        from app.services.reflection_pipeline import ReflectionPipeline
+        from app.models.artwork import Artwork
+        from app.services.reflection_service import reflection_service
+        from app.services.identity_service import identity_service  # 🔥 IMPORTANT
 
-        artwork = Artwork.query.filter_by(user_id=user_id).first()
-
-        if not artwork:
-            return jsonify({'error': 'No artwork found'}), 404
-
-        reflection = Reflection.query.filter_by(artwork_id=artwork.id).first()
+        reflection = Reflection.query.get(reflection_id)
 
         if not reflection:
-            return jsonify({'error': 'No reflection found'}), 404
+            return jsonify({'error': 'Reflection not found'}), 404
 
-        pipeline = ReflectionPipeline()
+        artwork = Artwork.query.get(reflection.artwork_id)
 
-        # 🧠 Build refine prompt
-        prompt = pipeline.build_refinement_prompt(
-            artwork=artwork,
-            previous_reflection=reflection.content,
-            user_input=user_input
+        if not artwork:
+            return jsonify({'error': 'Artwork not found'}), 404
+
+        # ✅ REFINE
+        updated_reflection = reflection_service.refine_reflection(
+            artwork,
+            reflection,
+            user_input
         )
 
-        # 🤖 Generate new reflection
-        new_reflection = pipeline.generate(prompt)
+        if not updated_reflection:
+            return jsonify({'error': 'Refinement failed'}), 500
 
-        if not new_reflection:
-            raise ValueError("AI returned empty response")
-
-        # 💾 Update existing reflection
-        reflection.content = new_reflection
-        db.session.commit()
+        # 🔥🔥🔥 THIS WAS MISSING (MAIN FIX)
+        identity_service.generate_for_reflection(
+            user_id=request.current_user['user_id'],
+            artwork_id=artwork.id,
+            reflection_text=updated_reflection.content
+        )
 
         return jsonify({
-            'reflection': reflection.to_dict()
+            'reflection': updated_reflection.to_dict()
         }), 200
 
     except Exception as e:
@@ -94,7 +162,7 @@ def refine_reflection():
 
 
 # ==========================================================
-# ✅ OPTIONAL: REGENERATE REFLECTION (WITHOUT USER INPUT)
+# ⚠️ KEEP OLD REGENERATE
 # ==========================================================
 @bp.route('/regenerate', methods=['POST'])
 @jwt_required_custom
@@ -103,34 +171,25 @@ def regenerate_reflection():
         user_id = request.current_user['user_id']
 
         from app.models.artwork import Artwork
-        from app.models.reflection import Reflection
-        from app.services.reflection_pipeline import ReflectionPipeline
+        from app.services.reflection_service import reflection_service
 
-        artwork = Artwork.query.filter_by(user_id=user_id).first()
+        artwork = (
+            Artwork.query
+            .filter_by(user_id=user_id)
+            .order_by(Artwork.created_at.desc())
+            .first()
+        )
 
         if not artwork:
             return jsonify({'error': 'No artwork found'}), 404
 
-        reflection = Reflection.query.filter_by(artwork_id=artwork.id).first()
+        updated_reflection = reflection_service.generate_for_artwork(artwork)
 
-        if not reflection:
-            return jsonify({'error': 'No reflection found'}), 404
-
-        pipeline = ReflectionPipeline()
-
-        # Reuse initial prompt logic
-        prompt = pipeline.build_initial_prompt(artwork)
-
-        new_reflection = pipeline.generate(prompt)
-
-        if not new_reflection:
-            raise ValueError("AI returned empty response")
-
-        reflection.content = new_reflection
-        db.session.commit()
+        if not updated_reflection:
+            return jsonify({'error': 'Generation failed'}), 500
 
         return jsonify({
-            'reflection': reflection.to_dict()
+            'reflection': updated_reflection.to_dict()
         }), 200
 
     except Exception as e:

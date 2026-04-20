@@ -126,8 +126,64 @@ kubernetes/
 .kubernetes/
 .monitoring/
 metrics/
+backend-flask/env/
+env/
+env/
+backend-flask/env/
+GOOGLE_AUTH_SETUP.md
+
+# =========================
+# ENV / SECRETS
+# =========================
+.env
+.env.*
 env
 env/
+env_backup
+env_backup/
+
+backend-flask/.env
+backend-flask/.env.*
 backend-flask/env
 backend-flask/env/
+backend-flask/env_backup
+backend-flask/env_backup/
+
+frontend/.env
+frontend/.env.*
+
+# =========================
+# KEEP THESE (DO NOT IGNORE)
+# =========================
+!env.example
+!backend-flask/.env.example
+!frontend/.env.example
+
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =========================
+# NODE
+# =========================
+node_modules/
+
+# =========================
+# LOGS
+# =========================
+*.log
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# OPTIONAL (docs with secrets)
+# =========================
 GOOGLE_AUTH_SETUP.md
