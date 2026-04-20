@@ -48,6 +48,7 @@
    
    # Start React frontend (new terminal)
    cd frontend
+   npm install chart.js react-chartjs-2
    npm run dev
    ```
 
