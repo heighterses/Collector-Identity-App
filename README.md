@@ -51,6 +51,9 @@
    npm install chart.js react-chartjs-2
    npm run dev
    ```
+   sentence-transformers
+   scikit-learn
+   numpy
 
 4. **Open your browser**
    - Frontend: http://localhost:3003
