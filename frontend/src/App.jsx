@@ -12,15 +12,14 @@ import Profile from './pages/Profile.jsx';
 import Settings from './pages/Settings.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
-import IdentityPage from './pages/IdentityPage.jsx';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasArtwork, setHasArtwork] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const [userArtwork, setUserArtwork] = useState(null);
-  const [userArtworks, setUserArtworks] = useState([]);
+  const [userArtwork, setUserArtwork] = useState(null); // latest
+  const [userArtworks, setUserArtworks] = useState([]); // ALL artworks
 
   const [userReflection, setUserReflection] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -69,20 +68,24 @@ const App = () => {
         artworksResponse = await artwork.getMine();
       } catch (err) {
         console.warn("No artworks yet");
+
         setHasArtwork(false);
         setUserArtwork(null);
         setUserArtworks([]);
         setUserReflection(null);
         setCurrentPage('dashboard');
+
         setLoading(false);
         return;
       }
 
       const artworks = artworksResponse.artworks || [];
+
       setUserArtworks(artworks);
 
       if (artworks.length > 0) {
         const latest = artworks[0];
+
         setUserArtwork(latest);
         setHasArtwork(true);
 
@@ -92,6 +95,7 @@ const App = () => {
         } catch {
           setUserReflection(null);
         }
+
       } else {
         setHasArtwork(false);
         setUserArtwork(null);
@@ -100,12 +104,14 @@ const App = () => {
 
     } catch (error) {
       auth.logout();
+
       setIsAuthenticated(false);
       setHasArtwork(false);
       setUserArtwork(null);
       setUserArtworks([]);
       setUserReflection(null);
       setCurrentUser(null);
+
     } finally {
       setLoading(false);
     }
@@ -116,23 +122,12 @@ const App = () => {
   };
 
   const handleArtworkCreated = async () => {
-    await checkAuthAndArtworkStatus();
+    await checkAuthAndArtworkStatus(); // refresh everything
     setCurrentPage('my-artwork');
   };
 
   const handleArtworkDeleted = async () => {
     await checkAuthAndArtworkStatus();
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-    setHasArtwork(false);
-    setUserArtwork(null);
-    setUserArtworks([]);
-    setUserReflection(null);
-    setCurrentPage('dashboard');
   };
 
   const handleNavigation = (pageId) => {
@@ -174,9 +169,6 @@ const App = () => {
       case 'settings':
         return <Settings currentUser={currentUser} />;
 
-      case 'identity':
-        return <IdentityPage artworkId={userArtwork?.id} />;
-
       default:
         return <Dashboard currentUser={currentUser} />;
     }
@@ -198,8 +190,6 @@ const App = () => {
         currentUser={currentUser}
         currentPage={currentPage}
         onNavigate={handleNavigation}
-        onLogout={handleLogout}
-        userArtwork={userArtwork}
       >
         {renderPageContent()}
       </Layout>

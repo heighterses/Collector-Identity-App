@@ -114,8 +114,7 @@ class EditEvent(db.Model):
     user_id = db.Column(
         db.String(36),
         db.ForeignKey('users.id', ondelete='CASCADE'),
-        nullable=False,
-        index=True
+        nullable=False
     )
     event_type = db.Column(db.String(20), nullable=False)  # create_trait | update_value | delete_trait
     old_value = db.Column(db.Text, nullable=True)
@@ -149,39 +148,22 @@ def log_edit_event(db_session, template_id, user_id, event_type, trait_id=None, 
     """
     Helper to log a committed edit event.
     Call this from route/service logic after a change is persisted.
-    Do NOT call db.session.commit() here - caller is responsible for committing.
 
     Args:
         db_session: SQLAlchemy db.session
         template_id: ID of the IdentityTemplate
         user_id: ID of the user making the change
         event_type: 'create_trait' | 'update_value' | 'delete_trait'
-        trait_id: ID of the affected IdentityTrait
+        trait_id: ID of the affected IdentityTrait (nullable for delete)
         old_value: Previous value as string (nullable)
         new_value: New value as string (nullable)
-
-    Returns:
-        EditEvent instance or None if event was skipped
     """
-    # Normalize values to strings for comparison
-    old_str = str(old_value) if old_value is not None else None
-    new_str = str(new_value) if new_value is not None else None
-
-    # Skip useless events where nothing changed
-    if event_type == 'update_value' and old_str == new_str:
-        return None
-
-    # update_value must always have a trait_id
-    if event_type == 'update_value' and not trait_id:
-        raise ValueError("update_value events must have a trait_id")
-
     event = EditEvent(
         template_id=template_id,
         trait_id=trait_id,
         user_id=user_id,
         event_type=event_type,
-        old_value=old_str,
-        new_value=new_str
+        old_value=str(old_value) if old_value is not None else None,
+        new_value=str(new_value) if new_value is not None else None
     )
     db_session.add(event)
-    return event

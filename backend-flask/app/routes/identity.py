@@ -1,122 +1,12 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth import jwt_required_custom
-from app import db
-from app.models.identity import IdentityTemplate, IdentityTrait, log_edit_event
+
 from app.services.identity_service import identity_service
 from app.services.identity_refinement_service import identity_refinement_service
 from app.services.pattern_service import pattern_service
-from app.services.intent_service import intent_service
+from app.services.intent_service import intent_service  # 🔥 NEW
 
 bp = Blueprint('identity', __name__, url_prefix='/api/identity')
-
-
-# ==========================================================
-# ✅ M2-05: GET IDENTITY TEMPLATE FOR DISPLAY (READ-ONLY)
-# ==========================================================
-@bp.route('/template/<artwork_id>', methods=['GET'])
-@jwt_required_custom
-def get_identity_template(artwork_id):
-    try:
-        user_id = request.current_user['user_id']
-
-        template = IdentityTemplate.query.filter_by(
-            user_id=user_id,
-            artwork_id=artwork_id
-        ).first()
-
-        if not template:
-            return jsonify({"template": None, "traits": []}), 200
-
-        traits = sorted(template.traits, key=lambda t: t.position)
-
-        return jsonify({
-            "template_id": template.id,
-            "artwork_id": template.artwork_id,
-            "traits": [
-                {
-                    "id": t.id,
-                    "label": t.label,
-                    "value": str(t.value) if t.value is not None else "",
-                    "type": t.trait_type,
-                    "position": t.position,
-                    "ai_generated": t.ai_generated
-                }
-                for t in traits
-            ]
-        }), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ==========================================================
-# ✅ M2-06: PATCH TRAIT (VALUE + LABEL) WITH EDIT TRACKING
-# ==========================================================
-@bp.route('/trait/<trait_id>', methods=['PATCH'])
-@jwt_required_custom
-def update_trait(trait_id):
-    try:
-        user_id = request.current_user['user_id']
-        data = request.get_json()
-
-        if 'value' not in data and 'label' not in data:
-            return jsonify({"error": "value or label is required"}), 400
-
-        trait = IdentityTrait.query.get(trait_id)
-        if not trait:
-            return jsonify({"error": "Trait not found"}), 404
-
-        if trait.template.user_id != user_id:
-            return jsonify({"error": "Unauthorized"}), 403
-
-        # Handle value update
-        if 'value' in data:
-            old_value = trait.value
-            new_value = str(data['value'])
-            trait.value = new_value
-            log_edit_event(
-                db_session=db.session,
-                template_id=trait.template_id,
-                user_id=user_id,
-                event_type='update_value',
-                trait_id=trait.id,
-                old_value=old_value,
-                new_value=new_value
-            )
-
-        # Handle label update
-        if 'label' in data:
-            old_label = trait.label
-            new_label = str(data['label']).strip()
-            if new_label and new_label != old_label:
-                trait.label = new_label
-                log_edit_event(
-                    db_session=db.session,
-                    template_id=trait.template_id,
-                    user_id=user_id,
-                    event_type='update_value',
-                    trait_id=trait.id,
-                    old_value=old_label,
-                    new_value=new_label
-                )
-
-        db.session.commit()
-
-        return jsonify({
-            "id": trait.id,
-            "label": trait.label,
-            "value": str(trait.value) if trait.value is not None else "",
-            "type": trait.trait_type,
-            "position": trait.position,
-            "ai_generated": trait.ai_generated
-        }), 200
-
-    except ValueError as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
 
 
 # ==========================================================
