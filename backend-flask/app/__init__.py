@@ -40,6 +40,7 @@ def create_app(config_class=Config):
     # Import models (for migrations)
     from app.models import identity  # noqa: F401
     from app.models import edit_event  # noqa: F401
+    from app.models import identity_version  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import bp as auth_bp

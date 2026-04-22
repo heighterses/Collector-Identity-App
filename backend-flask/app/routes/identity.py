@@ -1,12 +1,200 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth import jwt_required_custom
-
+from app import db
+from app.models.identity import IdentityTemplate, IdentityTrait
+from app.models.edit_event import EditEvent
+from app.models.identity_version import IdentityVersion
 from app.services.identity_service import identity_service
 from app.services.identity_refinement_service import identity_refinement_service
 from app.services.pattern_service import pattern_service
-from app.services.intent_service import intent_service  # 🔥 ML intent
+from app.services.intent_service import intent_service
 
 bp = Blueprint('identity', __name__, url_prefix='/api/identity')
+
+
+# ==========================================================
+# ✅ M2-05: GET IDENTITY TEMPLATE FOR DISPLAY (READ-ONLY)
+# ==========================================================
+@bp.route('/template/<artwork_id>', methods=['GET'])
+@jwt_required_custom
+def get_identity_template(artwork_id):
+    try:
+        user_id = request.current_user['user_id']
+        template = IdentityTemplate.query.filter_by(
+            user_id=user_id, artwork_id=artwork_id
+        ).first()
+
+        if not template:
+            return jsonify({"template": None, "traits": []}), 200
+
+        traits = sorted(template.traits, key=lambda t: t.position)
+        return jsonify({
+            "template_id": template.id,
+            "artwork_id": template.artwork_id,
+            "traits": [
+                {
+                    "id": t.id,
+                    "label": t.label,
+                    "value": str(t.value) if t.value is not None else "",
+                    "type": t.trait_type,
+                    "position": t.position,
+                    "ai_generated": t.ai_generated,
+                    "is_confirmed": t.is_confirmed
+                }
+                for t in traits
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# ✅ M2-06/07/08: PATCH TRAIT WITH EDIT TRACKING
+# ==========================================================
+@bp.route('/trait/<trait_id>', methods=['PATCH'])
+@jwt_required_custom
+def update_trait(trait_id):
+    try:
+        user_id = request.current_user['user_id']
+        data = request.get_json()
+
+        if 'value' not in data and 'label' not in data:
+            return jsonify({"error": "value or label is required"}), 400
+
+        trait = IdentityTrait.query.get(trait_id)
+        if not trait:
+            return jsonify({"error": "Trait not found"}), 404
+
+        if trait.template.user_id != user_id:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        # Handle value update
+        if 'value' in data:
+            new_value = str(data['value'])
+            if new_value != str(trait.value or ''):
+                db.session.add(EditEvent(
+                    user_id=user_id,
+                    trait_label=trait.label,
+                    action='update_value'
+                ))
+                trait.value = new_value
+
+        # Handle label update
+        if 'label' in data:
+            new_label = str(data['label']).strip()
+            if new_label and new_label != trait.label:
+                db.session.add(EditEvent(
+                    user_id=user_id,
+                    trait_label=new_label,
+                    action='update_label'
+                ))
+                trait.label = new_label
+
+        # Handle is_confirmed update
+        if 'is_confirmed' in data:
+            new_confirmed = bool(data['is_confirmed'])
+            if new_confirmed != trait.is_confirmed:
+                db.session.add(EditEvent(
+                    user_id=user_id,
+                    trait_label=trait.label,
+                    action='confirm' if new_confirmed else 'reject'
+                ))
+                trait.is_confirmed = new_confirmed
+
+        db.session.commit()
+
+        return jsonify({
+            "id": trait.id,
+            "label": trait.label,
+            "value": str(trait.value) if trait.value is not None else "",
+            "type": trait.trait_type,
+            "position": trait.position,
+            "ai_generated": trait.ai_generated,
+            "is_confirmed": trait.is_confirmed
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# ✅ M2-03: SAVE IDENTITY VERSION (SNAPSHOT)
+# ==========================================================
+@bp.route('/version/save/<template_id>', methods=['POST'])
+@jwt_required_custom
+def save_version(template_id):
+    try:
+        user_id = request.current_user['user_id']
+
+        template = IdentityTemplate.query.filter_by(
+            id=template_id, user_id=user_id
+        ).first()
+
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+
+        # Get next version number
+        last = IdentityVersion.query.filter_by(template_id=template_id)\
+            .order_by(IdentityVersion.version_number.desc()).first()
+        next_version = (last.version_number + 1) if last else 1
+
+        # Build full trait snapshot
+        snapshot = [
+            {
+                "id": t.id,
+                "label": t.label,
+                "value": t.value,
+                "trait_type": t.trait_type,
+                "position": t.position,
+                "ai_generated": t.ai_generated
+            }
+            for t in sorted(template.traits, key=lambda t: t.position)
+        ]
+
+        version = IdentityVersion(
+            template_id=template_id,
+            version_number=next_version,
+            snapshot_json=snapshot
+        )
+        db.session.add(version)
+        db.session.commit()
+
+        return jsonify({
+            "message": "Version saved",
+            "version": version.to_dict()
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# ✅ M2-03: GET VERSION HISTORY
+# ==========================================================
+@bp.route('/version/history/<template_id>', methods=['GET'])
+@jwt_required_custom
+def get_version_history(template_id):
+    try:
+        user_id = request.current_user['user_id']
+
+        template = IdentityTemplate.query.filter_by(
+            id=template_id, user_id=user_id
+        ).first()
+
+        if not template:
+            return jsonify({"error": "Template not found"}), 404
+
+        versions = IdentityVersion.query.filter_by(template_id=template_id)\
+            .order_by(IdentityVersion.version_number.asc()).all()
+
+        return jsonify({
+            "versions": [v.to_dict() for v in versions]
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # ==========================================================
