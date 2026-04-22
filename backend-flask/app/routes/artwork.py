@@ -19,8 +19,6 @@ def create_artwork():
         title = request.form.get('title')
         description = request.form.get('description')
 
-        # ✅ NO CHECK FOR EXISTING ANYMORE
-
         artwork = Artwork(
             user_id=user_id,
             title=title,
@@ -29,6 +27,19 @@ def create_artwork():
 
         db.session.add(artwork)
         db.session.commit()
+
+        # 🔥 Trigger identity generation if description exists
+        if description:
+            try:
+                from app.services.identity_service import identity_service
+                identity_service.generate_for_reflection(
+                    user_id=user_id,
+                    artwork_id=artwork.id,
+                    reflection_text=description
+                )
+                current_app.logger.info(f"Identity generated for artwork {artwork.id}")
+            except Exception as e:
+                current_app.logger.warning(f"Identity generation failed (non-blocking): {str(e)}")
 
         return jsonify({
             "artwork": artwork.to_dict()
