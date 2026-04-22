@@ -13,3 +13,10 @@ SQLAlchemy==2.0.23
 Werkzeug==3.0.1
 sendgrid==6.12.5
 requests
+
+# 🔥 ML / AI (FIXED - CPU ONLY, NO CUDA)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2+cpu
+sentence-transformers==2.6.1
+scikit-learn==1.4.2
+numpy==1.26.4

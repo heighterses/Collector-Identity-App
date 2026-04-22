@@ -4,7 +4,7 @@ from app.middleware.auth import jwt_required_custom
 from app.services.identity_service import identity_service
 from app.services.identity_refinement_service import identity_refinement_service
 from app.services.pattern_service import pattern_service
-from app.services.intent_service import intent_service  # 🔥 NEW
+from app.services.intent_service import intent_service  # 🔥 ML intent
 
 bp = Blueprint('identity', __name__, url_prefix='/api/identity')
 
@@ -18,11 +18,18 @@ def generate_identity():
     try:
         data = request.get_json()
         reflection = data.get("reflection")
+        artwork_id = data.get("artwork_id")
 
         if not reflection:
             return jsonify({"error": "Reflection required"}), 400
 
-        result = identity_service.generate_identity(reflection)
+        user_id = request.current_user['user_id']
+
+        result = identity_service.generate_identity(
+            reflection,
+            user_id=user_id,
+            artwork_id=artwork_id
+        )
 
         return jsonify({
             "identity": result
@@ -47,14 +54,19 @@ def refine_identity():
         if not identity or not user_input:
             return jsonify({"error": "Missing data"}), 400
 
-        # 🔥 STEP 1: Detect intent
+        user_id = request.current_user['user_id']
+
         intent = intent_service.detect_intent(user_input)
 
-        # 🔥 STEP 2: Apply logic
         if intent == "REFINE":
             result = identity_refinement_service.refine_identity(identity, user_input)
         else:
-            result = identity_service.apply_user_edit(identity, user_input, intent)
+            result = identity_service.apply_user_edit(
+                identity,
+                user_input,
+                intent,
+                user_id
+            )
 
         return jsonify({
             "identity": result,
@@ -87,7 +99,7 @@ def get_patterns():
 
 
 # ==========================================================
-# 🔥 PROFILE DATA (FINAL — WITH COUNTS + TREND)
+# 🔥 PROFILE DATA (FINAL — FULL ML OUTPUT)
 # ==========================================================
 @bp.route('/profile-data', methods=['GET'])
 @jwt_required_custom
@@ -110,18 +122,37 @@ def get_profile_data():
                 "trend": {
                     "new_traits": [],
                     "dropped_traits": []
-                }
+                },
+                "clusters": [],
+                "embedding_clusters": [],
+                "similarities": [],
+                "insights": []
             }), 200
 
         identities = [t.to_dict() for t in templates]
 
+        # ✅ EXISTING
         patterns = pattern_service.detect_patterns(identities)
         trend = pattern_service.detect_trend(identities)
+
+        # 🔥 KEEP YOUR ORIGINAL (trait-based clustering)
+        clusters = pattern_service.cluster_identities(identities)
+
+        # 🔥 ADD REAL ML (embedding-based)
+        embedding_clusters = pattern_service.cluster_embeddings(identities)
+        similarities = pattern_service.similarity_matrix(identities)
+
+        # 🔥 INSIGHTS
+        insights = pattern_service.generate_insights(patterns, trend)
 
         return jsonify({
             "identities": identities,
             "patterns": patterns,
-            "trend": trend
+            "trend": trend,
+            "clusters": clusters,  # old (safe)
+            "embedding_clusters": embedding_clusters,  # new ML
+            "similarities": similarities,  # new ML
+            "insights": insights
         }), 200
 
     except Exception as e:

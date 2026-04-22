@@ -16,13 +16,16 @@ class IdentityTemplate(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     artwork_id = db.Column(db.String(36), db.ForeignKey('artworks.id', ondelete='SET NULL'), nullable=True)
 
-    # 🔥 ADD THIS (fixes your earlier crash)
+    # 🔥 EXISTING (DO NOT TOUCH)
     version = db.Column(db.Integer, default=1, nullable=False)
+
+    # 🔥 NEW (ML BACKBONE — ONLY ADDITION)
+    embedding = db.Column(db.JSON, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Relationships
+    # Relationships (UNCHANGED)
     traits = db.relationship(
         'IdentityTrait',
         backref='template',
@@ -36,7 +39,8 @@ class IdentityTemplate(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'artwork_id': self.artwork_id,
-            'version': self.version,  # 🔥 include version
+            'version': self.version,  # 🔥 KEEP
+            'embedding': self.embedding,  # 🔥 NEW
             'traits': [t.to_dict() for t in self.traits],
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
@@ -58,12 +62,14 @@ class IdentityTrait(db.Model):
     __tablename__ = 'identity_traits'
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
     template_id = db.Column(
         db.String(36),
         db.ForeignKey('identity_templates.id', ondelete='CASCADE'),
         nullable=False
     )
 
+    # 🔥 ALL ORIGINAL FIELDS PRESERVED
     label = db.Column(db.String(255), nullable=False)
     value = db.Column(db.String(500), nullable=True)
     trait_type = db.Column(db.String(10), nullable=False)

@@ -14,7 +14,6 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // 🔥 AI DATA
   const [profileData, setProfileData] = useState(null);
 
   useEffect(() => {
@@ -39,7 +38,6 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
     }
   };
 
-  // 🔥 HELPER → convert [label, count] → "label (count)"
   const formatPattern = (arr) => {
     if (!arr) return [];
     return arr.map(([label, count]) => `${label} (${count})`);
@@ -157,7 +155,6 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
         <p className="gallery-profile-sub">Your identity and preferences</p>
       </div>
 
-      {/* EXISTING UI */}
       <div className="gallery-identity-card">
         <div className="gallery-identity-banner" />
         <div className="gallery-identity-body">
@@ -194,20 +191,10 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
               <div style={{ marginBottom: "20px" }}>
                 <h4>Patterns</h4>
 
-                <p>
-                  <strong>Traits:</strong>{" "}
-                  {formatPattern(profileData.patterns.traits).join(', ')}
-                </p>
+                <p><strong>Traits:</strong> {formatPattern(profileData.patterns.traits).join(', ')}</p>
+                <p><strong>Emotions:</strong> {formatPattern(profileData.patterns.emotions).join(', ')}</p>
+                <p><strong>Themes:</strong> {formatPattern(profileData.patterns.themes).join(', ')}</p>
 
-                <p>
-                  <strong>Emotions:</strong>{" "}
-                  {formatPattern(profileData.patterns.emotions).join(', ')}
-                </p>
-
-                <p>
-                  <strong>Themes:</strong>{" "}
-                  {formatPattern(profileData.patterns.themes).join(', ')}
-                </p>
                 <ProfilePieCharts patterns={profileData.patterns} />
               </div>
             )}
@@ -216,16 +203,39 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
             {profileData.trend && (
               <div style={{ marginBottom: "20px" }}>
                 <h4>Trend</h4>
+                <p><strong>New Traits:</strong> {profileData.trend.new_traits?.join(', ') || '—'}</p>
+                <p><strong>Dropped Traits:</strong> {profileData.trend.dropped_traits?.join(', ') || '—'}</p>
+              </div>
+            )}
 
-                <p>
-                  <strong>New Traits:</strong>{" "}
-                  {profileData.trend.new_traits?.join(', ') || '—'}
-                </p>
+            {/* 🔥 NEW: CLUSTERS */}
+            {profileData.clusters?.length > 0 && (
+              <div style={{ marginBottom: "20px" }}>
+                <h4>Identity Clusters</h4>
+                <p>{profileData.clusters.join(', ')}</p>
+              </div>
+            )}
 
+            {/* 🔥 NEW: SIMILARITY */}
+            {profileData.similarities?.length > 1 && (
+              <div style={{ marginBottom: "20px" }}>
+                <h4>Similarity</h4>
                 <p>
-                  <strong>Dropped Traits:</strong>{" "}
-                  {profileData.trend.dropped_traits?.join(', ') || '—'}
+                  Latest vs Previous:{" "}
+                  {profileData.similarities[profileData.similarities.length - 1][
+                    profileData.similarities.length - 2
+                  ]?.toFixed(2)}
                 </p>
+              </div>
+            )}
+
+            {/* 🔥 NEW: INSIGHTS */}
+            {profileData.insights?.length > 0 && (
+              <div style={{ marginBottom: "20px" }}>
+                <h4>AI Insights</h4>
+                {profileData.insights.map((i, idx) => (
+                  <p key={idx}>• {i}</p>
+                ))}
               </div>
             )}
 
