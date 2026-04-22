@@ -9,7 +9,7 @@ function TraitItem({ trait, onUpdate }) {
     case "chip":
       return <ChipDisplay trait={trait} onUpdate={onUpdate} />;
     case "text":
-      return <TextDisplay trait={trait} onUpdate={onUpdate} />;
+      return <TextDisplay trait={trait} />;
     default:
       return null;
   }
