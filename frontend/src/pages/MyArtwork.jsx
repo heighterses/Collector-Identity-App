@@ -43,7 +43,7 @@ const ArtworkCardImage = ({ src, alt, artworkType }) => {
   };
 
   const placeholder = (label) => (
-    <div className="artwork-item-image artwork-item-image--placeholder">
+    <div className="ma-card-img ma-card-img--placeholder">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" />
         <circle cx="8.5" cy="8.5" r="1.5" />
@@ -57,7 +57,7 @@ const ArtworkCardImage = ({ src, alt, artworkType }) => {
   if (!normalised) return placeholder('No image');
 
   return (
-    <div className="artwork-item-image">
+    <div className="ma-card-img">
       {status === 'loading' && (
         <div style={{
           position: 'absolute', inset: 0,
@@ -76,7 +76,7 @@ const ArtworkCardImage = ({ src, alt, artworkType }) => {
         style={{
           width: '100%', height: '100%', objectFit: 'cover', display: 'block',
           opacity: status === 'loaded' ? 1 : 0,
-          transition: 'opacity 0.45s ease',
+          transition: 'opacity 0.45s ease, transform 0.5s ease',
           position: status === 'error' ? 'absolute' : 'relative',
         }}
       />
@@ -138,26 +138,26 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   // ── Empty state ──────────────────────────────────────────────
   if (!artworks.length) {
     return (
-      <div className="my-artwork-page">
-        <div className="my-artwork-header">
-          <p className="my-artwork-eyebrow">Collection</p>
-          <h1 className="my-artwork-title">My Artwork</h1>
-          <p className="my-artwork-sub">Your personal gallery of collected works</p>
+      <div className="ma-page">
+        <div className="ma-header">
+          <p className="ma-eyebrow">Collection</p>
+          <h1 className="ma-title">My Artwork</h1>
+          <p className="ma-sub">Your personal gallery of collected works</p>
         </div>
-        <div className="my-artwork-empty">
-          <div className="my-artwork-empty-frame">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="ma-empty">
+          <div className="ma-empty-frame">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
           </div>
-          <h2 className="my-artwork-empty-title">Your gallery awaits</h2>
-          <p className="my-artwork-empty-desc">
-            Add your first artwork to begin building your collection and generating personal reflections.
+          <h2 className="ma-empty-title">Start your collection</h2>
+          <p className="ma-empty-desc">
+            Upload your first artwork to begin shaping your identity
           </p>
-          <button className="btn btn-primary btn-lg" onClick={() => onNavigate('add-artwork')}>
-            Add your first artwork
+          <button className="btn ma-empty-btn" onClick={() => onNavigate('add-artwork')}>
+            Add Artwork
           </button>
         </div>
       </div>
@@ -166,101 +166,70 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
 
   // ── Gallery ──────────────────────────────────────────────────
   return (
-    <div className="my-artwork-page">
-      <div className="my-artwork-header">
-        <p className="my-artwork-eyebrow">Collection</p>
-        <h1 className="my-artwork-title">My Artwork</h1>
-        <p className="my-artwork-sub">
-          {artworks.length === 1 ? '1 work in your collection' : `${artworks.length} works in your collection`}
-        </p>
+    <div className="ma-page">
+      <div className="ma-header">
+        <div className="ma-header-left">
+          <p className="ma-eyebrow">Collection</p>
+          <h1 className="ma-title">My Artwork</h1>
+          <p className="ma-sub">
+            {artworks.length === 1 ? '1 work' : `${artworks.length} works`}
+          </p>
+        </div>
+        <button className="btn ma-add-btn" onClick={() => onNavigate('add-artwork')}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Add artwork
+        </button>
       </div>
 
-      <div className="my-artwork-grid">
+      <div className="ma-grid">
         {artworks.map((art) => {
           const hasReflection = !!reflectionMap[art.id];
           const reflectionChecked = art.id in reflectionMap;
 
           return (
-            <div key={art.id} className="artwork-item-card">
-              <ArtworkCardImage
-                src={art.image_url}
-                alt={art.title || 'Artwork'}
-                artworkType={art.artwork_type}
-              />
-
-              <div className="artwork-item-body">
-                <div className="artwork-item-meta">
-                  {art.created_at && (
-                    <span className="artwork-item-date">{formatDate(art.created_at)}</span>
-                  )}
-                  {/* Reflection status badge */}
-                  {reflectionChecked && (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      fontSize: 'var(--text-xs)', color: hasReflection ? 'var(--success)' : 'var(--gray-400)',
-                      marginLeft: 'var(--sp-2)',
-                    }}>
-                      <span style={{
-                        width: 5, height: 5, borderRadius: '50%',
-                        background: hasReflection ? 'var(--success)' : 'var(--gray-300)',
-                        flexShrink: 0,
-                      }} />
-                      {hasReflection ? 'Reflected' : 'No reflection'}
-                    </span>
-                  )}
-                </div>
-
-                <h3 className="artwork-item-title">{art.title || 'Untitled'}</h3>
-
-                {art.description && (
-                  <p className="artwork-item-desc">{art.description}</p>
-                )}
-
-                {/* Reflection preview */}
-                {hasReflection && reflectionMap[art.id]?.content && (
-                  <p style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--gray-500)',
-                    fontStyle: 'italic',
-                    lineHeight: 1.6,
-                    margin: '0 0 var(--sp-3)',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}>
-                    {reflectionMap[art.id].content}
-                  </p>
-                )}
-
-                <div className="artwork-item-actions">
+            <div key={art.id} className="ma-card">
+              {/* Image — main focus */}
+              <div className="ma-card-img-wrap">
+                <ArtworkCardImage
+                  src={art.image_url}
+                  alt={art.title || 'Artwork'}
+                  artworkType={art.artwork_type}
+                />
+                {/* Hover overlay with actions */}
+                <div className="ma-card-overlay">
                   <button
-                    className="btn btn-secondary btn-sm"
+                    className="ma-overlay-btn ma-overlay-btn--primary"
                     onClick={() => onNavigate('reflection', art.id)}
                   >
                     {hasReflection ? 'View Reflection' : 'Generate Reflection'}
                   </button>
                   <button
-                    className="btn btn-danger btn-sm"
+                    className="ma-overlay-btn ma-overlay-btn--danger"
                     onClick={() => handleDelete(art.id)}
                   >
                     Delete
                   </button>
                 </div>
               </div>
+
+              {/* Info below image */}
+              <div className="ma-card-body">
+                <div className="ma-card-top">
+                  <h3 className="ma-card-title">{art.title || 'Untitled'}</h3>
+                  {reflectionChecked && (
+                    <span className={`ma-card-dot ${hasReflection ? 'ma-card-dot--on' : 'ma-card-dot--off'}`}
+                      title={hasReflection ? 'Reflection ready' : 'No reflection yet'}
+                    />
+                  )}
+                </div>
+                <p className="ma-card-date">{formatDate(art.created_at)}</p>
+              </div>
             </div>
           );
         })}
-      </div>
-
-      <div className="my-artwork-add-row">
-        <button className="btn btn-secondary" onClick={() => onNavigate('add-artwork')}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Add another artwork
-        </button>
       </div>
     </div>
   );

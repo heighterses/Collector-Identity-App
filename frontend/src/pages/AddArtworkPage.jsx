@@ -6,7 +6,6 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
   const [error, setError] = useState('');
   const [checkingExisting, setCheckingExisting] = useState(true);
   const [artworks, setArtworks] = useState([]);
-  const [artworkMode, setArtworkMode] = useState('image');
   const [formData, setFormData] = useState({ title: '', description: '', imageFile: null });
   const [imagePreview, setImagePreview] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -43,8 +42,8 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     setLoading(true);
     setError('');
 
-    if (artworkMode === 'image' && !formData.imageFile) {
-      setError('Please select an image file');
+    if (!formData.imageFile && !formData.description.trim()) {
+      setError('Please upload an image or add a description');
       setLoading(false);
       return;
     }
@@ -53,17 +52,12 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       setLoading(false);
       return;
     }
-    if (artworkMode === 'text' && !formData.description.trim()) {
-      setError('Description is required for text artwork');
-      setLoading(false);
-      return;
-    }
 
     try {
       const uploadData = new FormData();
       uploadData.append('title', formData.title.trim());
-      uploadData.append('artwork_type', artworkMode);
-      if (artworkMode === 'image' && formData.imageFile) {
+      uploadData.append('artwork_type', formData.imageFile ? 'image' : 'text');
+      if (formData.imageFile) {
         uploadData.append('imageFile', formData.imageFile);
       }
       if (formData.description.trim()) {
@@ -132,67 +126,43 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     if (fi) fi.value = '';
   };
 
-  const handleModeChange = (mode) => {
-    setArtworkMode(mode);
-    setError('');
-    if (mode === 'text') clearFile();
-    if (mode === 'image') setFormData(prev => ({ ...prev, description: '' }));
-  };
+  const isFormValid = formData.title.trim() && (formData.imageFile || formData.description.trim());
 
-  const isFormValid =
-    artworkMode === 'image'
-      ? (formData.imageFile && formData.title.trim())
-      : (formData.title.trim() && formData.description.trim());
-
+  // ── Loading skeleton ──────────────────────────────────────────
   if (checkingExisting) {
     return (
-      <div className="gallery-upload-page">
-        <div className="gallery-upload-header">
-          <h1 className="gallery-upload-title">Place Your Work</h1>
+      <div className="add-artwork-page">
+        <div className="add-artwork-heading">
+          <div className="ghost-card" style={{ height: 36, width: 220, marginBottom: 8 }} />
+          <div className="ghost-card" style={{ height: 14, width: 300 }} />
         </div>
-        <div className="ghost-cards">
-          <div className="ghost-card ghost-card--art" style={{ height: 320 }} />
-          <div className="ghost-card ghost-card--short" />
+        <div className="add-artwork-grid">
+          <div className="ghost-card" style={{ height: 360, borderRadius: 12 }} />
+          <div className="ghost-card" style={{ height: 360, borderRadius: 12 }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="gallery-upload-page">
-      <div className="gallery-upload-header">
-        <h1 className="gallery-upload-title">Place Your Work</h1>
-        <p className="gallery-upload-sub">
-          {artworks.length > 0
-            ? `You have ${artworks.length} artwork${artworks.length !== 1 ? 's' : ''} in your collection`
-            : 'Add your first artwork to begin'}
+    <div className="add-artwork-page">
+
+      {/* ── Page heading ─────────────────────────────────────── */}
+      <div className="add-artwork-heading">
+        <h1 className="add-artwork-title">Place Your Work</h1>
+        <p className="add-artwork-sub">
+          Upload your artwork and describe its meaning
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="gallery-form-fields">
-        {/* Mode toggle */}
-        <div className="mode-toggle">
-          <button
-            type="button"
-            onClick={() => handleModeChange('image')}
-            className={`mode-toggle-btn${artworkMode === 'image' ? ' mode-toggle-btn--active' : ''}`}
-          >
-            Upload Image
-          </button>
-          <button
-            type="button"
-            onClick={() => handleModeChange('text')}
-            className={`mode-toggle-btn${artworkMode === 'text' ? ' mode-toggle-btn--active' : ''}`}
-          >
-            Text Description
-          </button>
-        </div>
+      {/* ── 2-column grid ────────────────────────────────────── */}
+      <form onSubmit={handleSubmit} className="add-artwork-grid">
 
-        {/* Upload area */}
-        {artworkMode === 'image' && (
-          !imagePreview ? (
+        {/* LEFT — Upload canvas */}
+        <div className="add-artwork-canvas">
+          {!imagePreview ? (
             <div
-              className={`gallery-dropzone${dragActive ? ' gallery-dropzone--active' : ''}`}
+              className={`add-artwork-dropzone${dragActive ? ' add-artwork-dropzone--active' : ''}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -200,7 +170,10 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
               onClick={() => document.getElementById('imageFile').click()}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') document.getElementById('imageFile').click(); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ')
+                  document.getElementById('imageFile').click();
+              }}
               aria-label="Upload artwork image"
             >
               <input
@@ -210,85 +183,90 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
                 onChange={(e) => handleFileChange(e.target.files[0])}
                 style={{ display: 'none' }}
               />
-              <div className="dropzone-icon-wrap">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <div className="add-artwork-dropzone-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
               </div>
-              <p className="dropzone-primary">Place your artwork here</p>
-              <p className="dropzone-secondary">Click or drag &amp; drop · JPG, PNG up to 10MB</p>
+              <p className="add-artwork-dropzone-primary">Place your artwork here</p>
+              <p className="add-artwork-dropzone-secondary">
+                Click or drag &amp; drop · JPG, PNG up to 10MB
+              </p>
             </div>
           ) : (
-            <div className="gallery-preview-frame">
-              <img src={imagePreview} alt="Preview" />
-              <div className="gallery-preview-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={clearFile}
-                >
-                  Remove image
-                </button>
-              </div>
+            <div className="add-artwork-preview">
+              <img src={imagePreview} alt="Preview" className="add-artwork-preview-img" />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm add-artwork-preview-clear"
+                onClick={clearFile}
+              >
+                Remove image
+              </button>
             </div>
-          )
-        )}
-
-        {/* Title field */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="artwork-title">Title</label>
-          <input
-            id="artwork-title"
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className="form-input"
-            placeholder="Give your artwork a title"
-          />
-        </div>
-
-        {/* Description field */}
-        <div className="form-group">
-          <label className="form-label" htmlFor="artwork-description">
-            Description
-            {artworkMode === 'text' && <span style={{ color: 'var(--error)', marginLeft: 4 }}>*</span>}
-          </label>
-          <textarea
-            id="artwork-description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            className="form-input form-textarea"
-            placeholder={
-              artworkMode === 'text'
-                ? 'Describe your artwork in detail — this will be used to generate your reflection'
-                : 'Optional — add context or notes about this work'
-            }
-            rows={4}
-          />
-          {artworkMode === 'text' && (
-            <p className="form-hint">Describe the artwork in detail. This text will be used to generate your personal reflection.</p>
           )}
         </div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {/* RIGHT — Form panel */}
+        <div className="add-artwork-form-panel">
 
-        <button
-          type="submit"
-          disabled={loading || !isFormValid}
-          className="btn btn-primary btn-lg"
-          style={{ width: '100%', marginTop: 'var(--sp-2)' }}
-        >
-          {loading ? (
-            <>
-              <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
-              Adding to collection…
-            </>
-          ) : 'Add to collection'}
-        </button>
+          {/* Collection count */}
+          {artworks.length > 0 && (
+            <p className="add-artwork-count">
+              {artworks.length} artwork{artworks.length !== 1 ? 's' : ''} in your collection
+            </p>
+          )}
+
+          {/* Title */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="artwork-title">Title</label>
+            <input
+              id="artwork-title"
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className="form-input"
+              placeholder="Give your artwork a title"
+            />
+          </div>
+
+          {/* Description */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="artwork-description">
+              Description
+            </label>
+            <textarea
+              id="artwork-description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              className="form-input form-textarea add-artwork-textarea"
+              placeholder="Add context or notes about this work — or describe it if you have no image"
+              rows={5}
+            />
+          </div>
+
+          {/* Error */}
+          {error && <div className="alert alert-error">{error}</div>}
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={loading || !isFormValid}
+            className="btn btn-primary add-artwork-submit"
+          >
+            {loading ? (
+              <>
+                <span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
+                Adding to collection…
+              </>
+            ) : 'Add to collection'}
+          </button>
+
+        </div>
       </form>
     </div>
   );

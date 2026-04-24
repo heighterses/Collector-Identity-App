@@ -1,36 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
-import { reflection } from '../api.js';
+import { reflection, identity } from '../api.js';
+import ProfilePieCharts from '../components/ProfilePieCharts';
 
-// ── Image component with proper URL normalisation ────────────────────────────
+// ── Image component — unchanged logic ────────────────────────────────────────
 const CardImage = ({ src, alt, artworkType }) => {
   const [status, setStatus] = useState('loading');
   const [retried, setRetried] = useState(false);
   const imgRef = useRef(null);
   const isText = artworkType === 'text';
 
-  // Normalise whatever the backend stored into a browser-reachable URL.
-  // Stored values can be:
-  //   /api/images/artworks/user-xxx/...   ← proxy path (correct)
-  //   http://minio:9000/artworks/...      ← internal Docker URL (broken in browser)
-  //   artworks/user-xxx/...              ← bare object key
   const normalizedSrc = (() => {
     if (!src) return null;
-    // Already a proxy path
     if (src.startsWith('/api/images/')) return src;
-    // Internal MinIO URL — extract the object key and proxy it
     if (src.includes('minio:') || src.includes('localhost:9002') || src.includes('localhost:9000')) {
       const match = src.match(/\/artworks\/.+/);
       if (match) return `/api/images${match[0]}`;
-      // Try splitting on bucket name
       const bucketMatch = src.match(/artworks\/(.+)/);
       if (bucketMatch) return `/api/images/artworks/${bucketMatch[1]}`;
       return null;
     }
-    // Absolute http/https URL (e.g. public CDN) — use as-is
     if (src.startsWith('http://') || src.startsWith('https://')) return src;
-    // Relative path starting with /
     if (src.startsWith('/')) return src;
-    // Bare object key
     return `/api/images/${src}`;
   })();
 
@@ -52,7 +42,7 @@ const CardImage = ({ src, alt, artworkType }) => {
 
   if (isText) {
     return (
-      <div className="dash-card-img">
+      <div className="db-art-img">
         <div className="dash-card-img-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -68,7 +58,7 @@ const CardImage = ({ src, alt, artworkType }) => {
 
   if (!normalizedSrc) {
     return (
-      <div className="dash-card-img">
+      <div className="db-art-img">
         <div className="dash-card-img-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
             <rect x="3" y="3" width="18" height="18" rx="1"/>
@@ -82,7 +72,7 @@ const CardImage = ({ src, alt, artworkType }) => {
   }
 
   return (
-    <div className="dash-card-img">
+    <div className="db-art-img">
       {status === 'loading' && <div className="dash-card-img-skeleton" />}
       {status === 'error' && (
         <div className="dash-card-img-placeholder">
@@ -106,22 +96,38 @@ const CardImage = ({ src, alt, artworkType }) => {
   );
 };
 
-// ── Dashboard ────────────────────────────────────────────────────────────────
-// Receives artworks from App (single source of truth).
-// Fetches reflections for the latest artwork locally.
+// ── Metric bar ────────────────────────────────────────────────────────────────
+const MetricBar = ({ label, value, max = 10 }) => {
+  const pct = Math.min((parseFloat(value) / max) * 100, 100);
+  return (
+    <div className="db-metric-row">
+      <div className="db-metric-header">
+        <span className="db-metric-label">{label}</span>
+        <span className="db-metric-value">{parseFloat(value).toFixed(1)}</span>
+      </div>
+      <div className="db-metric-track">
+        <div className="db-metric-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+};
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
-  const [latestReflection, setLatestReflection] = useState(null);
+  const [latestReflection, setLatestReflection]   = useState(null);
   const [reflectionLoading, setReflectionLoading] = useState(false);
+  const [profileData, setProfileData]             = useState(null);
 
   const latestArtwork = artworks[0] || null;
 
   useEffect(() => {
-    if (!latestArtwork) {
-      setLatestReflection(null);
-      return;
-    }
+    if (!latestArtwork) { setLatestReflection(null); return; }
     loadReflection(latestArtwork.id);
   }, [latestArtwork?.id]);
+
+  useEffect(() => {
+    identity.getProfileData().then(setProfileData).catch(() => {});
+  }, []);
 
   const loadReflection = async (artworkId) => {
     setReflectionLoading(true);
@@ -143,16 +149,27 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
   };
 
   const fmtDate = (d) =>
-    d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+    d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
-  const artworkCount = artworks.length;
-  const reflectionCount = artworks.filter(a => a.has_reflection).length;
+  // ── Derived identity data ─────────────────────────────────────
+  const allTraits = profileData?.identities?.flatMap(i => i.traits) || [];
+  const coreIdentity = allTraits.find(
+    t => (t.type === 'text' || t.trait_type === 'text') && t.label === 'Core Identity'
+  );
+  const chipTraits = allTraits
+    .filter(t => (t.type === 'chip' || t.trait_type === 'chip') && (t.value === 'true' || t.value === '1.0'))
+    .slice(0, 6);
+  const sliderTraits = allTraits
+    .filter(t => (t.type === 'slider' || t.trait_type === 'slider'))
+    .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
+    .slice(0, 2);
+  const firstInsight = profileData?.insights?.[0] || null;
 
-  // ── Empty ────────────────────────────────────────────────────
+  // ── Empty state ───────────────────────────────────────────────
   if (!latestArtwork) {
     return (
-      <div className="dash-page">
-        <div className="dash-banner">
+      <div className="db-page">
+        <div className="db-banner">
           <p className="dash-banner-greeting">{greeting()}, {currentUser?.name?.split(' ')[0] || 'there'}</p>
           <h1 className="dash-banner-title">Your Collection</h1>
           <p className="dash-banner-sub">Nothing added yet</p>
@@ -171,145 +188,141 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
     );
   }
 
-  // ── Has artwork ──────────────────────────────────────────────
-  const subText = (() => {
-    const wLabel = artworkCount === 1 ? '1 work' : `${artworkCount} works`;
-    if (reflectionLoading) return `${wLabel} · loading reflection…`;
-    if (latestReflection) return `${wLabel} · reflection ready`;
-    return `${wLabel} · reflection pending`;
-  })();
-
   return (
-    <div className="dash-page">
+    <div className="db-page">
 
-      {/* ── Banner ── */}
-      <div className="dash-banner">
-        <p className="dash-banner-greeting">{greeting()}, {currentUser?.name?.split(' ')[0] || 'there'}</p>
-        <h1 className="dash-banner-title">Your Collection</h1>
-        <p className="dash-banner-sub">{subText}</p>
-      </div>
+      {/* ── 1. IDENTITY SNAPSHOT CARD ──────────────────────────── */}
+      <div className="db-identity-card">
+        <div className="db-identity-left">
+          <p className="db-identity-eyebrow">Your Identity</p>
+          {coreIdentity?.value ? (
+            <p className="db-identity-core">{coreIdentity.value}</p>
+          ) : (
+            <p className="db-identity-core db-identity-core--empty">
+              {greeting()}, {currentUser?.name?.split(' ')[0] || 'there'} — your identity is taking shape.
+            </p>
+          )}
 
-      {/* ── Latest artwork card ── */}
-      <div className="dash-section">
-        <p className="dash-section-label">
-          {artworkCount > 1 ? `Latest · ${artworkCount} total` : 'Artwork'}
-        </p>
-
-        <div
-          className="dash-card"
-          onClick={() => onNavigate('my-artwork')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === 'Enter' && onNavigate('my-artwork')}
-          aria-label={`View artwork: ${latestArtwork.title}`}
-        >
-          <CardImage
-            src={latestArtwork.image_url}
-            alt={latestArtwork.title}
-            artworkType={latestArtwork.artwork_type}
-          />
-
-          <div className="dash-card-body">
-            <h2 className="dash-card-title">{latestArtwork.title}</h2>
-            <p className="dash-card-date">{fmtDate(latestArtwork.created_at)}</p>
-            <div className="dash-card-sep" />
-
-            {reflectionLoading ? (
-              <p className="dash-card-reflection-pending">
-                <span style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: 'var(--gray-300)', flexShrink: 0,
-                  animation: 'pulse 1.5s ease-in-out infinite',
-                }} />
-                Loading reflection…
-              </p>
-            ) : latestReflection ? (
-              <p className="dash-card-reflection-text">{latestReflection.content}</p>
-            ) : (
-              <p className="dash-card-reflection-pending">
-                <span style={{
-                  width: 7, height: 7, borderRadius: '50%',
-                  background: 'var(--gray-300)', flexShrink: 0,
-                  animation: 'pulse 1.5s ease-in-out infinite',
-                }} />
-                Reflection not yet generated
-              </p>
-            )}
-
-            <div className="dash-card-action">
-              <button
-                className="dash-card-action-btn"
-                onClick={(e) => { e.stopPropagation(); onNavigate('my-artwork'); }}
-                tabIndex={-1}
-              >
-                View collection&nbsp;→
-              </button>
+          {chipTraits.length > 0 && (
+            <div className="db-identity-chips">
+              {chipTraits.map((t, i) => (
+                <span key={i} className="db-identity-chip">{t.label}</span>
+              ))}
             </div>
-          </div>
+          )}
+
+          {sliderTraits.length > 0 && (
+            <div className="db-identity-metrics">
+              {sliderTraits.map((t, i) => (
+                <MetricBar
+                  key={i}
+                  label={t.label.replace(' (ML)', '').replace('(ML)', '').trim()}
+                  value={t.value}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="db-identity-right">
+          <button className="btn db-accent-btn btn-sm" onClick={() => onNavigate('identity')}>
+            View full identity →
+          </button>
+          <p className="db-identity-stat">{artworks.length} artwork{artworks.length !== 1 ? 's' : ''}</p>
+          <p className="db-identity-stat">{artworks.filter(a => a.has_reflection).length} reflection{artworks.filter(a => a.has_reflection).length !== 1 ? 's' : ''}</p>
         </div>
       </div>
 
-      {/* ── Latest reflection preview ── */}
-      {latestReflection && (
-        <div className="dash-section">
-          <p className="dash-section-label">Latest reflection</p>
-          <div style={{
-            padding: 'var(--sp-4) var(--sp-5)',
-            background: 'var(--white)',
-            border: '1px solid var(--line-soft)',
-            borderRadius: 'var(--r-lg)',
-            boxShadow: '0 1px 3px rgba(13,13,11,0.04)',
-          }}>
-            <p style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--gray-500)',
-              lineHeight: 1.65,
-              margin: '0 0 var(--sp-4)',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}>
-              {latestReflection.content}
-            </p>
-            <button
-              onClick={() => onNavigate('reflections')}
-              className="dash-card-action-btn"
-            >
-              Read full reflection&nbsp;→
-            </button>
-          </div>
+      {/* ── 2. LATEST REFLECTION — full width ──────────────────── */}
+      {reflectionLoading && (
+        <div className="db-reflection-card">
+          <p className="db-col-label">Latest Reflection</p>
+          <p className="db-reflection-snippet" style={{ color: '#aaa' }}>Loading reflection…</p>
         </div>
       )}
 
-      {/* ── Quick actions when no reflection yet ── */}
-      {!latestReflection && !reflectionLoading && (
-        <div className="dash-section">
-          <p className="dash-section-label">Get started</p>
-          <div style={{
-            padding: 'var(--sp-5)',
-            background: 'var(--white)',
-            border: '1px solid var(--line-soft)',
-            borderRadius: 'var(--r-lg)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--sp-4)',
-          }}>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: 0 }}>
-              Generate a reflection for your artwork to begin exploring your creative identity.
-            </p>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ flexShrink: 0 }}
-              onClick={() => onNavigate('reflection', latestArtwork.id)}
-            >
-              Generate
+      {!reflectionLoading && latestReflection && (
+        <div className="db-reflection-card">
+          <div className="db-reflection-card-header">
+            <p className="db-col-label">Latest Reflection</p>
+            <button className="db-col-link" onClick={() => onNavigate('reflections')}>
+              Read full →
             </button>
           </div>
+          <p className="db-reflection-full">{latestReflection.content}</p>
         </div>
       )}
+
+      {!reflectionLoading && !latestReflection && (
+        <div className="db-reflection-card db-prompt-card">
+          <p className="db-prompt-text">
+            Generate a reflection for your latest artwork to begin exploring your creative identity.
+          </p>
+          <button
+            className="btn db-accent-btn btn-sm"
+            onClick={() => onNavigate('reflection', latestArtwork.id)}
+          >
+            Generate reflection
+          </button>
+        </div>
+      )}
+
+      {/* ── 3. MAIN 2-COLUMN SECTION ───────────────────────────── */}
+      <div className="db-main-grid">
+
+        {/* LEFT — Artworks */}
+        <div className="db-artworks-col">
+          <div className="db-col-header">
+            <p className="db-col-label">Your Artworks</p>
+            <button className="db-col-link" onClick={() => onNavigate('my-artwork')}>
+              View all →
+            </button>
+          </div>
+
+          <div className="db-artworks-grid">
+            {artworks.slice(0, 6).map((art) => (
+              <div
+                key={art.id}
+                className="db-art-card"
+                onClick={() => onNavigate('my-artwork')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onNavigate('my-artwork')}
+              >
+                <CardImage src={art.image_url} alt={art.title} artworkType={art.artwork_type} />
+                <div className="db-art-body">
+                  <p className="db-art-title">{art.title}</p>
+                  <p className="db-art-date">{fmtDate(art.created_at)}</p>
+                  {art.has_reflection && (
+                    <span className="db-art-tag">Reflection ready</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT — Sidebar */}
+        <div className="db-sidebar-col">
+
+          {profileData?.patterns && (
+            <div className="db-sidebar-card">
+              <p className="db-sidebar-card-label">Traits Distribution</p>
+              <div className="db-chart-wrap">
+                <ProfilePieCharts patterns={profileData.patterns} />
+              </div>
+            </div>
+          )}
+
+          {firstInsight && (
+            <div className="db-sidebar-card db-insight-card">
+              <p className="db-sidebar-card-label">AI Insight</p>
+              <p className="db-insight-text">{firstInsight}</p>
+            </div>
+          )}
+
+        </div>
+      </div>
 
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { reflection } from '../api.js';
 import { formatDate } from '../utils/dateUtils.js';
 
-// ── Normalise image URL (same logic as Dashboard/MyArtwork) ─────────────────
+// ── Normalise image URL ──────────────────────────────────────────────────────
 const normaliseImageUrl = (src) => {
   if (!src) return null;
   if (src.startsWith('/api/images/')) return src;
@@ -18,39 +18,56 @@ const normaliseImageUrl = (src) => {
   return `/api/images/${src}`;
 };
 
-// ── Single reflection reading view ──────────────────────────────────────────
+// ── Reading pane ─────────────────────────────────────────────────────────────
 const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate, loadingAI, aiAction }) => {
   const [userInput, setUserInput] = useState('');
   const fmtDate = (d) => formatDate(d, currentUser?.timezone || 'UTC', currentUser?.language || 'en');
+  const imgSrc = normaliseImageUrl(reflectionData.artwork?.image_url);
 
   return (
-    <div className="reflections-body-wrap">
-      {/* Artwork thumbnail */}
-      {reflectionData.artwork?.image_url && (
-        <div style={{
-          width: '100%', height: 180, overflow: 'hidden',
-          borderRadius: 'var(--r-xs)', marginBottom: 'var(--sp-6)',
-          background: 'var(--gray-800)',
-        }}>
+    <div className="rf-reader">
+
+      {/* 1 — Header */}
+      <div className="rf-reader-header">
+        <p className="rf-reader-on">On</p>
+        <h2 className="rf-reader-title">
+          {reflectionData.artwork?.title || 'Untitled'}
+        </h2>
+      </div>
+
+      {/* 2 — Artwork preview: full image, no cropping */}
+      {imgSrc && (
+        <div className="rf-artwork-preview">
           <img
-            src={normaliseImageUrl(reflectionData.artwork.image_url)}
-            alt={reflectionData.artwork.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            src={imgSrc}
+            alt={reflectionData.artwork?.title || 'Artwork'}
+            className="rf-artwork-img"
           />
         </div>
       )}
 
-      <div className="reflections-body">
-        <p className="reflections-text">{reflectionData.content}</p>
+      {/* 3 — Reflection text */}
+      <div className="rf-text-block">
+        {(() => {
+          const content = reflectionData.content || '';
+          // Split off first sentence for the lead highlight
+          const firstDot = content.search(/[.!?]\s/);
+          const lead = firstDot > 0 ? content.slice(0, firstDot + 1) : '';
+          const rest = firstDot > 0 ? content.slice(firstDot + 1).trimStart() : content;
+          return (
+            <>
+              {lead && <span className="rf-text-lead">{lead}</span>}
+              {rest && <p className="rf-text">{rest}</p>}
+            </>
+          );
+        })()}
+        {reflectionData.created_at && (
+          <p className="rf-date">{fmtDate(reflectionData.created_at)}</p>
+        )}
       </div>
 
-      {reflectionData.created_at && (
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginBottom: 'var(--sp-8)' }}>
-          {fmtDate(reflectionData.created_at)}
-        </p>
-      )}
-
-      <div className="reflections-ai-panel">
+      {/* 4 — AI refine panel */}
+      <div className="rf-ai-panel">
         <div className="reflections-ai-label">
           <span className="reflections-ai-pulse" />
           Refine with AI
@@ -69,18 +86,18 @@ const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate,
             onClick={() => { onRefine(reflectionData.id, userInput); setUserInput(''); }}
             disabled={loadingAI || !userInput.trim()}
           >
-            {loadingAI && aiAction === 'refine' ? (
-              <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Refining…</>
-            ) : 'Refine'}
+            {loadingAI && aiAction === 'refine'
+              ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Refining…</>
+              : 'Refine'}
           </button>
           <button
             className="btn btn-secondary btn-sm"
             onClick={() => onRegenerate(reflectionData.artwork_id)}
             disabled={loadingAI}
           >
-            {loadingAI && aiAction === 'regenerate' ? (
-              <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Regenerating…</>
-            ) : 'Regenerate'}
+            {loadingAI && aiAction === 'regenerate'
+              ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Regenerating…</>
+              : 'Regenerate'}
           </button>
         </div>
       </div>
@@ -88,13 +105,13 @@ const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate,
   );
 };
 
-// ── Main Reflections page ────────────────────────────────────────────────────
+// ── Main page ────────────────────────────────────────────────────────────────
 const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
-  const [reflections, setReflections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState(null);
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [aiAction, setAiAction] = useState('');
+  const [reflections, setReflections]   = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [selectedId, setSelectedId]     = useState(null);
+  const [loadingAI, setLoadingAI]       = useState(false);
+  const [aiAction, setAiAction]         = useState('');
 
   useEffect(() => {
     loadAllReflections();
@@ -103,23 +120,17 @@ const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
   const loadAllReflections = async () => {
     setLoading(true);
     try {
-      // Fetch reflections for every artwork in parallel
       const results = await Promise.all(
         artworks.map(async (art) => {
           try {
             const res = await reflection.getByArtworkId(art.id);
             return res?.reflection || null;
-          } catch {
-            return null;
-          }
+          } catch { return null; }
         })
       );
       const valid = results.filter(Boolean);
       setReflections(valid);
-      // Auto-select the first one
-      if (valid.length > 0 && !selectedId) {
-        setSelectedId(valid[0].id);
-      }
+      if (valid.length > 0 && !selectedId) setSelectedId(valid[0].id);
     } catch (err) {
       console.error(err);
     } finally {
@@ -129,26 +140,18 @@ const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
 
   const handleRefine = async (reflectionId, userInput) => {
     if (!userInput.trim() || !reflectionId) return;
-    setLoadingAI(true);
-    setAiAction('refine');
+    setLoadingAI(true); setAiAction('refine');
     try {
       const res = await reflection.refine(reflectionId, userInput);
       if (res?.reflection) {
-        setReflections(prev =>
-          prev.map(r => r.id === reflectionId ? res.reflection : r)
-        );
+        setReflections(prev => prev.map(r => r.id === reflectionId ? res.reflection : r));
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingAI(false);
-      setAiAction('');
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoadingAI(false); setAiAction(''); }
   };
 
   const handleRegenerate = async (artworkId) => {
-    setLoadingAI(true);
-    setAiAction('regenerate');
+    setLoadingAI(true); setAiAction('regenerate');
     try {
       const res = await reflection.generateForArtwork(artworkId);
       if (res?.reflection) {
@@ -159,12 +162,8 @@ const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
         });
         setSelectedId(res.reflection.id);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingAI(false);
-      setAiAction('');
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoadingAI(false); setAiAction(''); }
   };
 
   const selectedReflection = reflections.find(r => r.id === selectedId) || null;
@@ -172,158 +171,127 @@ const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
   // ── Loading ──────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="reflections-page">
-        <div className="reflections-header">
-          <p className="reflections-eyebrow">Reflections</p>
-          <div className="ghost-card" style={{ height: 40, width: 260, marginBottom: 'var(--sp-3)' }} />
-          <div className="ghost-card ghost-card--short" style={{ width: 180 }} />
+      <div className="rf-page">
+        <div className="rf-page-header">
+          <p className="rf-eyebrow">Reflections</p>
+          <div className="ghost-card" style={{ height: 36, width: 240, marginBottom: 8 }} />
+          <div className="ghost-card" style={{ height: 14, width: 160 }} />
         </div>
-        <div className="reflections-body">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="ghost-card" style={{ height: 22, width: `${90 - i * 8}%`, marginBottom: 'var(--sp-4)' }} />
-          ))}
+        <div className="rf-layout">
+          <div className="ghost-card" style={{ height: 400, borderRadius: 12 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="ghost-card" style={{ height: 18, width: `${88 - i * 8}%` }} />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── No artworks at all ───────────────────────────────────────
+  // ── Empty — no artworks ──────────────────────────────────────
   if (!artworks.length) {
     return (
-      <div className="reflections-page">
-        <div className="reflections-header">
-          <p className="reflections-eyebrow">Reflections</p>
-          <h1 className="reflections-title">Your Reflections</h1>
+      <div className="rf-page">
+        <div className="rf-page-header">
+          <p className="rf-eyebrow">Reflections</p>
+          <h1 className="rf-page-title">Your Reflections</h1>
         </div>
-        <div className="reflections-empty">
-          <div className="reflections-empty-icon">
+        <div className="rf-empty">
+          <div className="rf-empty-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <h2 className="reflections-empty-title">No reflections yet</h2>
-          <p className="reflections-empty-desc">
-            Add an artwork to your collection and a personal reflection will be generated for you.
-          </p>
-          <button className="btn btn-primary" onClick={() => onNavigate('add-artwork')}>
-            Add artwork
-          </button>
+          <h2 className="rf-empty-title">No reflections yet</h2>
+          <p className="rf-empty-desc">Add an artwork to your collection and a personal reflection will be generated for you.</p>
+          <button className="btn rf-empty-btn" onClick={() => onNavigate('add-artwork')}>Add artwork</button>
         </div>
       </div>
     );
   }
 
-  // ── Artworks exist but none have reflections ─────────────────
+  // ── Empty — artworks but no reflections ──────────────────────
   if (!reflections.length) {
     return (
-      <div className="reflections-page">
-        <div className="reflections-header">
-          <p className="reflections-eyebrow">Reflections</p>
-          <h1 className="reflections-title">Your Reflections</h1>
-          <p className="reflections-date">
-            {artworks.length} artwork{artworks.length !== 1 ? 's' : ''} · no reflections yet
-          </p>
+      <div className="rf-page">
+        <div className="rf-page-header">
+          <p className="rf-eyebrow">Reflections</p>
+          <h1 className="rf-page-title">Your Reflections</h1>
+          <p className="rf-page-sub">{artworks.length} artwork{artworks.length !== 1 ? 's' : ''} · no reflections yet</p>
         </div>
-        <div className="reflections-empty">
-          <div className="reflections-empty-icon">
+        <div className="rf-empty">
+          <div className="rf-empty-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <h2 className="reflections-empty-title">No reflections generated yet</h2>
-          <p className="reflections-empty-desc">
-            Go to My Artwork and generate a reflection for any of your {artworks.length} work{artworks.length !== 1 ? 's' : ''}.
-          </p>
-          <button className="btn btn-primary" onClick={() => onNavigate('my-artwork')}>
-            Go to My Artwork
-          </button>
+          <h2 className="rf-empty-title">No reflections generated yet</h2>
+          <p className="rf-empty-desc">Go to My Artwork and generate a reflection for any of your {artworks.length} work{artworks.length !== 1 ? 's' : ''}.</p>
+          <button className="btn rf-empty-btn" onClick={() => onNavigate('my-artwork')}>Go to My Artwork</button>
         </div>
       </div>
     );
   }
 
-  // ── Main view: sidebar list + reading pane ───────────────────
+  // ── Main: sidebar + reading pane ─────────────────────────────
   return (
-    <div className="reflections-page" style={{ maxWidth: 900 }}>
-      <div className="reflections-header">
-        <p className="reflections-eyebrow">Reflections</p>
-        <h1 className="reflections-title">Your Reflections</h1>
-        <p className="reflections-date">
+    <div className="rf-page">
+
+      {/* Page header */}
+      <div className="rf-page-header">
+        <p className="rf-eyebrow">Reflections</p>
+        <h1 className="rf-page-title">Your Reflections</h1>
+        <p className="rf-page-sub">
           {reflections.length} reflection{reflections.length !== 1 ? 's' : ''} across {artworks.length} artwork{artworks.length !== 1 ? 's' : ''}
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: reflections.length > 1 ? '220px 1fr' : '1fr', gap: 'var(--sp-6)', alignItems: 'start' }}>
+      {/* Two-column layout */}
+      <div className={`rf-layout ${reflections.length === 1 ? 'rf-layout--single' : ''}`}>
 
-        {/* Sidebar — only shown when multiple reflections */}
+        {/* LEFT — Artwork selector */}
         {reflections.length > 1 && (
-          <nav style={{
-            background: 'var(--white)',
-            border: '1px solid var(--line-soft)',
-            borderRadius: 'var(--r-lg)',
-            padding: 'var(--sp-2)',
-            boxShadow: 'var(--shadow-sm)',
-            position: 'sticky',
-            top: 'calc(var(--header-h) + var(--sp-6))',
-          }}>
+          <nav className="rf-sidebar">
+            <p className="rf-sidebar-label">Artworks</p>
             {reflections.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setSelectedId(r.id)}
-                style={{
-                  display: 'flex', flexDirection: 'column', gap: 3,
-                  width: '100%', padding: 'var(--sp-3) var(--sp-4)',
-                  background: selectedId === r.id ? 'var(--paper-3)' : 'none',
-                  border: 'none', borderRadius: 'var(--r-xs)',
-                  textAlign: 'left', cursor: 'pointer',
-                  transition: 'background var(--t-normal) var(--ease)',
-                }}
+                className={`rf-sidebar-item ${selectedId === r.id ? 'rf-sidebar-item--active' : ''}`}
               >
-                <span style={{
-                  fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)',
-                  color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}>
+                <span className="rf-sidebar-item-title">
                   {r.artwork?.title || 'Untitled'}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>
-                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' }) : ''}
+                <span className="rf-sidebar-item-date">
+                  {r.created_at
+                    ? new Date(r.created_at).toLocaleDateString('en', { month: 'short', day: 'numeric' })
+                    : ''}
                 </span>
               </button>
             ))}
           </nav>
         )}
 
-        {/* Reading pane */}
-        <div>
+        {/* RIGHT — Reading pane */}
+        <div className="rf-reading-col">
           {selectedReflection ? (
-            <>
-              {/* Artwork title above the reading pane */}
-              <div style={{ marginBottom: 'var(--sp-6)', paddingBottom: 'var(--sp-6)', borderBottom: '1px solid var(--line-soft)' }}>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--sp-2)' }}>
-                  On
-                </p>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--text-2xl)', fontWeight: 'var(--weight-regular)', color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
-                  {selectedReflection.artwork?.title || 'Untitled'}
-                </h2>
-              </div>
-
-              <ReflectionReader
-                reflectionData={selectedReflection}
-                currentUser={currentUser}
-                onRefine={handleRefine}
-                onRegenerate={handleRegenerate}
-                loadingAI={loadingAI}
-                aiAction={aiAction}
-              />
-            </>
+            <ReflectionReader
+              reflectionData={selectedReflection}
+              currentUser={currentUser}
+              onRefine={handleRefine}
+              onRegenerate={handleRegenerate}
+              loadingAI={loadingAI}
+              aiAction={aiAction}
+            />
           ) : (
-            <p style={{ color: 'var(--gray-400)', fontStyle: 'italic' }}>Select a reflection to read.</p>
+            <p className="rf-empty-hint">Select a reflection to read.</p>
           )}
         </div>
+
       </div>
 
-      <div className="reflections-back" style={{ marginTop: 'var(--sp-8)' }}>
+      <div className="rf-back">
         <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('my-artwork')}>
           ← Back to collection
         </button>
