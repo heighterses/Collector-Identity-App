@@ -179,22 +179,25 @@ class IdentityService:
 
             position = 0
 
-            # 🔹 CORE (UNCHANGED)
-            if identity_data.get("core_identity"):
+            # 🔹 CORE (SANITIZED)
+            core_val = identity_data.get("core_identity")
+            if core_val and str(core_val).strip().lower() not in ("none", "", "null", "n/a"):
                 db.session.add(IdentityTrait(
                     template_id=template.id,
                     label="Core Identity",
-                    value=identity_data["core_identity"],
+                    value=str(core_val).strip(),
                     trait_type="text",
                     position=position
                 ))
                 position += 1
 
-            # 🔹 LLM TRAITS (UNCHANGED)
+            # 🔹 LLM TRAITS (SANITIZED)
             for t in identity_data.get("traits", []):
+                if not t or str(t).strip().lower() in ("none", "", "null"):
+                    continue
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=t,
+                    label=str(t).strip(),
                     value="1.0",
                     trait_type="chip",
                     position=position
@@ -212,22 +215,26 @@ class IdentityService:
                 ))
                 position += 1
 
-            # 🔹 EMOTIONS (UNCHANGED)
+            # 🔹 EMOTIONS (SANITIZED)
             for e in identity_data.get("emotions", []):
+                if not e or str(e).strip().lower() in ("none", "", "null"):
+                    continue
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=e,
+                    label=str(e).strip(),
                     value="1.0",
                     trait_type="chip",
                     position=position
                 ))
                 position += 1
 
-            # 🔹 THEMES (UNCHANGED)
+            # 🔹 THEMES (SANITIZED)
             for th in identity_data.get("themes", []):
+                if not th or str(th).strip().lower() in ("none", "", "null"):
+                    continue
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=th,
+                    label=str(th).strip(),
                     value="1.0",
                     trait_type="chip",
                     position=position

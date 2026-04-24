@@ -1,10 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import TraitList from "../components/identity/TraitList";
+import Snackbar from "../components/identity/Snackbar";
 
 function IdentityPage({ artworkId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
   const savingRef = useRef(false);
 
   useEffect(() => {
@@ -49,11 +51,17 @@ function IdentityPage({ artworkId }) {
     });
 
     if (res.ok) {
-      setSaveMsg("Version saved");
-      setTimeout(() => setSaveMsg(""), 3000);
+      const result = await res.json();
+      setShowSnackbar(false);
+      setTimeout(() => {
+        setSavedAt(result.version?.created_at || new Date().toISOString());
+        setShowSnackbar(true);
+      }, 10);
     }
     savingRef.current = false;
   };
+
+  const handleSnackbarClose = useCallback(() => setShowSnackbar(false), []);
 
   if (loading) return <div>Loading...</div>;
 
@@ -65,7 +73,6 @@ function IdentityPage({ artworkId }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h2 style={{ margin: 0 }}>Identity</h2>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {saveMsg && <span style={{ fontSize: 13, color: "#16a34a" }}>{saveMsg}</span>}
           <button
             onClick={handleSaveVersion}
             style={{
@@ -84,6 +91,13 @@ function IdentityPage({ artworkId }) {
         </div>
       </div>
       <TraitList traits={data.traits} onUpdate={handleUpdate} />
+      {showSnackbar && (
+        <Snackbar
+          message="Version saved"
+          timestamp={savedAt}
+          onClose={handleSnackbarClose}
+        />
+      )}
     </div>
   );
 }

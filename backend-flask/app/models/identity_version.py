@@ -27,7 +27,7 @@ class IdentityVersion(db.Model):
             'template_id': self.template_id,
             'version_number': self.version_number,
             'snapshot_json': self.snapshot_json,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat() + "Z"
         }
 
     def __repr__(self):

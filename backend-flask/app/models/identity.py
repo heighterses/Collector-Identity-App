@@ -39,8 +39,8 @@ class IdentityTemplate(db.Model):
             'artwork_id': self.artwork_id,
             'version': self.version,  # 🔥 include version
             'traits': [t.to_dict() for t in self.traits],
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'created_at': self.created_at.isoformat() + "Z",
+            'updated_at': self.updated_at.isoformat() + "Z"
         }
 
     def __repr__(self):
@@ -86,8 +86,8 @@ class IdentityTrait(db.Model):
             'position': self.position,
             'ai_generated': self.ai_generated,
             'is_confirmed': self.is_confirmed,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'created_at': self.created_at.isoformat() + "Z",
+            'updated_at': self.updated_at.isoformat() + "Z"
         }
 
     def __repr__(self):

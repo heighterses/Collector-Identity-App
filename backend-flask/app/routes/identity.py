@@ -139,18 +139,35 @@ def save_version(template_id):
             .order_by(IdentityVersion.version_number.desc()).first()
         next_version = (last.version_number + 1) if last else 1
 
-        # Build full trait snapshot
-        snapshot = [
+        # M2-12: Only include confirmed traits, reflect latest edited state
+        confirmed_traits = [
+            t for t in sorted(template.traits, key=lambda t: t.position)
+            if t.is_confirmed
+        ]
+
+        # Build structured snapshot with user-edited values
+        trait_snapshot = [
             {
-                "id": t.id,
                 "label": t.label,
                 "value": t.value,
                 "trait_type": t.trait_type,
                 "position": t.position,
                 "ai_generated": t.ai_generated
             }
-            for t in sorted(template.traits, key=lambda t: t.position)
+            for t in confirmed_traits
         ]
+
+        # Extract core identity from text traits - skip empty/None values
+        core_identity = next(
+            (t.value for t in confirmed_traits
+             if t.trait_type == "text" and t.value and t.value.lower() != "none"),
+            None
+        )
+
+        snapshot = {
+            "traits": trait_snapshot,
+            "core_identity": core_identity
+        }
 
         version = IdentityVersion(
             template_id=template_id,
