@@ -6,6 +6,43 @@ bp = Blueprint('reflection', __name__, url_prefix='/api/reflection')
 
 
 # ==========================================================
+# ✅ GET ALL REFLECTIONS FOR USER (across all artworks)
+# ==========================================================
+@bp.route('/all', methods=['GET'])
+@jwt_required_custom
+def get_all_reflections():
+    try:
+        user_id = request.current_user['user_id']
+
+        from app.models.artwork import Artwork
+        from app.models.reflection import Reflection
+
+        artworks = (
+            Artwork.query
+            .filter_by(user_id=user_id)
+            .order_by(Artwork.created_at.desc())
+            .all()
+        )
+
+        artwork_ids = [a.id for a in artworks]
+
+        reflections = (
+            Reflection.query
+            .filter(Reflection.artwork_id.in_(artwork_ids))
+            .order_by(Reflection.created_at.desc())
+            .all()
+        )
+
+        return jsonify({
+            'reflections': [r.to_dict() for r in reflections]
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f'Fetch all reflections failed: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+# ==========================================================
 # ✅ GET USER REFLECTION (LATEST)
 # ==========================================================
 @bp.route('/mine', methods=['GET'])
@@ -88,16 +125,21 @@ def generate_reflection_for_artwork(artwork_id):
         if not reflection:
             return jsonify({'error': 'Reflection generation failed'}), 500
 
-        # ✅ Generate identity
-        identity = identity_service.generate_for_reflection(
-            user_id=user_id,
-            artwork_id=artwork.id,
-            reflection_text=reflection.content
-        )
+        # ✅ Generate identity (non-blocking — may return a dict on error)
+        try:
+            identity = identity_service.generate_for_reflection(
+                user_id=user_id,
+                artwork_id=artwork.id,
+                reflection_text=reflection.content
+            )
+            identity_data = identity.to_dict() if hasattr(identity, 'to_dict') else identity
+        except Exception as identity_err:
+            current_app.logger.warning(f"Identity generation failed (non-blocking): {str(identity_err)}")
+            identity_data = None
 
         return jsonify({
             'reflection': reflection.to_dict(),
-            'identity': identity.to_dict()
+            'identity': identity_data
         }), 200
 
     except Exception as e:

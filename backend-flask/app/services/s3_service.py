@@ -139,6 +139,23 @@ class S3Service:
         except Exception as e:
             current_app.logger.error(f'Failed to delete file from S3: {str(e)}')
             raise Exception(f'Failed to delete file from S3: {str(e)}')
+
+    def get_file(self, object_key):
+        """Retrieve an object from S3 and return the response dict (Body, ContentType, etc.)"""
+        if not self._initialized:
+            self._initialize_client()
+        try:
+            response = self.client.get_object(Bucket=self.bucket_name, Key=object_key)
+            return response
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code in ('NoSuchKey', '404'):
+                return None
+            current_app.logger.error(f'Failed to get file from S3: {str(e)}')
+            raise Exception(f'Failed to get file from S3: {str(e)}')
+        except Exception as e:
+            current_app.logger.error(f'Failed to get file from S3: {str(e)}')
+            raise Exception(f'Failed to get file from S3: {str(e)}')
     
     def extract_object_key_from_url(self, url):
         """Extract object key from URL"""

@@ -1,0 +1,733 @@
+/* redesign.css — Identity Page card layout + visual polish */
+
+/* ── Shared card base ─────────────────────────────────────────── */
+.id2-card-1,
+.id2-card-2,
+.id2-card-3,
+.id2-card-4 {
+  background: var(--white);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;   /* slightly more breathing room between cards */
+  overflow: hidden;
+}
+
+/* ── CARD 1 — Header ─────────────────────────────────────────── */
+.id2-card-1 {
+  padding: 28px;
+}
+
+.id2-card-1-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.id2-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 6px;
+}
+
+.id2-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-regular);
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: var(--leading-tight);
+  margin: 0 0 4px;
+}
+
+.id2-subtitle {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.id2-save-btn {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ── CARD 2 — Core Statement ─────────────────────────────────── */
+.id2-card-2 {
+  /* warm tinted background — not pure white */
+  background: #fdf8f2;
+  border-color: rgba(181, 129, 58, 0.14);
+  padding: 32px 28px;
+  max-width: 680px;   /* prevent stretching too wide */
+}
+
+.id2-statement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.id2-statement-quote {
+  font-family: var(--font-serif);
+  font-size: 2.8rem;
+  line-height: 1;
+  color: var(--accent-mid);
+  flex-shrink: 0;
+  margin-top: -6px;
+  user-select: none;
+  opacity: 0.7;
+}
+
+.id2-statement-quote--right {
+  align-self: flex-end;
+  margin-top: 0;
+  margin-bottom: -6px;
+}
+
+.id2-statement-text {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);   /* slightly larger */
+  font-style: italic;
+  color: var(--gray-700);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+  flex: 1;
+  letter-spacing: 0.005em;
+}
+
+/* ── Shared card header / body ───────────────────────────────── */
+.id2-card-header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.id2-card-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+
+.id2-card-desc {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  margin: 0;
+}
+
+.id2-card-body {
+  padding: 20px 24px 24px;
+}
+
+/* ── CARD 3 — Traits grid ────────────────────────────────────── */
+.id2-traits-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.id2-trait-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  /* soft background instead of hard border */
+  border: none;
+  background: var(--paper-2);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  transition: all var(--t-normal) var(--ease);
+}
+
+.id2-trait-cell:hover {
+  background: var(--paper-3);
+  box-shadow: var(--shadow-xs);
+  transform: translateY(-1px);
+}
+
+.id2-trait-cell--active {
+  background: #f4f7f4;   /* very subtle green tint for active */
+}
+
+.id2-trait-cell--active:hover {
+  background: #ecf3ec;
+}
+
+.id2-trait-cell--inactive {
+  background: var(--paper-2);
+  opacity: 0.65;
+}
+
+.id2-trait-cell-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-muted);
+  line-height: var(--leading-snug);
+}
+
+.id2-trait-cell--inactive .id2-trait-cell-label {
+  color: var(--gray-500);
+}
+
+/* Status badge — "ACTIVE" / "DISABLED" */
+.id2-trait-cell-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.id2-trait-cell--active .id2-trait-cell-status {
+  background: rgba(45, 122, 79, 0.1);
+  color: var(--success);
+}
+
+.id2-trait-cell--inactive .id2-trait-cell-status {
+  background: var(--paper-3);
+  color: var(--gray-400);
+}
+
+/* ── CARD 4 — Metrics ────────────────────────────────────────── */
+.id2-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;   /* slightly more space between each metric */
+}
+
+.id2-metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.id2-metric-header {
+  display: flex;
+  align-items: center;   /* center-align label and value on same baseline */
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.id2-metric-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink-muted);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.id2-metric-value {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.id2-metric-max {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  color: var(--gray-400);
+}
+
+/* Thicker bar with rounded edges and subtle track */
+.id2-bar-track {
+  width: 100%;
+  height: 8px;                          /* increased from 6px */
+  background: var(--paper-3);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(13,13,11,0.06);  /* subtle inner depth */
+}
+
+.id2-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gray-700), var(--ink));  /* slight gradient */
+  border-radius: var(--r-full);
+  transition: width 0.25s var(--ease);
+}
+
+.id2-bar-range {
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  accent-color: var(--ink);
+  opacity: 0;
+  position: relative;
+  margin-top: -20px;   /* sits on top of bar track for interaction */
+}
+
+/* ── Artwork tabs ────────────────────────────────────────────── */
+.id2-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.id2-tab {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background: var(--white);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--gray-600);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: all var(--t-normal) var(--ease);
+}
+
+.id2-tab:hover {
+  border-color: var(--gray-300);
+  color: var(--ink);
+}
+
+.id2-tab--active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--white);
+}
+
+/* ── Skeleton state ──────────────────────────────────────────── */
+.id2-hero--skeleton {
+  pointer-events: none;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .id2-traits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .id2-card-1-inner {
+    flex-direction: column;
+  }
+
+  .id2-save-btn {
+    align-self: flex-start;
+  }
+
+  .id2-card-2 {
+    max-width: 100%;
+    padding: 24px 20px;
+  }
+}
+
+/* ============================================================
+   PROFILE PAGE — card layout matching Identity page style
+   ============================================================ */
+
+/* ── Shared profile card base ─────────────────────────────── */
+.pf-card {
+  background: var(--white);
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;   /* 24→28px for more breathing room */
+  overflow: hidden;
+}
+
+/* ── Card header / body (mirrors id2-card-header/body) ───── */
+.pf-card-header {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pf-card-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+
+.pf-card-desc {
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  margin: 0;
+}
+
+.pf-card-body {
+  padding: 20px 24px 24px;
+}
+
+/* ── CARD 1 — Profile Header ──────────────────────────────── */
+.pf-header-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+/* Avatar circle — 72px */
+.pf-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(13,13,11,0.10);
+}
+
+.pf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-avatar-initial {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+
+/* Name + email block — takes remaining space */
+.pf-identity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pf-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pf-display-name {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  letter-spacing: -0.025em;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-email {
+  font-size: 13px;
+  color: var(--gray-400);
+  margin: 0;
+}
+
+.pf-name-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-name-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Photo button — pushed to the right */
+.pf-photo-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── CARD 2 — Preferences ─────────────────────────────────── */
+.pf-prefs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;   /* increased from 16px */
+}
+
+/* Labels sit above inputs with clear spacing */
+.pf-prefs-grid .pref-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pf-prefs-grid .pref-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0;
+}
+
+.pf-prefs-grid .settings-select {
+  width: 100%;
+}
+
+/* ── CARD 3 — Your Patterns ───────────────────────────────── */
+
+/* Charts: constrained, centered, spaced — slightly smaller */
+.pf-charts-wrap {
+  margin-bottom: 4px;
+}
+
+.pf-pie-charts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 8px 0 20px;
+}
+
+.pf-pie-item {
+  width: 100%;
+  max-width: 260px;   /* slightly smaller than before */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pf-pie-label {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 0;
+  text-align: center;
+}
+
+/* Keep existing profile-identity-block styles but remove top border on first */
+.pf-patterns-card .profile-identity-block:first-of-type {
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .pf-header-card {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .pf-photo-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pf-prefs-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .pf-pie-item {
+    max-width: 100%;
+  }
+}
+
+/* ============================================================
+   PROFILE — Patterns section visual polish
+   ============================================================ */
+
+/* ── Section block ────────────────────────────────────────── */
+.pf-pattern-block {
+  padding: 24px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.pf-pattern-block:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.pf-pattern-block-label {
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+}
+
+/* ── Chip group ───────────────────────────────────────────── */
+.pf-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f6f6f6;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--ink-muted);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pf-chip-count {
+  font-size: 11px;
+  font-weight: var(--weight-regular);
+  color: #888;
+}
+
+/* "+X more" overflow indicator */
+.pf-chip-overflow {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: #888;
+  background: transparent;
+  white-space: nowrap;
+}
+
+/* Cluster chips — slightly accented */
+.pf-chip--cluster {
+  background: var(--accent-subtle);
+  color: var(--accent-hover);
+}
+
+/* Trend chips */
+.pf-chip--emerging {
+  background: rgba(45, 122, 79, 0.08);
+  color: var(--success);
+}
+
+.pf-chip--fading {
+  background: var(--paper-3);
+  color: var(--gray-500);
+}
+
+/* ── Trend row ────────────────────────────────────────────── */
+.pf-trend-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-trend-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pf-trend-key {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.04em;
+}
+
+.pf-trend-key--emerging { color: var(--success); }
+.pf-trend-key--fading   { color: var(--gray-400); }
+
+/* ── AI Insights cards ────────────────────────────────────── */
+.pf-insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-insight-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f7f7f7;
+  border-left: 3px solid #e0e0e0;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+.pf-insight-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-mid);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.pf-insight-text {
+  font-size: 14px;
+  color: #444;
+  line-height: var(--leading-relaxed);
+}
+
+/* ── Per Artwork cards ────────────────────────────────────── */
+.pf-artwork-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-artwork-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--white);
+  border: 1px solid #eeeeee;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pf-artwork-card-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* Core Identity — highlighted line inside artwork card */
+.pf-artwork-core {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin: 0;
+  line-height: var(--leading-snug);
+  padding-bottom: 2px;
+}
+
+.pf-artwork-core-key {
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 3px;
+}

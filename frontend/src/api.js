@@ -77,6 +77,44 @@ export const auth = {
     apiRequest('/auth/complete-onboarding', {
       method: 'POST',
     }),
+
+  updateProfile: async (data) =>
+    apiRequest('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  uploadAvatar: async (formData) => {
+    const token = getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const res = await fetch('/api/auth/avatar', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+      throw new Error(err.error || 'Upload failed');
+    }
+    return res.json();
+  },
+
+  changePassword: async (data) =>
+    apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updatePreferences: async (data) =>
+    apiRequest('/auth/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  exportData: async () => apiRequest('/auth/export-data'),
+
+  deleteAccount: async () =>
+    apiRequest('/auth/delete-account', { method: 'DELETE' }),
 };
 
 // ─────────────────────────────────────────
@@ -114,29 +152,37 @@ export const artwork = {
 // REFLECTION
 // ─────────────────────────────────────────
 export const reflection = {
-  // OLD (keep for compatibility)
+  // Latest reflection for the user's most recent artwork
   getMine: async () => apiRequest('/reflection/mine'),
 
-  getByArtworkId: async (artworkId) =>
-    apiRequest(`/reflection/artwork/${artworkId}`),
+  // Reflection for a specific artwork — returns null instead of throwing on 404
+  getByArtworkId: async (artworkId) => {
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE}/reflection/artwork/${artworkId}`, {
+      headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(err.error || 'Request failed');
+    }
+    return res.json();
+  },
+
+  // All reflections across all artworks
+  getAll: async () => apiRequest('/reflection/all'),
 
   refine: async (reflection_id, input) =>
     apiRequest('/reflection/refine', {
       method: 'POST',
-      body: JSON.stringify({
-        reflection_id,
-        input,
-      }),
+      body: JSON.stringify({ reflection_id, input }),
     }),
 
   regenerate: async () =>
     apiRequest('/reflection/regenerate', { method: 'POST' }),
 
-  // 🔥 NEW (PER ARTWORK — MAIN FIX)
   generateForArtwork: async (artworkId) =>
-    apiRequest(`/reflection/generate/${artworkId}`, {
-      method: 'POST',
-    }),
+    apiRequest(`/reflection/generate/${artworkId}`, { method: 'POST' }),
 };
 
 // ─────────────────────────────────────────

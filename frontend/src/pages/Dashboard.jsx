@@ -1,17 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
-import { artwork, reflection } from '../api.js';
+import { reflection } from '../api.js';
 
-// ── Inline image for the dashboard card ─────────────────────────────────────
+// ── Image component with proper URL normalisation ────────────────────────────
 const CardImage = ({ src, alt, artworkType }) => {
   const [status, setStatus] = useState('loading');
   const [retried, setRetried] = useState(false);
   const imgRef = useRef(null);
   const isText = artworkType === 'text';
 
+  // Normalise whatever the backend stored into a browser-reachable URL.
+  // Stored values can be:
+  //   /api/images/artworks/user-xxx/...   ← proxy path (correct)
+  //   http://minio:9000/artworks/...      ← internal Docker URL (broken in browser)
+  //   artworks/user-xxx/...              ← bare object key
   const normalizedSrc = (() => {
     if (!src) return null;
+    // Already a proxy path
+    if (src.startsWith('/api/images/')) return src;
+    // Internal MinIO URL — extract the object key and proxy it
+    if (src.includes('minio:') || src.includes('localhost:9002') || src.includes('localhost:9000')) {
+      const match = src.match(/\/artworks\/.+/);
+      if (match) return `/api/images${match[0]}`;
+      // Try splitting on bucket name
+      const bucketMatch = src.match(/artworks\/(.+)/);
+      if (bucketMatch) return `/api/images/artworks/${bucketMatch[1]}`;
+      return null;
+    }
+    // Absolute http/https URL (e.g. public CDN) — use as-is
     if (src.startsWith('http://') || src.startsWith('https://')) return src;
+    // Relative path starting with /
     if (src.startsWith('/')) return src;
+    // Bare object key
     return `/api/images/${src}`;
   })();
 
@@ -88,24 +107,32 @@ const CardImage = ({ src, alt, artworkType }) => {
 };
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
-const Dashboard = ({ currentUser, onNavigate }) => {
-  const [userArtwork, setUserArtwork] = useState(null);
-  const [userReflection, setUserReflection] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Receives artworks from App (single source of truth).
+// Fetches reflections for the latest artwork locally.
+const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
+  const [latestReflection, setLatestReflection] = useState(null);
+  const [reflectionLoading, setReflectionLoading] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  const latestArtwork = artworks[0] || null;
 
-  const load = async () => {
-    setLoading(true);
+  useEffect(() => {
+    if (!latestArtwork) {
+      setLatestReflection(null);
+      return;
+    }
+    loadReflection(latestArtwork.id);
+  }, [latestArtwork?.id]);
+
+  const loadReflection = async (artworkId) => {
+    setReflectionLoading(true);
     try {
-      try {
-        const a = await artwork.getMine();
-        setUserArtwork(a.artwork);
-        try { const r = await reflection.getMine(); setUserReflection(r.reflection); }
-        catch { setUserReflection(null); }
-      } catch { setUserArtwork(null); setUserReflection(null); }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      const r = await reflection.getByArtworkId(artworkId);
+      setLatestReflection(r?.reflection || null);
+    } catch {
+      setLatestReflection(null);
+    } finally {
+      setReflectionLoading(false);
+    }
   };
 
   const greeting = () => {
@@ -118,44 +145,18 @@ const Dashboard = ({ currentUser, onNavigate }) => {
   const fmtDate = (d) =>
     d ? new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
-  // ── Loading ──────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="dash-page">
-        {/* Banner skeleton */}
-        <div className="dash-skeleton-banner">
-          <div className="dash-skeleton-bar" style={{ height: 11, width: 100, marginBottom: 'var(--sp-3)' }} />
-          <div className="dash-skeleton-bar" style={{ height: 38, width: 240, marginBottom: 'var(--sp-2)' }} />
-          <div className="dash-skeleton-bar" style={{ height: 14, width: 160 }} />
-        </div>
-        {/* Section label skeleton */}
-        <div className="dash-skeleton-bar" style={{ height: 11, width: 80, marginBottom: 'var(--sp-5)' }} />
-        {/* Card skeleton */}
-        <div className="dash-skeleton-card">
-          <div className="dash-skeleton-img" />
-          <div className="dash-skeleton-body">
-            <div className="dash-skeleton-bar" style={{ height: 20, width: '52%' }} />
-            <div className="dash-skeleton-bar" style={{ height: 11, width: '28%' }} />
-            <div style={{ height: 1, background: 'var(--line-soft)', margin: 'var(--sp-1) 0' }} />
-            <div className="dash-skeleton-bar" style={{ height: 14, width: '88%' }} />
-            <div className="dash-skeleton-bar" style={{ height: 14, width: '70%' }} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const artworkCount = artworks.length;
+  const reflectionCount = artworks.filter(a => a.has_reflection).length;
 
-  // ── Empty ────────────────────────────────────────────────
-  if (!userArtwork) {
+  // ── Empty ────────────────────────────────────────────────────
+  if (!latestArtwork) {
     return (
       <div className="dash-page">
-        {/* Banner */}
         <div className="dash-banner">
           <p className="dash-banner-greeting">{greeting()}, {currentUser?.name?.split(' ')[0] || 'there'}</p>
           <h1 className="dash-banner-title">Your Collection</h1>
           <p className="dash-banner-sub">Nothing added yet</p>
         </div>
-
         <div className="dash-empty">
           <div className="dash-empty-frame" />
           <h2 className="dash-empty-title">Your gallery awaits</h2>
@@ -170,7 +171,14 @@ const Dashboard = ({ currentUser, onNavigate }) => {
     );
   }
 
-  // ── Has artwork ──────────────────────────────────────────
+  // ── Has artwork ──────────────────────────────────────────────
+  const subText = (() => {
+    const wLabel = artworkCount === 1 ? '1 work' : `${artworkCount} works`;
+    if (reflectionLoading) return `${wLabel} · loading reflection…`;
+    if (latestReflection) return `${wLabel} · reflection ready`;
+    return `${wLabel} · reflection pending`;
+  })();
+
   return (
     <div className="dash-page">
 
@@ -178,14 +186,14 @@ const Dashboard = ({ currentUser, onNavigate }) => {
       <div className="dash-banner">
         <p className="dash-banner-greeting">{greeting()}, {currentUser?.name?.split(' ')[0] || 'there'}</p>
         <h1 className="dash-banner-title">Your Collection</h1>
-        <p className="dash-banner-sub">
-          1 work&nbsp;&nbsp;·&nbsp;&nbsp;{userReflection ? '1 reflection' : 'reflection pending'}
-        </p>
+        <p className="dash-banner-sub">{subText}</p>
       </div>
 
-      {/* ── Artwork section ── */}
+      {/* ── Latest artwork card ── */}
       <div className="dash-section">
-        <p className="dash-section-label">Artwork</p>
+        <p className="dash-section-label">
+          {artworkCount > 1 ? `Latest · ${artworkCount} total` : 'Artwork'}
+        </p>
 
         <div
           className="dash-card"
@@ -193,28 +201,30 @@ const Dashboard = ({ currentUser, onNavigate }) => {
           role="button"
           tabIndex={0}
           onKeyDown={(e) => e.key === 'Enter' && onNavigate('my-artwork')}
-          aria-label={`View artwork: ${userArtwork.title}`}
+          aria-label={`View artwork: ${latestArtwork.title}`}
         >
-          {/* 1 — Image */}
           <CardImage
-            src={userArtwork.image_url}
-            alt={userArtwork.title}
-            artworkType={userArtwork.artwork_type}
+            src={latestArtwork.image_url}
+            alt={latestArtwork.title}
+            artworkType={latestArtwork.artwork_type}
           />
 
-          {/* 2 — Body */}
           <div className="dash-card-body">
-
-            {/* Title + date */}
-            <h2 className="dash-card-title">{userArtwork.title}</h2>
-            <p className="dash-card-date">{fmtDate(userArtwork.created_at)}</p>
-
-            {/* Separator */}
+            <h2 className="dash-card-title">{latestArtwork.title}</h2>
+            <p className="dash-card-date">{fmtDate(latestArtwork.created_at)}</p>
             <div className="dash-card-sep" />
 
-            {/* Reflection — 2-line clamp */}
-            {userReflection ? (
-              <p className="dash-card-reflection-text">{userReflection.content}</p>
+            {reflectionLoading ? (
+              <p className="dash-card-reflection-pending">
+                <span style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: 'var(--gray-300)', flexShrink: 0,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                }} />
+                Loading reflection…
+              </p>
+            ) : latestReflection ? (
+              <p className="dash-card-reflection-text">{latestReflection.content}</p>
             ) : (
               <p className="dash-card-reflection-pending">
                 <span style={{
@@ -222,29 +232,27 @@ const Dashboard = ({ currentUser, onNavigate }) => {
                   background: 'var(--gray-300)', flexShrink: 0,
                   animation: 'pulse 1.5s ease-in-out infinite',
                 }} />
-                Generating reflection…
+                Reflection not yet generated
               </p>
             )}
 
-            {/* Action */}
             <div className="dash-card-action">
               <button
                 className="dash-card-action-btn"
                 onClick={(e) => { e.stopPropagation(); onNavigate('my-artwork'); }}
                 tabIndex={-1}
               >
-                View&nbsp;→
+                View collection&nbsp;→
               </button>
             </div>
-
           </div>
         </div>
       </div>
 
-      {/* ── Reflections section ── */}
-      {userReflection && (
+      {/* ── Latest reflection preview ── */}
+      {latestReflection && (
         <div className="dash-section">
-          <p className="dash-section-label">Reflections</p>
+          <p className="dash-section-label">Latest reflection</p>
           <div style={{
             padding: 'var(--sp-4) var(--sp-5)',
             background: 'var(--white)',
@@ -263,13 +271,41 @@ const Dashboard = ({ currentUser, onNavigate }) => {
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
             }}>
-              {userReflection.content}
+              {latestReflection.content}
             </p>
             <button
               onClick={() => onNavigate('reflections')}
               className="dash-card-action-btn"
             >
               Read full reflection&nbsp;→
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Quick actions when no reflection yet ── */}
+      {!latestReflection && !reflectionLoading && (
+        <div className="dash-section">
+          <p className="dash-section-label">Get started</p>
+          <div style={{
+            padding: 'var(--sp-5)',
+            background: 'var(--white)',
+            border: '1px solid var(--line-soft)',
+            borderRadius: 'var(--r-lg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--sp-4)',
+          }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: 0 }}>
+              Generate a reflection for your artwork to begin exploring your creative identity.
+            </p>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ flexShrink: 0 }}
+              onClick={() => onNavigate('reflection', latestArtwork.id)}
+            >
+              Generate
             </button>
           </div>
         </div>

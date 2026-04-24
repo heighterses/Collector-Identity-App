@@ -3,8 +3,9 @@ import requests
 
 class OllamaProvider:
     def __init__(self, model="gemma:2b"):
-        self.model = model
-        self.base_url = "http://host.docker.internal:11434"
+        import os
+        self.model = os.getenv("OLLAMA_MODEL", model)
+        self.base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
     def generate(self, prompt: str) -> str:
         try:

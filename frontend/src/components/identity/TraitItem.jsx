@@ -18,8 +18,8 @@ function TraitItem({ trait, onUpdate }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-      <div style={{ flex: 1 }}>{renderTrait()}</div>
+    <div className="trait-item-row">
+      <div style={{ flex: 1, minWidth: 0 }}>{renderTrait()}</div>
       <ConfirmSwitch trait={trait} onUpdate={onUpdate} />
     </div>
   );

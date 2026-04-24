@@ -29,7 +29,7 @@ function ChipDisplay({ trait, onUpdate }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
       {editing ? (
         <input
           autoFocus
@@ -37,15 +37,24 @@ function ChipDisplay({ trait, onUpdate }) {
           onChange={e => setLabelInput(e.target.value)}
           onBlur={commitLabel}
           onKeyDown={handleKeyDown}
-          style={{ fontWeight: "bold" }}
+          className="trait-text-input"
+          style={{ maxWidth: 200 }}
         />
       ) : (
-        <strong onDoubleClick={handleLabelDoubleClick} style={{ cursor: "text" }}>
+        <span
+          className="identity-trait-label"
+          onDoubleClick={handleLabelDoubleClick}
+          style={{ cursor: "text" }}
+          title="Double-click to rename"
+        >
           {trait.label}
-        </strong>
+        </span>
       )}
-      <span onClick={handleToggle} style={{ cursor: "pointer" }}>
-        {isActive ? "✔ Enabled" : "✖ Disabled"}
+      <span
+        onClick={handleToggle}
+        className={`trait-chip-toggle ${isActive ? "trait-chip-toggle--active" : "trait-chip-toggle--inactive"}`}
+      >
+        {isActive ? "✓ Enabled" : "✕ Disabled"}
       </span>
     </div>
   );

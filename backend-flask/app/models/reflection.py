@@ -15,14 +15,22 @@ class Reflection(db.Model):
     def to_dict(self, include_artwork=False):
         data = {
             'id': self.id,
+            'artwork_id': self.artwork_id,
             'content': self.content,
             'type': self.type,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            # Always include basic artwork info so the frontend can show the title
+            'artwork': {
+                'id': self.artwork.id,
+                'title': self.artwork.title,
+                'artwork_type': self.artwork.artwork_type,
+                'image_url': self.artwork.image_url,
+            } if self.artwork else None,
         }
-        
+
         if include_artwork and self.artwork:
             data['artwork'] = self.artwork.to_dict(include_user=True)
-            
+
         return data
     
     def __repr__(self):

@@ -4,7 +4,6 @@ function SliderDisplay({ trait, onUpdate }) {
   const [localValue, setLocalValue] = useState(Number(trait.value) || 0);
   const committedRef = useRef(false);
 
-  // Keep local state in sync if backend value changes
   useEffect(() => {
     setLocalValue(Number(trait.value) || 0);
   }, [trait.value]);
@@ -14,18 +13,20 @@ function SliderDisplay({ trait, onUpdate }) {
   };
 
   const handleRelease = () => {
-    // Guard against duplicate commits from both onMouseUp and onTouchEnd firing
     if (committedRef.current) return;
     committedRef.current = true;
     setTimeout(() => { committedRef.current = false; }, 100);
-
     onUpdate(trait.id, { value: String(localValue) });
   };
 
   return (
-    <div>
-      <strong>{trait.label}</strong>: {localValue} / 10
-      <br />
+    <div style={{ flex: 1 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6 }}>
+        <span className="identity-trait-label">{trait.label}</span>
+        <span style={{ fontSize: 11, color: "var(--gray-400)", fontVariantNumeric: "tabular-nums" }}>
+          {localValue}<span style={{ color: "var(--gray-300)" }}>/10</span>
+        </span>
+      </div>
       <input
         type="range"
         min="0"
@@ -35,6 +36,7 @@ function SliderDisplay({ trait, onUpdate }) {
         onChange={handleChange}
         onMouseUp={handleRelease}
         onTouchEnd={handleRelease}
+        className="trait-slider"
       />
     </div>
   );

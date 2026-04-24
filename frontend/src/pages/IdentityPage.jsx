@@ -1,41 +1,349 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import TraitList from "../components/identity/TraitList";
 import Snackbar from "../components/identity/Snackbar";
+import { artwork as artworkApi } from "../api.js";
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Split flat traits array into logical groups.
+ *  The API serialises the field as "type" (not "trait_type"). */
+function groupTraits(traits) {
+  const core    = traits.find(t => (t.type || t.trait_type) === "text" && t.label === "Core Identity");
+  const chips   = traits.filter(t => (t.type || t.trait_type) === "chip");
+  const sliders = traits.filter(t => (t.type || t.trait_type) === "slider");
+  return { core, chips, sliders };
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+/** CARD 1 — Header: Analysis / Your Identity / Based on... / Save button */
+function HeaderCard({ artwork, onSave, saving }) {
+  return (
+    <div className="id2-card-1">
+      <div className="id2-card-1-inner">
+        <div>
+          <p className="id2-eyebrow">Analysis</p>
+          <h1 className="id2-title">Your Identity</h1>
+          {artwork && (
+            <p className="id2-subtitle">Based on &ldquo;{artwork.title}&rdquo;</p>
+          )}
+        </div>
+        <button
+          className="btn btn-primary btn-sm id2-save-btn"
+          onClick={onSave}
+          disabled={saving}
+          title="Save a snapshot of your current identity"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          {saving ? "Saving…" : "Save version"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** CARD 2 — Core Statement */
+function CoreStatementCard({ core }) {
+  if (!core) return null;
+  return (
+    <div className="id2-card-2">
+      <div className="id2-statement">
+        <span className="id2-statement-quote">&ldquo;</span>
+        <p className="id2-statement-text">{core.value}</p>
+        <span className="id2-statement-quote id2-statement-quote--right">&rdquo;</span>
+      </div>
+    </div>
+  );
+}
+
+/** Artwork selector tabs — only shown when multiple artworks exist */
+function ArtworkTabs({ artworks, activeId, onSelect }) {
+  if (artworks.length <= 1) return null;
+  return (
+    <div className="id2-tabs">
+      {artworks.map(art => (
+        <button
+          key={art.id}
+          className={`id2-tab ${activeId === art.id ? "id2-tab--active" : ""}`}
+          onClick={() => onSelect(art.id)}
+        >
+          {art.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** CARD 3 — Traits grid */
+function TraitsSection({ chips, onToggle }) {
+  if (!chips.length) return null;
+
+  // Separate active vs inactive so user can see what's toggled off
+  const isChipActive = t => t.value === "true" || t.value === "1.0";
+  const active   = chips.filter(t => isChipActive(t));
+  const inactive = chips.filter(t => !isChipActive(t));
+  const allChips = [...active, ...inactive];
+
+  return (
+    <div className="id2-card-3">
+      <div className="id2-card-header">
+        <h2 className="id2-card-title">Traits &amp; Themes</h2>
+        <p className="id2-card-desc">Tap a trait to toggle it on or off</p>
+      </div>
+      <div className="id2-card-body">
+        <div className="id2-traits-grid">
+          {allChips.map(t => {
+            const isActive = t.value === "true" || t.value === "1.0";
+            return (
+              <button
+                key={t.id}
+                className={`id2-trait-cell ${isActive ? "id2-trait-cell--active" : "id2-trait-cell--inactive"}`}
+                onClick={() => onToggle(t.id, { value: isActive ? "false" : "1.0" })}
+                title={isActive ? "Click to disable" : "Click to enable"}
+              >
+                <span className="id2-trait-cell-label">{t.label}</span>
+                <span className="id2-trait-cell-status">{isActive ? "Active" : "Disabled"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** CARD 4 — Metrics sliders */
+function MetricsSection({ sliders, onUpdate }) {
+  if (!sliders.length) return null;
+
+  // Show max 6 metrics, sorted by value descending
+  const sorted = [...sliders]
+    .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
+    .slice(0, 6);
+
+  const max = 10;
+
+  return (
+    <div className="id2-card-4">
+      <div className="id2-card-header">
+        <h2 className="id2-card-title">Metrics</h2>
+        <p className="id2-card-desc">AI-scored dimensions of your creative identity</p>
+      </div>
+      <div className="id2-card-body">
+        <div className="id2-metrics">
+          {sorted.map(t => {
+            const raw   = parseFloat(t.value) || 0;
+            const label = t.label.replace(" (ML)", "").replace("(ML)", "").trim();
+            const pct   = Math.min((raw / max) * 100, 100);
+
+            return (
+              <MetricBar
+                key={t.id}
+                id={t.id}
+                label={label}
+                value={raw}
+                pct={pct}
+                max={max}
+                onUpdate={onUpdate}
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Single interactive metric bar */
+function MetricBar({ id, label, value, pct, max, onUpdate }) {
+  const [localVal, setLocalVal] = useState(value);
+  const committed = useRef(false);
+
+  useEffect(() => { setLocalVal(value); }, [value]);
+
+  const handleRelease = () => {
+    if (committed.current) return;
+    committed.current = true;
+    setTimeout(() => { committed.current = false; }, 100);
+    onUpdate(id, { value: String(localVal) });
+  };
+
+  const localPct = Math.min((localVal / max) * 100, 100);
+
+  return (
+    <div className="id2-metric-row">
+      <div className="id2-metric-header">
+        <span className="id2-metric-label">{label}</span>
+        <span className="id2-metric-value">
+          {localVal.toFixed ? localVal.toFixed(2) : localVal}
+          <span className="id2-metric-max">/{max}</span>
+        </span>
+      </div>
+      <div className="id2-bar-track">
+        <div className="id2-bar-fill" style={{ width: `${localPct}%` }} />
+      </div>
+      <input
+        type="range"
+        min="0"
+        max={max}
+        step="0.1"
+        value={localVal}
+        onChange={e => setLocalVal(parseFloat(e.target.value))}
+        onMouseUp={handleRelease}
+        onTouchEnd={handleRelease}
+        className="id2-bar-range"
+        aria-label={`Adjust ${label}`}
+      />
+    </div>
+  );
+}
+
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+function LoadingSkeleton() {
+  return (
+    <div className="identity-page">
+      <div className="id2-card-1 id2-hero--skeleton">
+        <div className="ghost-card" style={{ height: 14, width: 60, marginBottom: 10 }} />
+        <div className="ghost-card" style={{ height: 32, width: 200, marginBottom: 8 }} />
+        <div className="ghost-card" style={{ height: 14, width: 160, marginBottom: 24 }} />
+      </div>
+      <div className="id2-card-2">
+        <div className="ghost-card" style={{ height: 52, borderRadius: 10 }} />
+      </div>
+      <div className="id2-card-3">
+        <div className="id2-card-header">
+          <div className="ghost-card" style={{ height: 16, width: 120 }} />
+        </div>
+        <div className="id2-card-body">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {[80, 110, 90, 130, 70, 100].map((w, i) => (
+              <div key={i} className="ghost-card" style={{ height: 30, width: w, borderRadius: 999 }} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="id2-card-4">
+        <div className="id2-card-header">
+          <div className="ghost-card" style={{ height: 16, width: 80 }} />
+        </div>
+        <div className="id2-card-body">
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{ marginBottom: 16 }}>
+              <div className="ghost-card" style={{ height: 12, width: 140, marginBottom: 8 }} />
+              <div className="ghost-card" style={{ height: 6, borderRadius: 3 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+function EmptyState({ artworkCount }) {
+  return (
+    <div className="identity-page">
+      <div className="id2-card-1">
+        <div className="id2-card-1-inner">
+          <div>
+            <p className="id2-eyebrow">Analysis</p>
+            <h1 className="id2-title">Your Identity</h1>
+            <p className="id2-subtitle">AI-generated traits derived from your artwork and reflections</p>
+          </div>
+        </div>
+      </div>
+      <div className="identity-empty">
+        <div className="identity-empty-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4M12 16h.01"/>
+          </svg>
+        </div>
+        <h2 className="identity-empty-title">No identity yet</h2>
+        <p className="identity-empty-desc">
+          {artworkCount > 0
+            ? `You have ${artworkCount} artwork${artworkCount !== 1 ? "s" : ""} but no identity has been generated. Generate a reflection first.`
+            : "Add an artwork and generate a reflection to build your identity profile."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 function IdentityPage({ artworkId }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showSnackbar, setShowSnackbar] = useState(false);
-  const [savedAt, setSavedAt] = useState(null);
+  const [data,            setData]            = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [activeArtworkId, setActiveArtworkId] = useState(artworkId);
+  const [allArtworks,     setAllArtworks]     = useState([]);
+  const [showSnackbar,    setShowSnackbar]    = useState(false);
+  const [savedAt,         setSavedAt]         = useState(null);
+  const [saving,          setSaving]          = useState(false);
   const savingRef = useRef(false);
 
-  useEffect(() => {
-    if (!artworkId) return;
-    const token = localStorage.getItem("authToken");
+  // Load artworks list on mount
+  useEffect(() => { loadArtworks(); }, []);
 
-    fetch(`/api/identity/template/${artworkId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(res => {
-        setData(res);
+  const loadArtworks = async () => {
+    try {
+      const res  = await artworkApi.getMine();
+      const list = res.artworks || [];
+      setAllArtworks(list);
+      const startId = artworkId || list[0]?.id || null;
+      setActiveArtworkId(startId);
+    } catch {
+      setAllArtworks([]);
+      setLoading(false);
+    }
+  };
+
+  // Fetch template whenever active artwork changes
+  useEffect(() => {
+    if (!activeArtworkId) { setLoading(false); return; }
+    fetchTemplate(activeArtworkId);
+  }, [activeArtworkId]);
+
+  const fetchTemplate = async (id) => {
+    setLoading(true);
+    const token = localStorage.getItem("authToken");
+    try {
+      const res  = await fetch(`/api/identity/template/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+
+      if (json?.traits?.length > 0) {
+        setData(json);
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [artworkId]);
+        return;
+      }
+
+      // Try next artwork
+      const idx  = allArtworks.findIndex(a => a.id === id);
+      const next = allArtworks[idx + 1];
+      if (next) { setActiveArtworkId(next.id); }
+      else      { setData(null); setLoading(false); }
+    } catch {
+      setData(null);
+      setLoading(false);
+    }
+  };
 
   const handleUpdate = async (traitId, updates) => {
     const token = localStorage.getItem("authToken");
-    const res = await fetch(`/api/identity/trait/${traitId}`, {
-      method: "PATCH",
+    const res   = await fetch(`/api/identity/trait/${traitId}`, {
+      method:  "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(updates)
+      body:    JSON.stringify(updates),
     });
     if (res.ok) {
       const updated = await res.json();
       setData(prev => ({
         ...prev,
-        traits: prev.traits.map(t => t.id === traitId ? { ...t, ...updated } : t)
+        traits: prev.traits.map(t => t.id === traitId ? { ...t, ...updated } : t),
       }));
     }
   };
@@ -43,54 +351,62 @@ function IdentityPage({ artworkId }) {
   const handleSaveVersion = async () => {
     if (savingRef.current || !data?.template_id) return;
     savingRef.current = true;
-
+    setSaving(true);
     const token = localStorage.getItem("authToken");
-    const res = await fetch(`/api/identity/version/save/${data.template_id}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (res.ok) {
-      const result = await res.json();
-      setShowSnackbar(false);
-      setTimeout(() => {
-        setSavedAt(result.version?.created_at || new Date().toISOString());
-        setShowSnackbar(true);
-      }, 10);
+    try {
+      const res = await fetch(`/api/identity/version/save/${data.template_id}`, {
+        method:  "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const result = await res.json();
+        setShowSnackbar(false);
+        setTimeout(() => {
+          setSavedAt(result.version?.created_at || new Date().toISOString());
+          setShowSnackbar(true);
+        }, 10);
+      }
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    savingRef.current = false;
   };
 
   const handleSnackbarClose = useCallback(() => setShowSnackbar(false), []);
 
-  if (loading) return <div>Loading...</div>;
+  // ── Render states ────────────────────────────────────────────
+  if (loading) return <LoadingSkeleton />;
+  if (!data || !data.traits?.length) return <EmptyState artworkCount={allArtworks.length} />;
 
-  if (!data || !data.traits || data.traits.length === 0)
-    return <div>No identity template found.</div>;
+  const activeArtwork            = allArtworks.find(a => a.id === activeArtworkId);
+  const { core, chips, sliders } = groupTraits(data.traits);
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Identity</h2>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            onClick={handleSaveVersion}
-            style={{
-              padding: "8px 16px",
-              backgroundColor: "#1c1917",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: 14
-            }}
-          >
-            Save Version
-          </button>
-        </div>
-      </div>
-      <TraitList traits={data.traits} onUpdate={handleUpdate} />
+    <div className="identity-page">
+
+      {/* CARD 1 — Header */}
+      <HeaderCard
+        artwork={activeArtwork}
+        onSave={handleSaveVersion}
+        saving={saving}
+      />
+
+      {/* CARD 2 — Core Statement */}
+      <CoreStatementCard core={core} />
+
+      {/* Artwork tabs (multi-artwork) */}
+      <ArtworkTabs
+        artworks={allArtworks}
+        activeId={activeArtworkId}
+        onSelect={setActiveArtworkId}
+      />
+
+      {/* CARD 3 — Traits grid */}
+      <TraitsSection chips={chips} onToggle={handleUpdate} />
+
+      {/* CARD 4 — Metrics sliders */}
+      <MetricsSection sliders={sliders} onUpdate={handleUpdate} />
+
       {showSnackbar && (
         <Snackbar
           message="Version saved"

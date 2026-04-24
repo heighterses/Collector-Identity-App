@@ -6,7 +6,7 @@ bp = Blueprint('artwork', __name__, url_prefix='/api/artwork')
 
 
 # ==========================================================
-# ✅ CREATE ARTWORK (NOW MULTIPLE ALLOWED)
+# ✅ CREATE ARTWORK (WITH IMAGE UPLOAD)
 # ==========================================================
 @bp.route('/', methods=['POST'])
 @jwt_required_custom
@@ -18,17 +18,43 @@ def create_artwork():
 
         title = request.form.get('title')
         description = request.form.get('description')
+        artwork_type = request.form.get('artwork_type', 'image')
+
+        if not title or not title.strip():
+            return jsonify({'error': 'Title is required'}), 400
 
         artwork = Artwork(
             user_id=user_id,
-            title=title,
-            description=description
+            title=title.strip(),
+            description=description,
+            artwork_type=artwork_type,
         )
+
+        # ── Handle image upload ──────────────────────────────────
+        image_file = request.files.get('imageFile')
+        if image_file and image_file.filename:
+            try:
+                from app.services.s3_service import s3_service
+                file_bytes = image_file.read()
+                mime_type = image_file.mimetype or 'image/jpeg'
+                result = s3_service.upload_file(
+                    file_buffer=file_bytes,
+                    original_filename=image_file.filename,
+                    mime_type=mime_type,
+                    user_id=user_id,
+                )
+                # Store the proxy path so the browser fetches via /api/images/<key>
+                artwork.image_url = f"/api/images/{result['object_key']}"
+                artwork.s3_object_key = result['object_key']
+                current_app.logger.info(f"Image uploaded: {result['object_key']}")
+            except Exception as upload_err:
+                current_app.logger.error(f"Image upload failed (non-blocking): {str(upload_err)}")
+                # Continue without image rather than failing the whole request
 
         db.session.add(artwork)
         db.session.commit()
 
-        # 🔥 Trigger identity generation if description exists
+        # ── Trigger identity generation if description exists ────
         if description:
             try:
                 from app.services.identity_service import identity_service
