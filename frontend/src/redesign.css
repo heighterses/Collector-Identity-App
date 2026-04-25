@@ -4928,3 +4928,298 @@ html, body {
     rgba(10, 8, 6, 0.65) 100%
   );
 }
+
+/* ============================================================
+   ANIMATIONS — subtle, elegant, intentional
+   ============================================================ */
+
+/* ── 1. Refined keyframes ────────────────────────────────────── */
+
+/* Page entry — fade + gentle upward drift */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Card entry — fade + very slight scale */
+@keyframes cardEnter {
+  from { opacity: 0; transform: translateY(8px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Stagger child — used for trait chips, list items */
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Soft pulse for AI processing */
+@keyframes breathe {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* Ellipsis dot cycle */
+@keyframes dot1 { 0%,20%  { opacity: 0; } 40%,100% { opacity: 1; } }
+@keyframes dot2 { 0%,40%  { opacity: 0; } 60%,100% { opacity: 1; } }
+@keyframes dot3 { 0%,60%  { opacity: 0; } 80%,100% { opacity: 1; } }
+
+/* Subtle shimmer sweep for loading states */
+@keyframes sweep {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+/* ── 2. Page transitions ─────────────────────────────────────── */
+
+/* All main page containers */
+.db-page,
+.ma-page,
+.rf-page,
+.add-artwork-page,
+.profile-page,
+.identity-page,
+.gallery-settings,
+.reading-page {
+  animation: pageEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Cards animate in slightly after the page */
+.id2-card-1 { animation: cardEnter 240ms 40ms  cubic-bezier(0.22,1,0.36,1) both; }
+.id2-card-2 { animation: cardEnter 240ms 80ms  cubic-bezier(0.22,1,0.36,1) both; }
+.id2-card-3 { animation: cardEnter 240ms 120ms cubic-bezier(0.22,1,0.36,1) both; }
+.id2-card-4 { animation: cardEnter 240ms 160ms cubic-bezier(0.22,1,0.36,1) both; }
+
+.db-identity-card  { animation: cardEnter 240ms 30ms  cubic-bezier(0.22,1,0.36,1) both; }
+.db-reflection-card { animation: cardEnter 240ms 70ms  cubic-bezier(0.22,1,0.36,1) both; }
+
+.pf-card:nth-child(1) { animation: cardEnter 240ms 30ms  cubic-bezier(0.22,1,0.36,1) both; }
+.pf-card:nth-child(2) { animation: cardEnter 240ms 70ms  cubic-bezier(0.22,1,0.36,1) both; }
+.pf-card:nth-child(3) { animation: cardEnter 240ms 110ms cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ── 3. Card hover — scale + shadow ─────────────────────────── */
+
+/* Interactive cards */
+.ma-card,
+.db-art-card,
+.dash-card,
+.rf-sidebar-item,
+.id2-trait-cell,
+.landing-step {
+  transition:
+    transform 0.22s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.22s cubic-bezier(0.22,1,0.36,1),
+    background 0.18s ease;
+}
+
+.ma-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 10px 32px rgba(28,24,20,0.11);
+}
+
+.db-art-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 8px 24px rgba(28,24,20,0.10);
+}
+
+.dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(28,24,20,0.09);
+}
+
+.landing-step:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(28,24,20,0.09);
+}
+
+/* ── 4. Button interactions — press feedback ─────────────────── */
+
+.btn {
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.14s cubic-bezier(0.22,1,0.36,1),
+    box-shadow 0.16s ease,
+    opacity 0.16s ease;
+}
+
+/* Press down on click */
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: none !important;
+  transition-duration: 0.08s;
+}
+
+/* ── 5. Identity reveal — staggered traits ───────────────────── */
+
+/* Each trait cell staggers in */
+.id2-traits-grid .id2-trait-cell {
+  animation: staggerIn 200ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.id2-traits-grid .id2-trait-cell:nth-child(1)  { animation-delay: 60ms;  }
+.id2-traits-grid .id2-trait-cell:nth-child(2)  { animation-delay: 90ms;  }
+.id2-traits-grid .id2-trait-cell:nth-child(3)  { animation-delay: 120ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(4)  { animation-delay: 150ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(5)  { animation-delay: 180ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(6)  { animation-delay: 210ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(7)  { animation-delay: 240ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(8)  { animation-delay: 270ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(9)  { animation-delay: 300ms; }
+.id2-traits-grid .id2-trait-cell:nth-child(10) { animation-delay: 330ms; }
+
+/* Metric bars animate their fill */
+.id2-bar-fill {
+  animation: barGrow 600ms 200ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes barGrow {
+  from { width: 0% !important; }
+  /* to: inline width style takes over */
+}
+
+/* Core statement fades in with serif weight */
+.id2-statement-text {
+  animation: pageEnter 400ms 100ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ── 6. AI processing — animated text steps ──────────────────── */
+
+/* Animated ellipsis — attach to any loading text */
+.ai-dots span:nth-child(1) { animation: dot1 1.2s ease-in-out infinite; }
+.ai-dots span:nth-child(2) { animation: dot2 1.2s ease-in-out infinite; }
+.ai-dots span:nth-child(3) { animation: dot3 1.2s ease-in-out infinite; }
+
+/* AI step indicator — cycling text */
+.ai-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: rgba(255,255,255,0.9);
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+.ai-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  animation: breathe 1.8s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* For secondary buttons (light bg) */
+.ai-step--dark {
+  color: var(--text-secondary);
+}
+
+.ai-step--dark .ai-step-dot {
+  background: var(--accent);
+}
+
+/* ── 7. Artwork grid — stagger on load ───────────────────────── */
+
+.ma-grid .ma-card {
+  animation: cardEnter 220ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.ma-grid .ma-card:nth-child(1) { animation-delay: 30ms;  }
+.ma-grid .ma-card:nth-child(2) { animation-delay: 60ms;  }
+.ma-grid .ma-card:nth-child(3) { animation-delay: 90ms;  }
+.ma-grid .ma-card:nth-child(4) { animation-delay: 120ms; }
+.ma-grid .ma-card:nth-child(5) { animation-delay: 150ms; }
+.ma-grid .ma-card:nth-child(6) { animation-delay: 180ms; }
+
+/* ── 8. Sidebar items — stagger ──────────────────────────────── */
+
+.rf-sidebar .rf-sidebar-item {
+  animation: staggerIn 180ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.rf-sidebar .rf-sidebar-item:nth-child(1) { animation-delay: 40ms;  }
+.rf-sidebar .rf-sidebar-item:nth-child(2) { animation-delay: 70ms;  }
+.rf-sidebar .rf-sidebar-item:nth-child(3) { animation-delay: 100ms; }
+.rf-sidebar .rf-sidebar-item:nth-child(4) { animation-delay: 130ms; }
+.rf-sidebar .rf-sidebar-item:nth-child(5) { animation-delay: 160ms; }
+
+/* ── 9. Reflection text — gentle reveal ──────────────────────── */
+
+.rf-reader {
+  animation: cardEnter 280ms 60ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.rf-text-lead {
+  animation: pageEnter 300ms 120ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.rf-text {
+  animation: pageEnter 300ms 180ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* ── 10. Dashboard identity chips — stagger ──────────────────── */
+
+.db-identity-chips .db-identity-chip {
+  animation: staggerIn 180ms cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.db-identity-chips .db-identity-chip:nth-child(1) { animation-delay: 80ms;  }
+.db-identity-chips .db-identity-chip:nth-child(2) { animation-delay: 110ms; }
+.db-identity-chips .db-identity-chip:nth-child(3) { animation-delay: 140ms; }
+.db-identity-chips .db-identity-chip:nth-child(4) { animation-delay: 170ms; }
+.db-identity-chips .db-identity-chip:nth-child(5) { animation-delay: 200ms; }
+.db-identity-chips .db-identity-chip:nth-child(6) { animation-delay: 230ms; }
+
+/* ── 11. Respect reduced motion ──────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   REFLECTIONS — full-width fix when single reflection
+   ============================================================ */
+
+/* Reading column always fills its grid cell */
+.rf-reading-col {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Reader card fills the column */
+.rf-reader {
+  width: 100%;
+}
+
+/* Text max-width: comfortable reading line length,
+   but never constrained to less than the card width */
+.rf-text {
+  max-width: min(62ch, 100%);
+}
+
+.rf-text-lead {
+  max-width: min(62ch, 100%);
+}
+
+/* When single (no sidebar), give the reader more generous padding
+   and let text breathe across the full width */
+.rf-layout--single .rf-reader-header,
+.rf-layout--single .rf-text-block,
+.rf-layout--single .rf-ai-panel,
+.rf-layout--single .rf-artwork-preview {
+  padding-left: 36px;
+  padding-right: 36px;
+}
+
+.rf-layout--single .rf-text,
+.rf-layout--single .rf-text-lead {
+  max-width: 72ch;   /* wider comfortable reading width for full layout */
+}

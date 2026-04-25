@@ -87,7 +87,7 @@ const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate,
             disabled={loadingAI || !userInput.trim()}
           >
             {loadingAI && aiAction === 'refine'
-              ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Refining…</>
+              ? <span className="ai-step"><span className="ai-step-dot" />Refining<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span></span>
               : 'Refine'}
           </button>
           <button
@@ -96,7 +96,7 @@ const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate,
             disabled={loadingAI}
           >
             {loadingAI && aiAction === 'regenerate'
-              ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 1.5 }} />Regenerating…</>
+              ? <span className="ai-step"><span className="ai-step-dot" />Regenerating<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span></span>
               : 'Regenerate'}
           </button>
         </div>

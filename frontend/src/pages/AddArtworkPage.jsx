@@ -259,10 +259,10 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
             className="btn btn-primary add-artwork-submit"
           >
             {loading ? (
-              <>
-                <span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
-                Adding to collection…
-              </>
+              <span className="ai-step">
+                <span className="ai-step-dot" />
+                Adding to collection<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span>
+              </span>
             ) : 'Add to collection'}
           </button>
 

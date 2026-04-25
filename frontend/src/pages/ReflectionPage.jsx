@@ -126,9 +126,12 @@ const ReflectionPage = ({ onLogout, artwork }) => {
           {error && <div className="alert alert-error" style={{ marginBottom: 'var(--sp-4)' }}>{error}</div>}
 
           <button onClick={handleGenerateReflection} disabled={loading} className="btn btn-primary btn-lg" style={{ width: '100%' }}>
-            {loading
-              ? <><div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Generating…</>
-              : 'Generate Reflection'}
+            {loading ? (
+              <span className="ai-step">
+                <span className="ai-step-dot" />
+                Reading your artwork<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span>
+              </span>
+            ) : 'Generate Reflection'}
           </button>
         </div>
       ) : (
@@ -153,7 +156,7 @@ const ReflectionPage = ({ onLogout, artwork }) => {
             <div className="reading-ai-actions">
               <button onClick={handleRefineReflection} disabled={refineLoading || !userInput.trim()} className="btn btn-primary">
                 {refineLoading
-                  ? <><div className="spinner" style={{ width: 14, height: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Refining…</>
+                  ? <span className="ai-step"><span className="ai-step-dot" />Refining<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span></span>
                   : 'Refine'}
               </button>
             </div>
