@@ -1,7 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AuthModal from './AuthModal.jsx';
 
 const SAMPLE = `This work carries a quiet tension between presence and absence — the way light falls across the composition suggests not just a moment captured, but a feeling held in suspension. There is an intentionality here that speaks to a practiced eye: the artist knows what to include, but more importantly, what to leave out.`;
+
+// ── Curated artwork dataset ───────────────────────────────────────────────────
+// Sourced from Unsplash (public domain / free to use)
+const ARTWORKS = [
+  {
+    id: 1,
+    image: 'https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=600&q=80',
+    title: 'Quiet Geometry',
+    subtitle: 'AI reflection available',
+    date: 'March 2024',
+  },
+  {
+    id: 2,
+    image: 'https://images.unsplash.com/photo-1549490349-8643362247b5?w=600&q=80',
+    title: 'Suspended Light',
+    subtitle: 'AI reflection available',
+    date: 'January 2024',
+  },
+  {
+    id: 3,
+    image: 'https://images.unsplash.com/photo-1541961017774-22349e4a1262?w=600&q=80',
+    title: 'Chromatic Study',
+    subtitle: 'AI reflection available',
+    date: 'November 2023',
+  },
+  {
+    id: 4,
+    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
+    title: 'Interior Silence',
+    subtitle: 'AI reflection available',
+    date: 'September 2023',
+  },
+  {
+    id: 5,
+    image: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=600&q=80',
+    title: 'Soft Boundary',
+    subtitle: 'AI reflection available',
+    date: 'July 2023',
+  },
+  {
+    id: 6,
+    image: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=600&q=80',
+    title: 'Trace of Form',
+    subtitle: 'AI reflection available',
+    date: 'May 2023',
+  },
+];
+
+// ── Rotating artwork card ─────────────────────────────────────────────────────
+const RotatingArtworkCard = () => {
+  const [current, setCurrent] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Fade out
+      setVisible(false);
+      setTimeout(() => {
+        setCurrent(prev => (prev + 1) % ARTWORKS.length);
+        // Fade in
+        setVisible(true);
+      }, 400); // matches CSS transition duration
+    }, 6000); // rotate every 6 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const art = ARTWORKS[current];
+
+  return (
+    <div className="landing-card-main">
+      <div
+        className="landing-rotating-img"
+        style={{ opacity: visible ? 1 : 0 }}
+      >
+        <img
+          src={art.image}
+          alt={art.title}
+          className="landing-rotating-img-el"
+        />
+        {/* Progress bar */}
+        <div className="landing-rotating-progress" key={current} />
+      </div>
+      <div
+        className="landing-card-body"
+        style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.4s ease' }}
+      >
+        <p className="landing-card-label">
+          <span className="landing-chip-dot" style={{ display: 'inline-block', marginRight: 6 }} />
+          {art.subtitle}
+        </p>
+        <p className="landing-card-title">{art.title}</p>
+        <p className="landing-card-date">Added {art.date}</p>
+      </div>
+    </div>
+  );
+};
 
 const LandingPage = ({ onAuthSuccess }) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -46,16 +143,7 @@ const LandingPage = ({ onAuthSuccess }) => {
           <div className="landing-hero-right">
             <div className="landing-visual-stack">
               <div className="landing-card-back" />
-              <div className="landing-card-main">
-                <div className="landing-card-image">
-                  <div className="landing-card-shimmer" />
-                </div>
-                <div className="landing-card-body">
-                  <p className="landing-card-label">Artwork</p>
-                  <p className="landing-card-title">Untitled Study No. 4</p>
-                  <p className="landing-card-date">Added March 2026</p>
-                </div>
-              </div>
+              <RotatingArtworkCard />
               <div className="landing-reflection-chip">
                 <div className="landing-chip-label">
                   <span className="landing-chip-dot" />

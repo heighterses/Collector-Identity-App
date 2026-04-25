@@ -3909,3 +3909,1022 @@ p {
   color: #ffffff;
   border-radius: var(--btn-radius);
 }
+
+/* ============================================================
+   LANDING — rotating artwork card
+   ============================================================ */
+
+/* Image container — fills the card's image area */
+.landing-rotating-img {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  background: #1a1816;
+  transition: opacity 0.4s ease;
+}
+
+.landing-rotating-img-el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 6s ease;   /* very slow drift for life */
+  transform: scale(1.04);
+}
+
+/* Subtle progress bar at bottom of image — resets on each artwork */
+.landing-rotating-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: rgba(176,122,91,0.55);
+  border-radius: 0 2px 0 0;
+  animation: landing-progress 6s linear forwards;
+}
+
+@keyframes landing-progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}
+
+/* Dot indicator in card label */
+.landing-card-label .landing-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   DARK MODE — .dark-theme on <html>
+   Remaps all design tokens. Every component using var()
+   automatically inherits the dark palette.
+   ============================================================ */
+
+.dark-theme {
+  /* ── Core palette ── */
+  --bg-main:        #1a1816;   /* deep warm dark */
+  --card-bg:        #242220;   /* slightly lighter card surface */
+  --border-subtle:  #3a3632;   /* warm dark border */
+  --text-primary:   #f0ece8;   /* warm off-white */
+  --text-secondary: #9a9088;   /* muted warm gray */
+  --accent:         #c4906e;   /* slightly lighter clay for dark bg */
+  --accent-light:   rgba(196,144,110,0.12);
+  --accent-hover:   #d4a07e;
+  --accent-subtle:  rgba(196,144,110,0.08);
+
+  /* ── Token remaps ── */
+  --paper:          #1a1816;
+  --paper-2:        #201e1c;
+  --paper-3:        #2a2724;
+  --white:          #242220;
+  --line:           #3a3632;
+  --line-soft:      #302e2b;
+  --ink:            #f0ece8;
+  --ink-soft:       #e8e4e0;
+  --ink-muted:      #d0ccc8;
+  --gray-100:       #201e1c;
+  --gray-200:       #2a2724;
+  --gray-300:       #3d3a36;
+  --gray-400:       #6a6460;
+  --gray-500:       #8a8480;
+  --gray-600:       #aaa49e;
+  --gray-700:       #ccc8c2;
+
+  /* ── Shadows — more visible on dark ── */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.20);
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.28);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.36);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.44);
+  --shadow-xl:  0 24px 64px rgba(0,0,0,0.52);
+  --card-shadow: 0 1px 4px rgba(0,0,0,0.28);
+
+  /* ── Semantic ── */
+  --success:    #4caf7d;
+  --success-bg: rgba(76,175,125,0.12);
+  --error:      #e06060;
+  --error-bg:   rgba(224,96,96,0.12);
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+.dark-theme body {
+  background: var(--bg-main);
+  color: var(--text-secondary);
+}
+
+/* ── Navbar ──────────────────────────────────────────────────── */
+.dark-theme .app-header {
+  background: #201e1c;
+  border-bottom-color: var(--border-subtle);
+}
+
+.dark-theme .app-title { color: var(--text-primary); }
+
+.dark-theme .nav-item {
+  color: var(--text-secondary);
+}
+
+.dark-theme .nav-item:hover {
+  color: var(--text-primary);
+  background: rgba(196,144,110,0.10);
+}
+
+.dark-theme .nav-item--active {
+  color: var(--accent);
+  background: rgba(196,144,110,0.14);
+}
+
+.dark-theme .nav-profile-btn {
+  background: #2e2c2a;
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .nav-profile-btn:hover {
+  background: #363330;
+  border-color: var(--gray-300);
+}
+
+.dark-theme .nav-user-name { color: var(--text-primary); }
+.dark-theme .nav-chevron   { color: var(--text-secondary); }
+.dark-theme .nav-avatar    { background: #5a4030; }
+
+.dark-theme .nav-profile-dropdown {
+  background: #2a2826;
+  border-color: var(--border-subtle);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.40);
+}
+
+.dark-theme .nav-profile-dropdown button {
+  color: var(--text-primary);
+}
+
+.dark-theme .nav-profile-dropdown button:hover {
+  background: rgba(196,144,110,0.10);
+}
+
+/* ── Universal cards ─────────────────────────────────────────── */
+.dark-theme .card,
+.dark-theme .id2-card-1,
+.dark-theme .id2-card-2,
+.dark-theme .id2-card-3,
+.dark-theme .id2-card-4,
+.dark-theme .pf-card,
+.dark-theme .db-identity-card,
+.dark-theme .db-reflection-card,
+.dark-theme .db-sidebar-card,
+.dark-theme .db-art-card,
+.dark-theme .db-prompt-card,
+.dark-theme .dash-card,
+.dark-theme .dash-banner,
+.dark-theme .gallery-identity-card,
+.dark-theme .gallery-prefs-card,
+.dark-theme .add-artwork-form-panel,
+.dark-theme .gallery-settings-content,
+.dark-theme .gallery-settings-nav,
+.dark-theme .rf-reader,
+.dark-theme .rf-sidebar,
+.dark-theme .ma-card,
+.dark-theme .modal,
+.dark-theme .auth-modal {
+  background: var(--card-bg);
+  border-color: var(--border-subtle);
+  box-shadow: var(--card-shadow);
+}
+
+/* Identity card 2 — core statement */
+.dark-theme .id2-card-2 {
+  background: #2a2420;
+  border-color: rgba(196,144,110,0.20);
+}
+
+/* Profile header card */
+.dark-theme .pf-header-card {
+  background: #2a2420;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.dark-theme .btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1816;
+}
+
+.dark-theme .btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.dark-theme .btn-secondary {
+  background: #2e2c2a;
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .btn-secondary:hover:not(:disabled) {
+  background: #363330;
+  border-color: var(--gray-300);
+}
+
+.dark-theme .btn-ghost {
+  color: var(--text-secondary);
+}
+
+.dark-theme .btn-ghost:hover:not(:disabled) {
+  background: rgba(196,144,110,0.08);
+  color: var(--text-primary);
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.dark-theme .form-input,
+.dark-theme .auth-field-input,
+.dark-theme .reflections-ai-textarea,
+.dark-theme .reading-ai-textarea,
+.dark-theme .rf-ai-panel .reflections-ai-textarea {
+  background: #1e1c1a;
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.dark-theme .form-input:hover,
+.dark-theme .auth-field-input:hover {
+  border-color: var(--gray-300);
+}
+
+.dark-theme .form-input:focus,
+.dark-theme .auth-field-input:focus,
+.dark-theme .reflections-ai-textarea:focus,
+.dark-theme .reading-ai-textarea:focus,
+.dark-theme .rf-ai-panel .reflections-ai-textarea:focus {
+  background: #242220;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(196,144,110,0.14);
+}
+
+.dark-theme .form-input::placeholder,
+.dark-theme .auth-field-input::placeholder {
+  color: var(--gray-400);
+}
+
+.dark-theme .form-label { color: var(--text-secondary); }
+
+.dark-theme .settings-select {
+  background: #1e1c1a;
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+/* Toggle on */
+.dark-theme .toggle-switch input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+/* ── Typography ──────────────────────────────────────────────── */
+.dark-theme h1,
+.dark-theme h2,
+.dark-theme h3,
+.dark-theme h4,
+.dark-theme h5,
+.dark-theme h6 {
+  color: var(--text-primary);
+}
+
+.dark-theme p { color: var(--text-secondary); }
+.dark-theme a { color: var(--accent); }
+
+/* ── Reflection text ─────────────────────────────────────────── */
+.dark-theme .rf-text,
+.dark-theme .reflections-text,
+.dark-theme .reading-text,
+.dark-theme .db-reflection-full,
+.dark-theme .db-reflection-snippet {
+  color: #c8c4be;
+}
+
+.dark-theme .rf-text-lead {
+  color: var(--text-primary);
+}
+
+/* ── Artwork image areas ─────────────────────────────────────── */
+.dark-theme .rf-artwork-preview {
+  background: #1e1c1a;
+}
+
+.dark-theme .db-art-img,
+.dark-theme .ma-card-img-wrap {
+  background: #111010;
+}
+
+/* ── Sidebar items ───────────────────────────────────────────── */
+.dark-theme .rf-sidebar-item:hover {
+  background: rgba(196,144,110,0.08);
+}
+
+.dark-theme .rf-sidebar-item--active {
+  background: rgba(196,144,110,0.14);
+}
+
+.dark-theme .rf-sidebar-item--active .rf-sidebar-item-title {
+  color: var(--accent);
+}
+
+/* ── Identity trait cells ────────────────────────────────────── */
+.dark-theme .id2-trait-cell {
+  background: #2a2724;
+}
+
+.dark-theme .id2-trait-cell:hover {
+  background: #302e2b;
+}
+
+.dark-theme .id2-trait-cell--active {
+  background: #252e25;
+}
+
+/* ── Metric bars ─────────────────────────────────────────────── */
+.dark-theme .id2-bar-track,
+.dark-theme .db-metric-track {
+  background: #302e2b;
+}
+
+/* ── Profile chips ───────────────────────────────────────────── */
+.dark-theme .pf-chip {
+  background: #2a2724;
+  color: var(--text-primary);
+}
+
+.dark-theme .db-identity-chip {
+  background: rgba(196,144,110,0.12);
+  color: var(--accent);
+}
+
+/* ── Insight card ────────────────────────────────────────────── */
+.dark-theme .db-insight-card {
+  background: #2a2420;
+  border-color: rgba(196,144,110,0.18);
+}
+
+.dark-theme .pf-insight-card {
+  background: #2a2420;
+  border-left-color: var(--accent);
+}
+
+/* ── Add artwork dropzone ────────────────────────────────────── */
+.dark-theme .add-artwork-dropzone {
+  background: #1e1c1a;
+  border-color: #3a3632;
+}
+
+.dark-theme .add-artwork-dropzone:hover {
+  background: #242220;
+  border-color: #4a4642;
+}
+
+.dark-theme .add-artwork-dropzone-icon {
+  background: #2a2724;
+  border-color: var(--border-subtle);
+  color: var(--gray-400);
+}
+
+/* ── Settings ────────────────────────────────────────────────── */
+.dark-theme .setting-row:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.dark-theme .setting-row-label { color: var(--text-primary); }
+.dark-theme .setting-row-desc  { color: var(--text-secondary); }
+
+.dark-theme .gallery-settings-nav-btn {
+  color: var(--text-secondary);
+}
+
+.dark-theme .gallery-settings-nav-btn:hover {
+  background: rgba(196,144,110,0.08);
+  color: var(--text-primary);
+}
+
+.dark-theme .gallery-settings-nav-btn--active {
+  background: rgba(196,144,110,0.14);
+  color: var(--accent);
+}
+
+/* ── Modals ──────────────────────────────────────────────────── */
+.dark-theme .modal-backdrop,
+.dark-theme .auth-modal-backdrop {
+  background: rgba(0,0,0,0.65);
+}
+
+.dark-theme .modal-title,
+.dark-theme .auth-main-title {
+  color: var(--text-primary);
+}
+
+.dark-theme .modal-message { color: var(--text-secondary); }
+
+/* ── Alerts ──────────────────────────────────────────────────── */
+.dark-theme .alert-error {
+  background: rgba(224,96,96,0.12);
+  color: #e08080;
+  border-color: rgba(224,96,96,0.20);
+}
+
+.dark-theme .alert-success {
+  background: rgba(76,175,125,0.12);
+  color: #6abf90;
+  border-color: rgba(76,175,125,0.20);
+}
+
+/* ── Skeleton / ghost ────────────────────────────────────────── */
+.dark-theme .ghost-card {
+  background: linear-gradient(
+    90deg,
+    #242220 25%,
+    #2e2c2a 50%,
+    #242220 75%
+  );
+  background-size: 600px 100%;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: #3a3632;
+}
+
+/* ── Landing page ────────────────────────────────────────────── */
+.dark-theme .landing {
+  background: var(--bg-main);
+}
+
+.dark-theme .landing-header {
+  background: rgba(26,24,22,0.96);
+  border-bottom-color: var(--border-subtle);
+}
+
+.dark-theme .landing-logo { color: var(--text-primary); }
+
+.dark-theme .landing-h1,
+.dark-theme .landing-lead { color: var(--text-primary); }
+
+.dark-theme .landing-card-main,
+.dark-theme .landing-card-back {
+  background: var(--card-bg);
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .landing-reflection-chip {
+  background: #2a2724;
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .landing-preview-card {
+  background: var(--card-bg);
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .landing-cta-section {
+  background: #201e1c;
+}
+
+.dark-theme .landing-cta-title { color: var(--text-primary); }
+.dark-theme .landing-cta-sub   { color: var(--text-secondary); }
+
+.dark-theme .landing-step {
+  background: var(--card-bg);
+  border-color: var(--border-subtle);
+}
+
+.dark-theme .landing-footer {
+  background: #161412;
+  border-top-color: var(--border-subtle);
+}
+
+/* ── Empty states ────────────────────────────────────────────── */
+.dark-theme .ma-empty-frame,
+.dark-theme .rf-empty-icon {
+  background: #2a2724;
+  border-color: var(--border-subtle);
+  color: var(--gray-400);
+}
+
+.dark-theme .dash-empty-frame {
+  background: #2a2724;
+  border-color: var(--border-subtle);
+}
+
+/* ============================================================
+   MOBILE RESPONSIVENESS — comprehensive fix
+   Prevents horizontal scroll, fixes layouts on small screens
+   ============================================================ */
+
+/* ── 1. Global overflow guard ────────────────────────────────── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  min-width: 0;   /* prevents flex/grid children from overflowing */
+}
+
+/* ── 2. Content wrapper — tighter padding on mobile ─────────── */
+.content-wrapper {
+  padding: var(--sp-8) var(--sp-5);
+  width: 100%;
+  max-width: var(--max-w);
+}
+
+@media (max-width: 480px) {
+  .content-wrapper {
+    padding: var(--sp-6) var(--sp-4);
+  }
+}
+
+/* ── 3. Navbar — mobile ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app-header {
+    height: auto;
+    min-height: var(--header-h);
+  }
+
+  .header-content {
+    padding: 0 var(--sp-4);
+    flex-wrap: wrap;
+    gap: var(--sp-2);
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /* Logo + profile on top row */
+  .header-left  { order: 1; flex: 1; }
+  .nav-profile-wrapper { order: 2; }
+
+  /* Nav scrolls horizontally on second row */
+  .main-navigation {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 4px 0 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .main-navigation::-webkit-scrollbar { display: none; }
+
+  .nav-item {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .nav-label { font-size: 10px; }
+  .nav-icon svg { width: 12px; height: 12px; }
+
+  /* Hide username on mobile */
+  .nav-user-name { display: none; }
+}
+
+/* ── 4. Landing page — mobile ────────────────────────────────── */
+@media (max-width: 900px) {
+  .landing-hero-section {
+    min-height: auto;
+    padding: var(--sp-16) 0 var(--sp-12);
+  }
+
+  .landing-hero-inner {
+    grid-template-columns: 1fr;
+    gap: var(--sp-10);
+    padding: 0 var(--sp-5);
+  }
+
+  /* Hide the visual card stack on mobile — text is enough */
+  .landing-hero-right { display: none; }
+
+  .landing-h1 {
+    font-size: clamp(32px, 8vw, 52px);
+  }
+
+  .landing-lead {
+    font-size: var(--text-base);
+  }
+
+  .landing-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .landing-btn-primary,
+  .landing-btn-secondary {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Steps — single column */
+  .landing-steps {
+    grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+
+  .landing-section-inner {
+    padding: 0 var(--sp-5);
+  }
+
+  .landing-preview-inner {
+    padding: 0 var(--sp-5);
+  }
+
+  .landing-preview-card-body {
+    padding: var(--sp-6) var(--sp-5);
+  }
+
+  .landing-preview-text {
+    font-size: var(--text-base);
+  }
+
+  .landing-preview-text::first-letter {
+    font-size: inherit;
+    float: none;
+    margin: 0;
+  }
+
+  .landing-cta-inner {
+    padding: 0 var(--sp-5);
+  }
+
+  .landing-footer-inner {
+    padding: 0 var(--sp-5);
+    flex-direction: column;
+    gap: var(--sp-2);
+    text-align: center;
+  }
+
+  .landing-header-content {
+    padding: 0 var(--sp-5);
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-how,
+  .landing-preview,
+  .landing-cta-section {
+    padding: var(--sp-12) 0;
+  }
+
+  .landing-section-title {
+    font-size: var(--text-xl);
+  }
+
+  .landing-section-sub {
+    font-size: var(--text-sm);
+  }
+}
+
+/* ── 5. Dashboard — mobile ───────────────────────────────────── */
+@media (max-width: 860px) {
+  .db-page { padding: 0; }
+
+  .db-identity-card {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .db-identity-right {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .db-main-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .db-reflection-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .db-artworks-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .db-identity-core {
+    font-size: var(--text-base);
+  }
+
+  .db-identity-metrics {
+    max-width: 100%;
+  }
+}
+
+/* ── 6. My Artwork — mobile ──────────────────────────────────── */
+@media (max-width: 900px) {
+  .ma-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+@media (max-width: 560px) {
+  .ma-grid  { grid-template-columns: 1fr; gap: 14px; }
+  .ma-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .ma-add-btn { width: 100%; justify-content: center; }
+}
+
+/* ── 7. Reflections — mobile ─────────────────────────────────── */
+@media (max-width: 700px) {
+  .rf-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .rf-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    overflow-x: auto;
+  }
+
+  .rf-sidebar-label { display: none; }
+
+  .rf-sidebar-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    padding: 7px 12px;
+    white-space: nowrap;
+  }
+
+  .rf-sidebar-item-date { display: none; }
+
+  .rf-reader-header,
+  .rf-text-block,
+  .rf-ai-panel {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .rf-artwork-preview {
+    padding: 14px 18px;
+  }
+
+  .rf-text { max-width: 100%; }
+}
+
+/* ── 8. Add Artwork — mobile ─────────────────────────────────── */
+@media (max-width: 720px) {
+  .add-artwork-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .add-artwork-canvas { position: static; }
+
+  .add-artwork-dropzone,
+  .add-artwork-preview {
+    min-height: 240px;
+  }
+
+  .add-artwork-form-panel {
+    padding: 20px;
+  }
+}
+
+/* ── 9. Identity page — mobile ───────────────────────────────── */
+@media (max-width: 560px) {
+  .id2-traits-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .id2-card-1 { padding: 20px; }
+  .id2-card-2 { padding: 22px 20px; max-width: 100%; }
+  .id2-card-body { padding: 16px 20px 20px; }
+  .id2-card-header { padding: 16px 20px 12px; }
+}
+
+/* ── 10. Profile page — mobile ───────────────────────────────── */
+@media (max-width: 560px) {
+  .pf-header-card {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .pf-photo-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pf-prefs-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .pf-card-body { padding: 16px 18px 20px; }
+  .pf-card-header { padding: 16px 18px 12px; }
+}
+
+/* ── 11. Settings — mobile ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .gallery-settings-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .gallery-settings-nav {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .gallery-settings-nav-btn {
+    flex: 0 0 auto;
+    padding: var(--sp-2) var(--sp-3);
+  }
+}
+
+/* ── 12. Modals — mobile ─────────────────────────────────────── */
+@media (max-width: 480px) {
+  .modal,
+  .auth-modal {
+    max-width: calc(100vw - 32px);
+    margin: 0 16px;
+  }
+
+  .modal-backdrop,
+  .auth-modal-backdrop {
+    padding: var(--sp-4);
+    align-items: flex-end;   /* sheet from bottom on mobile */
+  }
+
+  .auth-modal-content {
+    padding: var(--sp-8) var(--sp-5) var(--sp-6);
+  }
+}
+
+/* ── 13. Cards — prevent overflow ────────────────────────────── */
+@media (max-width: 480px) {
+  .db-sidebar-card,
+  .db-identity-card,
+  .db-reflection-card,
+  .pf-card,
+  .rf-reader {
+    border-radius: 10px;
+  }
+
+  /* Ensure no card bleeds past viewport */
+  .db-page,
+  .ma-page,
+  .rf-page,
+  .add-artwork-page,
+  .profile-page,
+  .identity-page {
+    overflow-x: hidden;
+  }
+}
+
+/* ============================================================
+   LANDING — artwork card visual refinement
+   Image-first, compact body, gradient overlay
+   ============================================================ */
+
+/* Card container — taller, image-dominant */
+.landing-card-main {
+  position: absolute;
+  inset: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(28,24,20,0.22), 0 4px 16px rgba(28,24,20,0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.landing-card-main:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 28px 72px rgba(28,24,20,0.28), 0 6px 20px rgba(28,24,20,0.14);
+}
+
+/* Image area — takes ~78% of card height */
+.landing-rotating-img {
+  width: 100%;
+  flex: 1;                  /* grows to fill available space */
+  height: auto;             /* override the fixed 220px */
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: #1a1816;
+  transition: opacity 0.4s ease;
+}
+
+.landing-rotating-img-el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.04);
+  transition: transform 6s ease;
+}
+
+/* Gradient overlay — fades image into card body */
+.landing-rotating-img::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(20, 18, 16, 0.55) 100%
+  );
+  pointer-events: none;
+}
+
+/* Progress bar — sits above the gradient */
+.landing-rotating-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: rgba(196, 144, 110, 0.65);
+  border-radius: 0 2px 0 0;
+  animation: landing-progress 6s linear forwards;
+  z-index: 2;
+}
+
+/* Card body — compact, secondary */
+.landing-card-body {
+  padding: 12px 16px 14px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--card-bg);
+  flex-shrink: 0;           /* never grows — stays compact */
+}
+
+.landing-card-label {
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.landing-card-title {
+  font-family: var(--font-serif);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin: 0 0 2px;
+  line-height: var(--leading-snug);
+}
+
+.landing-card-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Back card — slightly adjusted */
+.landing-card-back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: -20px;
+  bottom: -20px;
+  background: var(--paper-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+}
+
+/* Dark mode */
+.dark-theme .landing-rotating-img::after {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(10, 8, 6, 0.65) 100%
+  );
+}
