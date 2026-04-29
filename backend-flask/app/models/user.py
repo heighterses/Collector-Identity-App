@@ -12,6 +12,10 @@ class User(db.Model):
     auth_provider = db.Column(db.String(50), default='email', nullable=False)
     google_id = db.Column(db.String(255), unique=True, nullable=True)
     onboarding_completed = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Role selection
+    user_role = db.Column(db.String(20), nullable=True)  # artist | collector | enthusiast
+    role_selected_at = db.Column(db.DateTime, nullable=True)
     
     # Profile fields
     avatar_url = db.Column(db.String(500), nullable=True)
@@ -67,6 +71,7 @@ class User(db.Model):
             'name': self.name,
             'auth_provider': self.auth_provider,
             'onboarding_completed': self.onboarding_completed,
+            'user_role': self.user_role,
             'avatar_url': avatar_url_out,
             'language': self.language,
             'timezone': self.timezone,

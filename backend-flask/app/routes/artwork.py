@@ -58,10 +58,13 @@ def create_artwork():
         if description:
             try:
                 from app.services.identity_service import identity_service
+                from app.models.user import User as UserModel
+                user_obj = UserModel.query.get(user_id)
                 identity_service.generate_for_reflection(
                     user_id=user_id,
                     artwork_id=artwork.id,
-                    reflection_text=description
+                    reflection_text=description,
+                    user_role=user_obj.user_role if user_obj else None
                 )
                 current_app.logger.info(f"Identity generated for artwork {artwork.id}")
             except Exception as e:

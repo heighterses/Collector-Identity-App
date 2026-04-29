@@ -13,6 +13,7 @@ import Settings from './pages/Settings.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import IdentityPage from './pages/IdentityPage.jsx';
+import RoleSelectionPage from './pages/RoleSelectionPage.jsx';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -195,6 +196,17 @@ const App = () => {
 
   if (!isAuthenticated) {
     return <LandingPage onAuthSuccess={handleAuthSuccess} />;
+  }
+
+  // Role selection gate - must complete before accessing app
+  if (!currentUser?.user_role) {
+    return (
+      <RoleSelectionPage
+        onRoleSelected={(role) => {
+          setCurrentUser(prev => ({ ...prev, user_role: role }));
+        }}
+      />
+    );
   }
 
   return (

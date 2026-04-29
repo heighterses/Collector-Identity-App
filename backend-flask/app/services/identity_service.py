@@ -141,7 +141,7 @@ class IdentityService:
     # ==========================================================
     # 🔥 MAIN GENERATION (ONLY EXTENDED)
     # ==========================================================
-    def generate_for_reflection(self, user_id: str, artwork_id: str, reflection_text: str):
+    def generate_for_reflection(self, user_id: str, artwork_id: str, reflection_text: str, user_role: str = None):
         try:
             # 🔹 EXISTING
             identity_data = self._generate_identity_data(reflection_text)
@@ -151,6 +151,8 @@ class IdentityService:
 
             # 🔥 NEW: EMBEDDING (ADDED ONLY)
             combined_text = reflection_text + " " + (identity_data.get("core_identity") or "")
+            if user_role:
+                combined_text += f" role:{user_role}"
             embedding = embedding_service.embed(combined_text)
 
             # 🔹 EXISTING VERSIONING

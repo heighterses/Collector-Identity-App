@@ -13,10 +13,10 @@ services:
       - DATABASE_URL=sqlite:///dev.db
       - JWT_SECRET=your-super-secure-jwt-secret-key-here
       - FRONTEND_URL=http://localhost:3000
-      # Google OAuth (set in .env or shell environment)
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=856220311201-uiev26u502mcb2eskk37h5ve187vjkov.apps.googleusercontent.com
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      # SendGrid Email (set in .env or shell environment)
+      # SendGrid Email
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - EMAIL_FROM=${EMAIL_FROM}
       # S3 / MinIO (inside Docker network, use service name)
@@ -32,6 +32,9 @@ services:
       - OLLAMA_MODEL=gemma:2b
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - ./backend-flask:/app
       - flask_db:/app/instance

@@ -99,9 +99,11 @@ def login():
             'user': {
                 'id': user.id,
                 'email': user.email,
-                'name': user.name
+                'name': user.name,
+                'user_role': user.user_role
             },
-            'token': token
+            'token': token,
+            'role_required': user.user_role is None
         })
         
     except Exception as e:
@@ -179,9 +181,11 @@ def google_signin():
                 'id': user.id,
                 'email': user.email,
                 'name': user.name,
-                'auth_provider': user.auth_provider
+                'auth_provider': user.auth_provider,
+                'user_role': user.user_role
             },
-            'token': token
+            'token': token,
+            'role_required': user.user_role is None
         })
         
     except Exception as e:
@@ -739,4 +743,37 @@ def complete_onboarding():
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'Complete onboarding failed: {str(e)}')
+        return jsonify({'error': 'Internal server error'}), 500
+
+@bp.route('/set-role', methods=['POST'])
+@jwt_required_custom
+def set_role():
+    """Set user role during onboarding"""
+    try:
+        user_id = request.current_user['user_id']
+        data = request.get_json()
+        role = data.get('role', '').lower().strip()
+
+        VALID_ROLES = {'artist', 'collector', 'enthusiast'}
+        if role not in VALID_ROLES:
+            return jsonify({'error': f'Invalid role. Must be one of: {", ".join(VALID_ROLES)}'}), 400
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        user.user_role = role
+        user.role_selected_at = datetime.utcnow()
+        user.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        current_app.logger.info(f'Role set for user {user_id}: {role}')
+        return jsonify({
+            'message': 'Role set successfully',
+            'user_role': user.user_role
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Set role failed: {str(e)}')
         return jsonify({'error': 'Internal server error'}), 500
