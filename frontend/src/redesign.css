@@ -714,6 +714,51 @@ a {
   margin: 0;
 }
 
+/* ── Role badge ───────────────────────────────────────────── */
+.pf-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  width: fit-content;
+  /* default — clay/accent theme */
+  background: var(--accent-light);
+  color: var(--accent-hover);
+  border: 1px solid rgba(176,122,91,0.20);
+}
+.pf-role-badge svg {
+  flex-shrink: 0;
+  display: block;
+  color: inherit;
+}
+
+/* Per-role tints — subtle variations within the brown/clay palette */
+.pf-role-badge--artist {
+  background: #f5ede8;
+  color: #8f5e42;
+  border-color: rgba(143,94,66,0.18);
+}
+.pf-role-badge--collector {
+  background: #eef0e8;
+  color: #5a6642;
+  border-color: rgba(90,102,66,0.18);
+}
+.pf-role-badge--enthusiast {
+  background: #f0ece0;
+  color: #7a6a3a;
+  border-color: rgba(122,106,58,0.18);
+}
+
+/* Dark theme overrides */
+.dark-theme .pf-role-badge--artist     { background: rgba(143,94,66,0.18);  color: #d4a07a; border-color: rgba(143,94,66,0.30); }
+.dark-theme .pf-role-badge--collector  { background: rgba(90,102,66,0.18);  color: #a8b87a; border-color: rgba(90,102,66,0.30); }
+.dark-theme .pf-role-badge--enthusiast { background: rgba(122,106,58,0.18); color: #c8b87a; border-color: rgba(122,106,58,0.30); }
+
 .pf-name-edit {
   display: flex;
   flex-direction: column;
@@ -2701,6 +2746,58 @@ a {
 
 .ma-card-dot--on  { background: var(--success); }
 .ma-card-dot--off { background: var(--gray-300); }
+
+/* ── Processing card ─────────────────────────────────────── */
+.ma-card--processing {
+  pointer-events: none;   /* disable hover/click while processing */
+  opacity: 0.92;
+}
+
+/* Overlay sits on top of the image */
+.ma-processing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(13, 13, 11, 0.55);
+  backdrop-filter: blur(2px);
+  border-radius: inherit;
+  z-index: 2;
+}
+
+.ma-processing-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.ma-processing-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.ma-card-dot--processing {
+  background: var(--accent);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+
+.ma-card-date--processing {
+  color: var(--accent);
+  font-style: italic;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
 
 /* ── Empty state ─────────────────────────────────────────── */
 .ma-empty {

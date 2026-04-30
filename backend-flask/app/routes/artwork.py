@@ -1,8 +1,63 @@
 from flask import Blueprint, request, jsonify, current_app
 from app.middleware.auth import jwt_required_custom
 from app import db
+import threading
 
 bp = Blueprint('artwork', __name__, url_prefix='/api/artwork')
+
+
+def _run_reflection_and_identity(app, artwork_id, user_id, user_role):
+    """
+    Background thread: generate reflection + identity for a newly uploaded
+    artwork, then flip artwork.status to 'completed'.
+    """
+    with app.app_context():
+        try:
+            from app.models.artwork import Artwork
+            from app.services.reflection_service import reflection_service
+            from app.services.identity_service import identity_service
+
+            artwork = Artwork.query.get(artwork_id)
+            if not artwork:
+                return
+
+            # 1. Generate reflection
+            reflection = reflection_service.generate_for_artwork(artwork)
+
+            # 2. Generate identity (non-blocking on failure)
+            if reflection:
+                try:
+                    identity_service.generate_for_reflection(
+                        user_id=user_id,
+                        artwork_id=artwork_id,
+                        reflection_text=reflection.content,
+                        user_role=user_role,
+                    )
+                except Exception as ie:
+                    current_app.logger.warning(
+                        f"Identity generation failed (non-blocking): {ie}"
+                    )
+
+            # 3. Mark artwork as completed
+            artwork.status = 'completed'
+            db.session.commit()
+            current_app.logger.info(
+                f"Artwork {artwork_id} processing complete"
+            )
+
+        except Exception as e:
+            current_app.logger.error(
+                f"Background processing failed for artwork {artwork_id}: {e}"
+            )
+            # Still flip to completed so the card doesn't spin forever
+            try:
+                from app.models.artwork import Artwork
+                artwork = Artwork.query.get(artwork_id)
+                if artwork:
+                    artwork.status = 'completed'
+                    db.session.commit()
+            except Exception:
+                pass
 
 
 # ==========================================================
@@ -15,6 +70,7 @@ def create_artwork():
         user_id = request.current_user['user_id']
 
         from app.models.artwork import Artwork
+        from app.models.user import User as UserModel
 
         title = request.form.get('title')
         description = request.form.get('description')
@@ -23,14 +79,16 @@ def create_artwork():
         if not title or not title.strip():
             return jsonify({'error': 'Title is required'}), 400
 
+        # Create artwork immediately with status='processing'
         artwork = Artwork(
             user_id=user_id,
             title=title.strip(),
             description=description,
             artwork_type=artwork_type,
+            status='processing',
         )
 
-        # ── Handle image upload ──────────────────────────────────
+        # ── Handle image upload (synchronous — fast) ─────────────
         image_file = request.files.get('imageFile')
         if image_file and image_file.filename:
             try:
@@ -43,32 +101,27 @@ def create_artwork():
                     mime_type=mime_type,
                     user_id=user_id,
                 )
-                # Store the proxy path so the browser fetches via /api/images/<key>
                 artwork.image_url = f"/api/images/{result['object_key']}"
                 artwork.s3_object_key = result['object_key']
                 current_app.logger.info(f"Image uploaded: {result['object_key']}")
             except Exception as upload_err:
-                current_app.logger.error(f"Image upload failed (non-blocking): {str(upload_err)}")
-                # Continue without image rather than failing the whole request
+                current_app.logger.error(
+                    f"Image upload failed (non-blocking): {upload_err}"
+                )
 
         db.session.add(artwork)
         db.session.commit()
 
-        # ── Trigger identity generation if description exists ────
-        if description:
-            try:
-                from app.services.identity_service import identity_service
-                from app.models.user import User as UserModel
-                user_obj = UserModel.query.get(user_id)
-                identity_service.generate_for_reflection(
-                    user_id=user_id,
-                    artwork_id=artwork.id,
-                    reflection_text=description,
-                    user_role=user_obj.user_role if user_obj else None
-                )
-                current_app.logger.info(f"Identity generated for artwork {artwork.id}")
-            except Exception as e:
-                current_app.logger.warning(f"Identity generation failed (non-blocking): {str(e)}")
+        # ── Kick off reflection + identity in background ─────────
+        user_obj = UserModel.query.get(user_id)
+        user_role = user_obj.user_role if user_obj else None
+
+        t = threading.Thread(
+            target=_run_reflection_and_identity,
+            args=(current_app._get_current_object(), artwork.id, user_id, user_role),
+            daemon=True,
+        )
+        t.start()
 
         return jsonify({
             "artwork": artwork.to_dict()
@@ -90,7 +143,12 @@ def get_my_artworks():
 
         from app.models.artwork import Artwork
 
-        artworks = Artwork.query.filter_by(user_id=user_id).order_by(Artwork.created_at.desc()).all()
+        artworks = (
+            Artwork.query
+            .filter_by(user_id=user_id)
+            .order_by(Artwork.created_at.desc())
+            .all()
+        )
 
         return jsonify({
             "artworks": [a.to_dict() for a in artworks]

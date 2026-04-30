@@ -186,6 +186,44 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
 
       <div className="ma-grid">
         {artworks.map((art) => {
+          // ── Processing card ──────────────────────────────────
+          if (art.status === 'processing') {
+            return (
+              <div key={art.id} className="ma-card ma-card--processing">
+                <div className="ma-card-img-wrap">
+                  {art.image_url ? (
+                    <ArtworkCardImage
+                      src={art.image_url}
+                      alt={art.title || 'Artwork'}
+                      artworkType={art.artwork_type}
+                    />
+                  ) : (
+                    <div className="ma-card-img ma-card-img--placeholder">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                  )}
+                  {/* Processing overlay */}
+                  <div className="ma-processing-overlay">
+                    <div className="ma-processing-spinner" />
+                    <span className="ma-processing-label">Generating reflection…</span>
+                  </div>
+                </div>
+                <div className="ma-card-body">
+                  <div className="ma-card-top">
+                    <h3 className="ma-card-title">{art.title || 'Untitled'}</h3>
+                    <span className="ma-card-dot ma-card-dot--processing" title="Processing" />
+                  </div>
+                  <p className="ma-card-date ma-card-date--processing">Analyzing artwork…</p>
+                </div>
+              </div>
+            );
+          }
+
+          // ── Normal card ──────────────────────────────────────
           const hasReflection = !!reflectionMap[art.id];
           const reflectionChecked = art.id in reflectionMap;
 

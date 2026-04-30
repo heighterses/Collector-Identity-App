@@ -15,6 +15,9 @@ class Artwork(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # Processing status: 'processing' while reflection is being generated, 'completed' when done
+    status = db.Column(db.String(20), default='completed', nullable=False)
+    
     # Relationships
     reflection = db.relationship('Reflection', backref='artwork', uselist=False, cascade='all, delete-orphan')
     identity_template = db.relationship('IdentityTemplate', backref='artwork', uselist=False, cascade='all, delete-orphan')
@@ -26,6 +29,7 @@ class Artwork(db.Model):
             'description': self.description,
             'artwork_type': self.artwork_type,
             'image_url': self.image_url,
+            'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         

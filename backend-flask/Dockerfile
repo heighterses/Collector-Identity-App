@@ -30,5 +30,5 @@ EXPOSE 3001
 ENV FLASK_APP=run.py
 ENV PYTHONPATH=/app
 
-# Run the application
-CMD ["python", "run.py"]
+# Startup: smart migration handler then Flask app
+CMD ["python", "startup.py"]

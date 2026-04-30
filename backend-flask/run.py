@@ -11,6 +11,19 @@ def ensure_schema():
     inspector = inspect(db.engine)
 
     migrations = {
+        'users': [
+            ('user_role',             'VARCHAR(20)'),
+            ('role_selected_at',      'DATETIME'),
+            ('avatar_url',            'VARCHAR(500)'),
+            ('language',              'VARCHAR(10) DEFAULT "en" NOT NULL'),
+            ('timezone',              'VARCHAR(50) DEFAULT "UTC" NOT NULL'),
+            ('privacy_settings',      'JSON'),
+            ('notification_settings', 'JSON'),
+            ('updated_at',            'DATETIME'),
+        ],
+        'artworks': [
+            ('status', 'VARCHAR(20) DEFAULT "completed" NOT NULL'),
+        ],
         'identity_templates': [
             ('version',   'INTEGER DEFAULT 1 NOT NULL'),
             ('embedding', 'TEXT'),

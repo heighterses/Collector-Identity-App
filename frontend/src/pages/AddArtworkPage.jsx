@@ -67,15 +67,8 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       const result = await artwork.createWithFile(uploadData);
       const newArtwork = result.artwork;
 
-      try {
-        await fetch('/api/reflection/regenerate', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-        });
-      } catch (err) {
-        console.warn("Reflection generation failed:", err);
-      }
-
+      // Reflection + identity are generated in the background on the server.
+      // App.jsx will poll and update userArtworks when status flips to 'completed'.
       setFormData({ title: '', description: '', imageFile: null });
       setImagePreview(null);
       onArtworkCreated(newArtwork);

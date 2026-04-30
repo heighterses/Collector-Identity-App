@@ -14,7 +14,7 @@ services:
       - JWT_SECRET=your-super-secure-jwt-secret-key-here
       - FRONTEND_URL=http://localhost:3000
       # Google OAuth
-      - GOOGLE_CLIENT_ID=856220311201-uiev26u502mcb2eskk37h5ve187vjkov.apps.googleusercontent.com
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       # SendGrid Email
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}

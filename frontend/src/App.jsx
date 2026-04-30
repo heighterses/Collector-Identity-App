@@ -32,6 +32,28 @@ const App = () => {
   const latestArtwork = userArtworks[0] || null;
   const hasArtwork = userArtworks.length > 0;
 
+  // ── Poll while any artwork is still processing ───────────
+  useEffect(() => {
+    const hasProcessing = userArtworks.some(a => a.status === 'processing');
+    if (!hasProcessing || !isAuthenticated) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await artwork.getMine();
+        const updated = res.artworks || [];
+        setUserArtworks(updated);
+        // Stop polling once all are done
+        if (!updated.some(a => a.status === 'processing')) {
+          clearInterval(interval);
+        }
+      } catch {
+        // silent — keep polling
+      }
+    }, 4000); // every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [userArtworks, isAuthenticated]);
+
   useEffect(() => {
     // Restore saved theme before anything renders
     const saved = localStorage.getItem('theme') || 'light';

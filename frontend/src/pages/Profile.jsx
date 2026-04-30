@@ -2,6 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { auth, identity } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
 
+const RoleIcon = ({ role }) => {
+  if (role === 'artist') return (
+    // Paintbrush
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18.37 2.63 14 7l-1.59-1.59a2 2 0 0 0-2.82 0L8 7l9 9 1.59-1.59a2 2 0 0 0 0-2.82L17 10l4.37-4.37a2.12 2.12 0 1 0-3-3Z"/>
+      <path d="M9 8c-2 3-4 3.5-7 4l8 10c2-1 6-5 6-7"/>
+      <path d="M14.5 17.5 4.5 15"/>
+    </svg>
+  );
+  if (role === 'collector') return (
+    // Picture frame
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <rect x="7" y="7" width="10" height="10" rx="1"/>
+    </svg>
+  );
+  if (role === 'enthusiast') return (
+    // Star
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  );
+  return null;
+};
+
 const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
@@ -178,6 +203,15 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
             </div>
           )}
           <p className="pf-email">{currentUser?.email}</p>
+
+          {/* Role badge */}
+          {currentUser?.user_role && (
+            <span className={`pf-role-badge pf-role-badge--${currentUser.user_role}`}>
+              <RoleIcon role={currentUser.user_role} />
+              {currentUser.user_role.charAt(0).toUpperCase() + currentUser.user_role.slice(1)}
+            </span>
+          )}
+
           {currentUser?.provider && (
             <span className="gallery-provider-badge">{currentUser.provider}</span>
           )}
