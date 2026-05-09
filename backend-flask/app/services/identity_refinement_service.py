@@ -4,7 +4,9 @@ from app.services.identity_parser import parse_identity_response
 class IdentityRefinementService:
 
     def __init__(self):
-        self.ollama_url = "http://host.docker.internal:11434/api/generate"
+        import os
+        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434") + "/api/generate"
+        self.model = os.getenv("OLLAMA_MODEL", "gemma:2b")
 
     def refine_identity(self, identity: dict, user_input: str):
         prompt = f"""
@@ -31,7 +33,7 @@ Return ONLY JSON in same format:
             response = requests.post(
                 self.ollama_url,
                 json={
-                    "model": "gemma:2b",
+                    "model": self.model,
                     "prompt": prompt,
                     "stream": False
                 },

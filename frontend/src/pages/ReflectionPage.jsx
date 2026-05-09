@@ -112,7 +112,7 @@ const ReflectionPage = ({ onLogout, artwork }) => {
             <div style={{ marginBottom: 'var(--sp-10)', padding: 'var(--sp-6)', background: 'var(--paper-2)', borderRadius: 'var(--r-xs)', border: '1px solid var(--line-soft)' }}>
               <p style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-medium)', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--sp-4)' }}>Your Artwork</p>
               {artwork.image_url && (
-                <img src={`http://localhost:3001${artwork.image_url}`} alt="artwork" style={{ width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 'var(--r-xs)', marginBottom: 'var(--sp-4)', background: 'var(--ink)' }} />
+                <img src={artwork.image_url} alt="artwork" style={{ width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 'var(--r-xs)', marginBottom: 'var(--sp-4)', background: 'var(--ink)' }} />
               )}
               <p style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--weight-semibold)', color: 'var(--ink)', margin: '0 0 var(--sp-2) 0', letterSpacing: '-0.02em' }}>{artwork.title}</p>
               {artwork.description && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: 0 }}>{artwork.description}</p>}

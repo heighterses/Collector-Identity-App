@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 class IdentityService:
 
     def __init__(self):
-        self.ollama_url = "http://host.docker.internal:11434/api/generate"
+        import os
+        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434") + "/api/generate"
+        self.model = os.getenv("OLLAMA_MODEL", "gemma:2b")
 
     # ==========================================================
     # ✅ CORE GENERATION (UNCHANGED)
@@ -37,7 +39,7 @@ class IdentityService:
         response = requests.post(
             self.ollama_url,
             json={
-                "model": "gemma:2b",
+                "model": self.model,
                 "prompt": prompt,
                 "stream": False
             },

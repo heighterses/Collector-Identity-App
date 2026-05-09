@@ -132,12 +132,13 @@ a {
   content: '';
   position: absolute;
   bottom: 3px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   width: 16px;
   height: 2px;
   background: var(--accent);
   border-radius: 2px;
+  margin: 0 auto;
 }
 
 .nav-profile-btn {
@@ -1995,12 +1996,13 @@ a {
   content: '';
   position: absolute;
   bottom: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   width: 14px;
   height: 2px;
   background: var(--accent);
   border-radius: 2px;
+  margin: 0 auto;
 }
 
 /* Logo */
