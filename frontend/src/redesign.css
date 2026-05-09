@@ -1093,6 +1093,33 @@ a {
   grid-template-columns: 1.2fr 1fr;
   gap: 32px;
   align-items: start;
+  position: relative;
+}
+
+/* "or" pill — floats in the gap between the two columns */
+.add-artwork-or {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 50%;
+  left: calc(54.5% - 1px); /* sits in the gap */
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.add-artwork-or span {
+  background: var(--white);
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--gray-400);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-xs);
 }
 
 /* ── LEFT — Upload canvas ────────────────────────────────── */
@@ -1240,6 +1267,57 @@ a {
   min-height: 130px;
   resize: vertical;
 }
+
+/* Textarea highlighted when it's the active input method */
+.add-artwork-textarea--active {
+  border-color: var(--accent) !important;
+  background: var(--accent-light) !important;
+}
+
+/* Dropzone dimmed when description is already provided */
+.add-artwork-dropzone--optional {
+  border-style: dashed;
+  opacity: 0.7;
+}
+.add-artwork-dropzone--optional:hover {
+  opacity: 1;
+}
+
+/* "or" divider between left canvas and right panel */
+.add-artwork-or {
+  display: none; /* hidden on mobile — shown via absolute positioning on desktop */
+}
+
+/* Description label hint */
+.add-artwork-desc-hint {
+  font-size: 11px;
+  font-weight: var(--weight-normal);
+  color: var(--accent);
+  margin-left: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* Input mode indicator */
+.add-artwork-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--gray-400);
+  font-weight: var(--weight-medium);
+  margin-top: -8px;
+  margin-bottom: 4px;
+}
+
+.add-artwork-mode-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.add-artwork-mode-dot--image { background: var(--accent); }
+.add-artwork-mode-dot--text  { background: #5a9e6f; }
+.add-artwork-mode-dot--both  { background: linear-gradient(135deg, var(--accent) 50%, #5a9e6f 50%); }
 
 /* Submit — full width, prominent */
 .add-artwork-submit {
@@ -2285,6 +2363,7 @@ a {
   grid-template-columns: 1.4fr 1fr;
   gap: 28px;
   align-items: start;
+  position: relative;
 }
 
 /* LEFT — sticky canvas */
@@ -2461,6 +2540,52 @@ a {
   resize: vertical;
   line-height: var(--leading-relaxed);
 }
+
+/* Textarea highlighted when it's the active text-only input */
+.add-artwork-textarea--active {
+  border-color: var(--accent) !important;
+  background: var(--accent-light) !important;
+}
+
+/* Dropzone dimmed when description already covers the requirement */
+.add-artwork-dropzone--optional {
+  opacity: 0.65;
+}
+.add-artwork-dropzone--optional:hover {
+  opacity: 1;
+}
+
+/* Description label hint */
+.add-artwork-desc-hint {
+  font-size: 10px;
+  font-weight: var(--weight-normal);
+  color: var(--accent);
+  margin-left: 6px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+/* Input mode indicator */
+.add-artwork-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+  margin-top: -10px;
+  margin-bottom: 6px;
+}
+
+.add-artwork-mode-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.add-artwork-mode-dot--image { background: var(--accent); }
+.add-artwork-mode-dot--text  { background: #5a9e6f; }
+.add-artwork-mode-dot--both  { background: linear-gradient(135deg, var(--accent) 50%, #5a9e6f 50%); }
 
 /* Submit — accent, full width, prominent */
 .add-artwork-submit {
@@ -4789,6 +4914,9 @@ html, body {
   }
 
   .add-artwork-canvas { position: static; }
+
+  /* Hide the "or" pill on mobile — layout is stacked, not side-by-side */
+  .add-artwork-or { display: none; }
 
   .add-artwork-dropzone,
   .add-artwork-preview {

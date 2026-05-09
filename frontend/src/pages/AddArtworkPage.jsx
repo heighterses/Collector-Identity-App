@@ -43,7 +43,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     setError('');
 
     if (!formData.imageFile && !formData.description.trim()) {
-      setError('Please upload an image or add a description');
+      setError('Please upload an image or write a description');
       setLoading(false);
       return;
     }
@@ -67,8 +67,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       const result = await artwork.createWithFile(uploadData);
       const newArtwork = result.artwork;
 
-      // Reflection + identity are generated in the background on the server.
-      // App.jsx will poll and update userArtworks when status flips to 'completed'.
+      // Reflection + identity generated in background — App.jsx polls for completion
       setFormData({ title: '', description: '', imageFile: null });
       setImagePreview(null);
       onArtworkCreated(newArtwork);
@@ -94,7 +93,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     }
     setFormData(prev => ({ ...prev, imageFile: file }));
     const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target.result);
+    reader.onload = (ev) => setImagePreview(ev.target.result);
     reader.readAsDataURL(file);
     setError('');
   };
@@ -119,7 +118,10 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
     if (fi) fi.value = '';
   };
 
-  const isFormValid = formData.title.trim() && (formData.imageFile || formData.description.trim());
+  // Derived state for UI hints
+  const hasImage = !!formData.imageFile;
+  const hasDescription = formData.description.trim().length > 0;
+  const isFormValid = formData.title.trim() && (hasImage || hasDescription);
 
   // ── Loading skeleton ──────────────────────────────────────────
   if (checkingExisting) {
@@ -144,7 +146,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
       <div className="add-artwork-heading">
         <h1 className="add-artwork-title">Place Your Work</h1>
         <p className="add-artwork-sub">
-          Upload your artwork and describe its meaning
+          Upload an image, write a description, or both
         </p>
       </div>
 
@@ -155,7 +157,7 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
         <div className="add-artwork-canvas">
           {!imagePreview ? (
             <div
-              className={`add-artwork-dropzone${dragActive ? ' add-artwork-dropzone--active' : ''}`}
+              className={`add-artwork-dropzone${dragActive ? ' add-artwork-dropzone--active' : ''}${hasDescription && !hasImage ? ' add-artwork-dropzone--optional' : ''}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -177,15 +179,29 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
                 style={{ display: 'none' }}
               />
               <div className="add-artwork-dropzone-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
+                {hasDescription && !hasImage ? (
+                  // Softer icon when text is already provided
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                ) : (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                )}
               </div>
-              <p className="add-artwork-dropzone-primary">Place your artwork here</p>
+
+              <p className="add-artwork-dropzone-primary">
+                {hasDescription && !hasImage ? 'Add an image (optional)' : 'Place your artwork here'}
+              </p>
               <p className="add-artwork-dropzone-secondary">
-                Click or drag &amp; drop · JPG, PNG up to 10MB
+                {hasDescription && !hasImage
+                  ? 'Your description is enough — or add an image too'
+                  : 'Click or drag & drop · JPG, PNG up to 10MB'}
               </p>
             </div>
           ) : (
@@ -200,6 +216,11 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
               </button>
             </div>
           )}
+
+          {/* "or" divider — only visible on desktop between the two columns */}
+          <div className="add-artwork-or" aria-hidden="true">
+            <span>or</span>
+          </div>
         </div>
 
         {/* RIGHT — Form panel */}
@@ -226,21 +247,50 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
             />
           </div>
 
-          {/* Description */}
+          {/* Description — clearly labelled as the text-only path */}
           <div className="form-group">
             <label className="form-label" htmlFor="artwork-description">
               Description
+              {!hasImage && (
+                <span className="add-artwork-desc-hint">
+                  {hasDescription ? ' · used as your artwork' : ' · required if no image'}
+                </span>
+              )}
             </label>
             <textarea
               id="artwork-description"
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className="form-input form-textarea add-artwork-textarea"
-              placeholder="Add context or notes about this work — or describe it if you have no image"
-              rows={5}
+              className={`form-input form-textarea add-artwork-textarea${hasDescription && !hasImage ? ' add-artwork-textarea--active' : ''}`}
+              placeholder="Describe your artwork — its meaning, technique, or story. This becomes the basis for your reflection."
+              rows={6}
             />
           </div>
+
+          {/* Input method indicator */}
+          {(hasImage || hasDescription) && (
+            <div className="add-artwork-mode">
+              {hasImage && hasDescription && (
+                <>
+                  <span className="add-artwork-mode-dot add-artwork-mode-dot--both" />
+                  Image + description
+                </>
+              )}
+              {hasImage && !hasDescription && (
+                <>
+                  <span className="add-artwork-mode-dot add-artwork-mode-dot--image" />
+                  Image upload
+                </>
+              )}
+              {!hasImage && hasDescription && (
+                <>
+                  <span className="add-artwork-mode-dot add-artwork-mode-dot--text" />
+                  Text description
+                </>
+              )}
+            </div>
+          )}
 
           {/* Error */}
           {error && <div className="alert alert-error">{error}</div>}
