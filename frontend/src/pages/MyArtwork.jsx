@@ -90,6 +90,10 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   const [reflectionMap, setReflectionMap] = useState({}); // artworkId → reflection | null
   const [loadingReflections, setLoadingReflections] = useState(true);
 
+  // Track previous processing IDs so we can detect when they finish
+  const prevProcessingIds = useRef(new Set());
+
+  // Initial load: fetch reflection status for all artworks
   useEffect(() => {
     if (!artworks.length) {
       setReflectionMap({});
@@ -98,6 +102,36 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
     }
     loadAllReflections();
   }, [artworks.map(a => a.id).join(',')]);
+
+  // Reactive update: when an artwork transitions OUT of 'processing',
+  // fetch its reflection immediately without reloading the whole map.
+  useEffect(() => {
+    const currentProcessingIds = new Set(
+      artworks.filter(a => a.status === 'processing').map(a => a.id)
+    );
+
+    // Find IDs that were processing on the last render but are no longer
+    const justFinished = [...prevProcessingIds.current].filter(
+      id => !currentProcessingIds.has(id)
+    );
+
+    if (justFinished.length > 0) {
+      // Re-check only the newly completed artworks
+      justFinished.forEach(id => refreshReflectionForArtwork(id));
+    }
+
+    prevProcessingIds.current = currentProcessingIds;
+  }, [artworks.map(a => `${a.id}:${a.status}`).join(',')]);
+
+  const refreshReflectionForArtwork = async (artworkId) => {
+    try {
+      const res = await reflection.getByArtworkId(artworkId);
+      const ref = res?.reflection || null;
+      setReflectionMap(prev => ({ ...prev, [artworkId]: ref }));
+    } catch {
+      setReflectionMap(prev => ({ ...prev, [artworkId]: null }));
+    }
+  };
 
   const loadAllReflections = async () => {
     setLoadingReflections(true);
