@@ -29,9 +29,10 @@ function Snackbar({ message, timestamp, onClose, onAction, actionLabel }) {
     <div
       style={{
         position: "fixed",
-        bottom: 32,
-        left: "50%",
-        transform: `translateX(-50%) translateY(${visible ? "0" : "20px"})`,
+        top: 24,
+        right: 24,
+        left: "auto",
+        transform: `translateY(${visible ? "0" : "-12px"})`,
         opacity: visible ? 1 : 0,
         transition: "opacity 0.3s ease, transform 0.3s ease",
         backgroundColor: "#1c1917",

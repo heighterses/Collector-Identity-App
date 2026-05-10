@@ -532,7 +532,7 @@ a {
 
 .id2-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--gray-700), var(--ink));  /* slight gradient */
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));  /* theme clay gradient */
   border-radius: var(--r-full);
   transition: width 0.25s var(--ease);
 }
@@ -543,7 +543,7 @@ a {
   margin: 0;
   padding: 0;
   cursor: pointer;
-  accent-color: var(--ink);
+  accent-color: var(--accent);
   opacity: 0;
   position: relative;
   margin-top: -20px;   /* sits on top of bar track for interaction */
@@ -576,9 +576,14 @@ a {
 }
 
 .id2-tab--active {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
   color: var(--white);
+}
+
+.id2-tab--active:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 /* ── Skeleton state ──────────────────────────────────────────── */
