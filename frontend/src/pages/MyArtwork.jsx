@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { artwork, reflection } from '../api';
+import ConfirmModal from '../components/ConfirmModal';
 
 // ── Normalise image_url to a browser-reachable path ─────────────────────────
 const normaliseImageUrl = (src) => {
@@ -90,6 +91,10 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   const [reflectionMap, setReflectionMap] = useState({}); // artworkId → reflection | null
   const [loadingReflections, setLoadingReflections] = useState(true);
 
+  // Delete confirmation modal state
+  const [deleteTarget, setDeleteTarget] = useState(null); // artworkId pending deletion | null
+  const [deleting, setDeleting]         = useState(false);
+
   // Track previous processing IDs so we can detect when they finish
   const prevProcessingIds = useRef(new Set());
 
@@ -150,14 +155,32 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
     setLoadingReflections(false);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this artwork? This cannot be undone.')) return;
+  // Opens the confirmation modal — does NOT delete yet
+  const handleDeleteRequest = (id) => {
+    setDeleteTarget(id);
+  };
+
+  // Called when user confirms inside the modal
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await artwork.deleteMine(id);
+      await artwork.deleteMine(deleteTarget);
+      setDeleteTarget(null);
       if (onArtworkDeleted) onArtworkDeleted();
     } catch (err) {
-      alert(err.message || 'Delete failed');
+      setDeleteTarget(null);
+      // Surface error without alert() — log for now; could be a toast
+      console.error('Delete failed:', err.message || err);
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  // Called when user cancels or dismisses the modal
+  const handleDeleteCancel = () => {
+    if (deleting) return; // don't close while in-flight
+    setDeleteTarget(null);
   };
 
   const formatDate = (dateStr) => {
@@ -280,7 +303,7 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
                   </button>
                   <button
                     className="ma-overlay-btn ma-overlay-btn--danger"
-                    onClick={() => handleDelete(art.id)}
+                    onClick={() => handleDeleteRequest(art.id)}
                   >
                     Delete
                   </button>
@@ -303,6 +326,17 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
           );
         })}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Delete artwork?"
+        message="This action cannot be undone."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        danger
+      />
     </div>
   );
 };
