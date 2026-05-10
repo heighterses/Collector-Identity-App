@@ -12,7 +12,8 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=sqlite:///dev.db
       - JWT_SECRET=your-super-secure-jwt-secret-key-here
-      - FRONTEND_URL=http://localhost:3000
+      - FRONTEND_URL=${FRONTEND_URL}
+      - BASE_URL=${BASE_URL}
       # Google OAuth
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}

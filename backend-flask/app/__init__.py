@@ -20,7 +20,7 @@ def create_app(config_class=Config):
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")])
     migrate.init_app(app, db)
     
     # Configure logging
