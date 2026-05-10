@@ -106,7 +106,7 @@ const ReflectionReader = ({ reflectionData, currentUser, onRefine, onRegenerate,
 };
 
 // ── Main page ────────────────────────────────────────────────────────────────
-const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
+const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId = null }) => {
   const [reflections, setReflections]   = useState([]);
   const [loading, setLoading]           = useState(true);
   const [selectedId, setSelectedId]     = useState(null);
@@ -130,7 +130,16 @@ const Reflections = ({ onNavigate, currentUser, artworks = [] }) => {
       );
       const valid = results.filter(Boolean);
       setReflections(valid);
-      if (valid.length > 0 && !selectedId) setSelectedId(valid[0].id);
+
+      // If we arrived here from "View Reflection" on a specific artwork,
+      // find that artwork's reflection and pre-select it.
+      // Otherwise fall back to the first reflection.
+      if (valid.length > 0) {
+        const targetReflection = initialArtworkId
+          ? valid.find(r => r.artwork_id === initialArtworkId)
+          : null;
+        setSelectedId(targetReflection ? targetReflection.id : valid[0].id);
+      }
     } catch (err) {
       console.error(err);
     } finally {

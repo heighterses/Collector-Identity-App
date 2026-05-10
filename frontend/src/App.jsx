@@ -169,14 +169,22 @@ const App = () => {
             onNavigate={handleNavigation}
             currentUser={currentUser}
             artworks={userArtworks}
+            initialArtworkId={selectedArtworkId}
           />
         );
 
       case 'reflection': {
-        // Use selectedArtworkId if set, otherwise fall back to latest
-        const artworkForReflection =
-          userArtworks.find(a => a.id === selectedArtworkId) || latestArtwork;
-        return <ReflectionPage artwork={artworkForReflection} />;
+        // Redirect: treat the standalone reflection route as an alias for
+        // the main Reflections page with the artwork pre-selected.
+        // selectedArtworkId is already set by handleNavigation before this renders.
+        return (
+          <Reflections
+            onNavigate={handleNavigation}
+            currentUser={currentUser}
+            artworks={userArtworks}
+            initialArtworkId={selectedArtworkId}
+          />
+        );
       }
 
       case 'profile':
