@@ -14,6 +14,9 @@ import Onboarding from './components/Onboarding.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import IdentityPage from './pages/IdentityPage.jsx';
 import RoleSelectionPage from './pages/RoleSelectionPage.jsx';
+import ChatPage from './pages/ChatPage.jsx';
+import TimelinePage from './pages/TimelinePage.jsx';
+import ComparisonPage from './pages/ComparisonPage.jsx';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -199,6 +202,15 @@ const App = () => {
           userArtworks.find(a => a.id === selectedArtworkId) || latestArtwork;
         return <IdentityPage artworkId={artworkForIdentity?.id} />;
       }
+
+      case 'chat':
+        return <ChatPage />;
+
+      case 'timeline':
+        return <TimelinePage />;
+
+      case 'comparison':
+        return <ComparisonPage />;
 
       default:
         return (

@@ -204,3 +204,38 @@ export const identity = {
   getProfileData: async () =>
     apiRequest('/identity/profile-data'),
 };
+
+// ─────────────────────────────────────────
+// CHAT (M3-03)
+// ─────────────────────────────────────────
+export const chat = {
+  sendMessage: async (message, history = []) =>
+    apiRequest('/chat/message', {
+      method: 'POST',
+      body: JSON.stringify({ message, history }),
+    }),
+
+  getContext: async () => apiRequest('/chat/context'),
+};
+
+// ─────────────────────────────────────────
+// TIMELINE (M3-12)
+// ─────────────────────────────────────────
+export const timeline = {
+  get: async () => apiRequest('/timeline/'),
+  getChanges: async () => apiRequest('/timeline/changes'),
+};
+
+// ─────────────────────────────────────────
+// COMPARISON (M3-14)
+// ─────────────────────────────────────────
+export const comparison = {
+  compareVersions: async (version_a_id, version_b_id) =>
+    apiRequest('/comparison/versions', {
+      method: 'POST',
+      body: JSON.stringify({ version_a_id, version_b_id }),
+    }),
+
+  listVersions: async (template_id) =>
+    apiRequest(`/comparison/templates/${template_id}/versions`),
+};

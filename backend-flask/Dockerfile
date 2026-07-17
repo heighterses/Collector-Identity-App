@@ -1,34 +1,27 @@
 FROM python:3.11-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Download embedding model at build time (internet available on host during build).
+# Stored at /root/.cache/huggingface — NOT under /app, so the volume mount
+# at runtime does not overwrite it.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" \
+    || echo "WARNING: model download failed — version comparison will use Jaccard fallback"
+
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
+RUN mkdir -p logs instance
 
-# Create instance directory for SQLite database
-RUN mkdir -p instance
-
-# Expose port
 EXPOSE 3001
 
-# Set environment variables
 ENV FLASK_APP=run.py
 ENV PYTHONPATH=/app
 
-# Startup: smart migration handler then Flask app
 CMD ["python", "startup.py"]

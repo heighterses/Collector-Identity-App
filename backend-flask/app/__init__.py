@@ -48,12 +48,20 @@ def create_app(config_class=Config):
     from app.routes.reflection import bp as reflection_bp
     from app.routes.images import bp as images_bp
     from app.routes.identity import bp as identity_bp
-   
+    from app.routes.chat import bp as chat_bp
+    from app.routes.recommendations import bp as recommendations_bp
+    from app.routes.timeline import bp as timeline_bp
+    from app.routes.comparison import bp as comparison_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(artwork_bp, url_prefix='/api/artwork')
     app.register_blueprint(reflection_bp, url_prefix='/api/reflection')
     app.register_blueprint(images_bp, url_prefix='/api/images')
     app.register_blueprint(identity_bp, url_prefix='/api/identity')
+    app.register_blueprint(chat_bp, url_prefix='/api/chat')
+    app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
+    app.register_blueprint(timeline_bp, url_prefix='/api/timeline')
+    app.register_blueprint(comparison_bp, url_prefix='/api/comparison')
      
     # ✅ FIX: Initialize S3 inside app context
     from app.services.s3_service import s3_service

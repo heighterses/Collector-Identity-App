@@ -31,6 +31,10 @@ services:
       # Ollama (running natively on host machine)
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - OLLAMA_MODEL=gemma:2b
+      # Tell HuggingFace libraries not to hit the internet at runtime.
+      # The model is downloaded during docker build and lives in the image layer.
+      - TRANSFORMERS_OFFLINE=1
+      - HF_DATASETS_OFFLINE=1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:
