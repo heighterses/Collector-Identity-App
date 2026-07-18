@@ -16,7 +16,7 @@ from app import create_app, db
 
 app = create_app()
 
-LATEST_REVISION = 'd4e5f6a7b8c9'
+LATEST_REVISION = 'f6a7b8c9d0e1'
 
 
 def get_db_path():

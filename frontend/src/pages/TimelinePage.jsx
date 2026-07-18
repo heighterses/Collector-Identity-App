@@ -1,5 +1,223 @@
 import { useState, useEffect } from 'react';
-import { timeline } from '../api.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+import { timeline, identityNotes } from '../api.js';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+
+const NOTE_MAX = 280;
+
+// Same palette ProfilePieCharts.jsx uses, for visual consistency across
+// the app's charts.
+const TRAIT_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
+
+// M3-18: trait intensity per version — reuses identity_change_detector's
+// output as-is (intensity_series), no recomputation on the frontend.
+// Hovering/clicking a version point reveals that version's key traits,
+// pulled from the already-fetched timeline events (traits_snapshot) rather
+// than a second API call.
+const IntensityChart = ({ intensitySeries, analysisEvents }) => {
+  const [selectedIndex, setSelectedIndex] = useState(null);
+
+  const { versions = [], series = [] } = intensitySeries || {};
+
+  if (!series.length) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--gray-400)' }}>
+        <p style={{ fontSize: 'var(--text-sm)' }}>
+          Add more artworks with confirmed trait intensities to see how they've shifted over time.
+        </p>
+      </div>
+    );
+  }
+
+  const data = {
+    labels: versions.map(v => `v${v}`),
+    datasets: series.map((s, i) => ({
+      label: s.trait,
+      data: s.values,
+      borderColor: TRAIT_COLORS[i % TRAIT_COLORS.length],
+      backgroundColor: TRAIT_COLORS[i % TRAIT_COLORS.length],
+      spanGaps: true,
+      tension: 0.25,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+    })),
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    onClick: (_evt, elements) => {
+      if (elements?.length) setSelectedIndex(elements[0].index);
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const idx = items[0]?.dataIndex;
+            const ev = analysisEvents[idx];
+            return ev ? ['', 'Click point to see full traits'] : [];
+          },
+        },
+      },
+    },
+    scales: {
+      y: { title: { display: true, text: 'Intensity (0–10)' }, min: 0, suggestedMax: 10 },
+      x: { title: { display: true, text: 'Identity version' } },
+    },
+  };
+
+  const selectedEvent = selectedIndex != null ? analysisEvents[selectedIndex] : null;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 10 }}>
+        {series.map((s, i) => (
+          <span key={s.trait} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: TRAIT_COLORS[i % TRAIT_COLORS.length], display: 'inline-block' }} />
+            {s.trait}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ position: 'relative', height: 260 }}>
+        <Line
+          data={data}
+          options={options}
+          role="img"
+          aria-label={`Line chart of trait intensity across ${versions.length} identity versions: ${series.map(s => s.trait).join(', ')}`}
+        />
+      </div>
+
+      {selectedEvent && (
+        <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--paper-2)', border: '1px solid var(--line)', borderRadius: 8 }}>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            v{versions[selectedIndex]} · {selectedEvent.date ? new Date(selectedEvent.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+          </p>
+          {selectedEvent.traits_snapshot?.length > 0 ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {selectedEvent.traits_snapshot.map((t, i) => <TraitPill key={i} label={t} />)}
+            </div>
+          ) : (
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>No confirmed traits recorded for this version.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// A short personal annotation on a saved identity version — deliberately
+// styled as a sticky-note aside, never as a trait pill, so it can never be
+// mistaken for a confirmed identity signal. Create + delete only, no edit.
+const VersionNotes = ({ versionId }) => {
+  const [notes, setNotes] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    identityNotes.getForVersion(versionId)
+      .then(data => setNotes(data.notes || []))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [versionId]);
+
+  const handleAdd = async () => {
+    const text = draft.trim();
+    if (!text || text.length > NOTE_MAX || saving) return;
+    setSaving(true);
+    try {
+      const res = await identityNotes.add(versionId, text);
+      if (res?.note) {
+        setNotes(prev => [...prev, res.note]);
+        setDraft('');
+      }
+    } catch {
+      // silent — the draft stays in the input so the user can retry
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (noteId) => {
+    setNotes(prev => prev.filter(n => n.id !== noteId));
+    try {
+      await identityNotes.remove(noteId);
+    } catch {
+      // note is already gone from the UI; a stale row on the server isn't
+      // worth re-inserting the note and confusing the user
+    }
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed var(--line)' }}>
+      {notes.map(note => (
+        <div key={note.id} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 6,
+          marginBottom: 6, fontSize: 'var(--text-xs)', color: 'var(--gray-500)',
+        }}>
+          <span style={{ fontStyle: 'italic', flex: 1 }}>&ldquo;{note.note_text}&rdquo;</span>
+          <button
+            onClick={() => handleDelete(note.id)}
+            aria-label="Delete note"
+            style={{
+              background: 'none', border: 'none', color: 'var(--gray-400)',
+              cursor: 'pointer', fontSize: 'var(--text-xs)', padding: '0 2px', lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <input
+          type="text"
+          value={draft}
+          onChange={e => setDraft(e.target.value.slice(0, NOTE_MAX))}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+          placeholder="Add a note about this moment…"
+          maxLength={NOTE_MAX}
+          disabled={saving}
+          style={{
+            flex: 1, fontSize: 'var(--text-xs)', padding: '5px 8px',
+            border: '1px solid var(--line)', borderRadius: 6,
+            background: 'var(--paper-2)', color: 'var(--ink)', outline: 'none',
+          }}
+        />
+        <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--gray-400)', whiteSpace: 'nowrap' }}>
+          {draft.length}/{NOTE_MAX}
+        </span>
+        <button
+          onClick={handleAdd}
+          disabled={!draft.trim() || saving}
+          style={{
+            fontSize: 'var(--text-2xs)', padding: '5px 10px', borderRadius: 6,
+            border: 'none', cursor: draft.trim() ? 'pointer' : 'not-allowed',
+            background: draft.trim() ? 'var(--ink)' : 'var(--line)',
+            color: draft.trim() ? 'var(--white)' : 'var(--gray-400)',
+          }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const ChangeBar = ({ score }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
@@ -78,6 +296,11 @@ const EventCard = ({ event, isLast }) => {
         )}
 
         {event.change_score > 0 && <ChangeBar score={event.change_score} />}
+
+        {/* M3-15: notes only apply to real saved IdentityVersion rows —
+            "artwork_analysis" events aren't backed by one, so there's
+            nothing valid to attach a note to. */}
+        {isSaved && event.id && <VersionNotes versionId={event.id} />}
       </div>
     </div>
   );
@@ -127,6 +350,11 @@ export default function TimelinePage() {
     transition: 'all 0.15s',
   });
 
+  // artwork_analysis events are built from the same identity_templates list,
+  // in the same order, as intensity_series.versions — used to look up each
+  // version's key traits for the chart's click/hover reveal.
+  const analysisEvents = events.filter(e => e.event_type === 'artwork_analysis');
+
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', paddingBottom: 60 }}>
 
@@ -157,6 +385,16 @@ export default function TimelinePage() {
               {summary.most_stable_trait && (
                 <StatCard label="Most stable trait" value={summary.most_stable_trait} />
               )}
+            </div>
+          )}
+
+          {/* M3-18: trait intensity over time */}
+          {changes && (
+            <div style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 10, padding: '16px 20px', marginBottom: 28 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Trait Intensity Over Time
+              </p>
+              <IntensityChart intensitySeries={changes.intensity_series} analysisEvents={analysisEvents} />
             </div>
           )}
 

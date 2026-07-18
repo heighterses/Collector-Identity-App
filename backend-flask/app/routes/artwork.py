@@ -183,3 +183,112 @@ def delete_artwork(artwork_id):
     except Exception as e:
         current_app.logger.error(f'Delete artwork failed: {str(e)}')
         return jsonify({'error': 'Failed to delete artwork'}), 500
+
+
+# ==========================================================
+# 🔥 M3-16: ARTWORK COLLECTIONS
+# Private, personal organization only — no sharing, no public collections,
+# no follower mechanics. Every route below is scoped to request.current_user.
+# ==========================================================
+@bp.route('/collections', methods=['POST'])
+@jwt_required_custom
+def create_collection():
+    try:
+        user_id = request.current_user['user_id']
+        from app.models.artwork_collection import ArtworkCollection
+
+        data = request.get_json() or {}
+        name = (data.get('name') or '').strip()
+        description = (data.get('description') or '').strip() or None
+
+        if not name:
+            return jsonify({'error': 'Collection name is required'}), 400
+
+        collection = ArtworkCollection(user_id=user_id, name=name, description=description)
+        db.session.add(collection)
+        db.session.commit()
+
+        return jsonify({'collection': collection.to_dict(include_artwork_ids=True)}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Create collection failed: {str(e)}')
+        return jsonify({'error': 'Failed to create collection'}), 500
+
+
+@bp.route('/collections', methods=['GET'])
+@jwt_required_custom
+def list_collections():
+    try:
+        user_id = request.current_user['user_id']
+        from app.models.artwork_collection import ArtworkCollection
+
+        collections = (
+            ArtworkCollection.query
+            .filter_by(user_id=user_id)
+            .order_by(ArtworkCollection.created_at.asc())
+            .all()
+        )
+        return jsonify({
+            'collections': [c.to_dict(include_artwork_ids=True) for c in collections]
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f'List collections failed: {str(e)}')
+        return jsonify({'error': 'Failed to fetch collections'}), 500
+
+
+@bp.route('/collections/<collection_id>/artworks/<artwork_id>', methods=['POST'])
+@jwt_required_custom
+def add_artwork_to_collection(collection_id, artwork_id):
+    try:
+        user_id = request.current_user['user_id']
+        from app.models.artwork import Artwork
+        from app.models.artwork_collection import ArtworkCollection
+
+        collection = ArtworkCollection.query.filter_by(id=collection_id, user_id=user_id).first()
+        if not collection:
+            return jsonify({'error': 'Collection not found'}), 404
+
+        art = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+        if not art:
+            return jsonify({'error': 'Artwork not found'}), 404
+
+        if art not in collection.artworks:
+            collection.artworks.append(art)
+            db.session.commit()
+
+        return jsonify({'collection': collection.to_dict(include_artwork_ids=True)}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Add artwork to collection failed: {str(e)}')
+        return jsonify({'error': 'Failed to add artwork to collection'}), 500
+
+
+@bp.route('/collections/<collection_id>/artworks/<artwork_id>', methods=['DELETE'])
+@jwt_required_custom
+def remove_artwork_from_collection(collection_id, artwork_id):
+    try:
+        user_id = request.current_user['user_id']
+        from app.models.artwork import Artwork
+        from app.models.artwork_collection import ArtworkCollection
+
+        collection = ArtworkCollection.query.filter_by(id=collection_id, user_id=user_id).first()
+        if not collection:
+            return jsonify({'error': 'Collection not found'}), 404
+
+        art = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+        if not art:
+            return jsonify({'error': 'Artwork not found'}), 404
+
+        if art in collection.artworks:
+            collection.artworks.remove(art)
+            db.session.commit()
+
+        return jsonify({'collection': collection.to_dict(include_artwork_ids=True)}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Remove artwork from collection failed: {str(e)}')
+        return jsonify({'error': 'Failed to remove artwork from collection'}), 500

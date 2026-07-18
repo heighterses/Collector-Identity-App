@@ -51,6 +51,7 @@ class TimelineService:
                     snapshot = v.get("snapshot_json", {})
                     traits = [t["label"] for t in snapshot.get("traits", [])][:5]
                     events.append({
+                        "id": v.get("id"),  # M3-15: the actual IdentityVersion id — needed to attach notes
                         "date": v.get("created_at"),
                         "event_type": "saved_version",
                         "title": f"Saved Version {v.get('version_number', '?')}",

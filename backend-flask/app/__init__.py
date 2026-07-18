@@ -41,6 +41,8 @@ def create_app(config_class=Config):
     from app.models import identity  # noqa: F401
     from app.models import edit_event  # noqa: F401
     from app.models import identity_version  # noqa: F401
+    from app.models import identity_note  # noqa: F401
+    from app.models import artwork_collection  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import bp as auth_bp
@@ -52,6 +54,7 @@ def create_app(config_class=Config):
     from app.routes.recommendations import bp as recommendations_bp
     from app.routes.timeline import bp as timeline_bp
     from app.routes.comparison import bp as comparison_bp
+    from app.routes.analytics import bp as analytics_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(artwork_bp, url_prefix='/api/artwork')
@@ -62,6 +65,7 @@ def create_app(config_class=Config):
     app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
     app.register_blueprint(timeline_bp, url_prefix='/api/timeline')
     app.register_blueprint(comparison_bp, url_prefix='/api/comparison')
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
      
     # ✅ FIX: Initialize S3 inside app context
     from app.services.s3_service import s3_service

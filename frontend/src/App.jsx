@@ -119,6 +119,18 @@ const App = () => {
     setCurrentPage('my-artwork');
   };
 
+  // Used when artwork is added from inside chat: refetches the artwork list
+  // without checkAuthAndLoad's global loading flag, which would otherwise
+  // flash a full-page spinner over the chat and lose the user's place.
+  const handleArtworkAddedInPlace = async () => {
+    try {
+      const res = await artwork.getMine();
+      setUserArtworks(res.artworks || []);
+    } catch {
+      // silent — the existing processing-poll effect will retry
+    }
+  };
+
   const handleArtworkDeleted = async () => {
     await checkAuthAndLoad();
     setCurrentPage('my-artwork');
@@ -204,7 +216,13 @@ const App = () => {
       }
 
       case 'chat':
-        return <ChatPage />;
+        return (
+          <ChatPage
+            artworks={userArtworks}
+            onArtworkCreated={handleArtworkAddedInPlace}
+            onNavigate={handleNavigation}
+          />
+        );
 
       case 'timeline':
         return <TimelinePage />;

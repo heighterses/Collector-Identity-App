@@ -22,6 +22,7 @@ class IdentityChangeDetector:
                     "emerging_traits": [],
                     "fading_traits": [],
                     "intensity_trends": [],
+                    "intensity_series": {"versions": [], "series": []},
                     "volatility_score": 0.0,
                     "summary": "Only one artwork analysed so far — upload more to track changes."
                 }
@@ -31,6 +32,7 @@ class IdentityChangeDetector:
                 "emerging_traits": self._find_emerging_traits(identity_templates),
                 "fading_traits": self._find_fading_traits(identity_templates),
                 "intensity_trends": self._find_intensity_trends(identity_templates),
+                "intensity_series": self._find_intensity_series(identity_templates),
                 "volatility_score": self._compute_volatility(identity_templates),
                 "summary": self._generate_summary(identity_templates)
             }
@@ -93,6 +95,40 @@ class IdentityChangeDetector:
 
         return sorted(trends, key=lambda x: abs(x["delta"]), reverse=True)[:5]
 
+    def _find_intensity_series(self, templates: list) -> dict:
+        """
+        M3-18: per-version values for slider traits, for charting intensity
+        over time. `_find_intensity_trends` above only keeps the start->end
+        delta and an overall average — this keeps the full series so the
+        frontend can plot it without recomputing anything itself.
+        """
+        n = len(templates)
+        label_values = {}
+        for idx, tmpl in enumerate(templates):
+            for t in tmpl.get("traits", []):
+                if t.get("trait_type") == "slider" and t.get("label") and t.get("value") is not None:
+                    try:
+                        val = float(t["value"])
+                    except (ValueError, TypeError):
+                        continue
+                    label_values.setdefault(t["label"], [None] * n)[idx] = val
+
+        def spread(values):
+            nums = [v for v in values if v is not None]
+            return (max(nums) - min(nums)) if nums else 0
+
+        series = [
+            {"trait": label, "values": values}
+            for label, values in label_values.items()
+            if sum(v is not None for v in values) >= 2
+        ]
+        series.sort(key=lambda s: spread(s["values"]), reverse=True)
+
+        return {
+            "versions": [tmpl.get("version", i + 1) for i, tmpl in enumerate(templates)],
+            "series": series[:6],
+        }
+
     def _compute_volatility(self, templates: list) -> float:
         sets = self._get_trait_sets(templates)
         if len(sets) < 2:
@@ -130,6 +166,7 @@ class IdentityChangeDetector:
             "emerging_traits": [],
             "fading_traits": [],
             "intensity_trends": [],
+            "intensity_series": {"versions": [], "series": []},
             "volatility_score": 0.0,
             "summary": "Not enough data to detect changes yet."
         }

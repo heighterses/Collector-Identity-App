@@ -149,6 +149,26 @@ export const artwork = {
 };
 
 // ─────────────────────────────────────────
+// ARTWORK COLLECTIONS (M3-16) — private, personal organization only.
+// No sharing, no public collections, no follower mechanics.
+// ─────────────────────────────────────────
+export const collections = {
+  create: async (name, description) =>
+    apiRequest('/artwork/collections', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  list: async () => apiRequest('/artwork/collections'),
+
+  addArtwork: async (collectionId, artworkId) =>
+    apiRequest(`/artwork/collections/${collectionId}/artworks/${artworkId}`, { method: 'POST' }),
+
+  removeArtwork: async (collectionId, artworkId) =>
+    apiRequest(`/artwork/collections/${collectionId}/artworks/${artworkId}`, { method: 'DELETE' }),
+};
+
+// ─────────────────────────────────────────
 // REFLECTION
 // ─────────────────────────────────────────
 export const reflection = {
@@ -203,16 +223,38 @@ export const identity = {
 
   getProfileData: async () =>
     apiRequest('/identity/profile-data'),
+
+  exportSummary: async () =>
+    apiRequest('/identity/export'),
+};
+
+// ─────────────────────────────────────────
+// IDENTITY NOTES (M3-15) — lightweight annotations on a saved identity
+// version. Metadata about a moment, never identity input: create + delete
+// only, no edit.
+// ─────────────────────────────────────────
+export const identityNotes = {
+  add: async (versionId, noteText) =>
+    apiRequest(`/identity/${versionId}/note`, {
+      method: 'POST',
+      body: JSON.stringify({ note_text: noteText }),
+    }),
+
+  getForVersion: async (versionId) =>
+    apiRequest(`/identity/${versionId}/notes`),
+
+  remove: async (noteId) =>
+    apiRequest(`/identity/note/${noteId}`, { method: 'DELETE' }),
 };
 
 // ─────────────────────────────────────────
 // CHAT (M3-03)
 // ─────────────────────────────────────────
 export const chat = {
-  sendMessage: async (message, history = []) =>
+  sendMessage: async (message, history = [], artworkId = null) =>
     apiRequest('/chat/message', {
       method: 'POST',
-      body: JSON.stringify({ message, history }),
+      body: JSON.stringify({ message, history, artwork_id: artworkId }),
     }),
 
   getContext: async () => apiRequest('/chat/context'),
@@ -238,4 +280,11 @@ export const comparison = {
 
   listVersions: async (template_id) =>
     apiRequest(`/comparison/templates/${template_id}/versions`),
+};
+
+// ─────────────────────────────────────────
+// ANALYTICS (M3-10) — insight-quality metrics, not user activity tracking
+// ─────────────────────────────────────────
+export const analytics = {
+  getReturnBehavior: async () => apiRequest('/analytics/return-behavior'),
 };

@@ -13,6 +13,7 @@ SQLAlchemy==2.0.23
 Werkzeug==3.0.1
 sendgrid==6.12.5
 requests
+pytest==8.3.3
 
 # 🔥 ML / AI (FIXED - CPU ONLY, NO CUDA)
 --extra-index-url https://download.pytorch.org/whl/cpu

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { reflection, identity } from '../api.js';
+import { reflection, identity, analytics } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
 
 // ── Image component — unchanged logic ────────────────────────────────────────
@@ -117,6 +117,7 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
   const [latestReflection, setLatestReflection]   = useState(null);
   const [reflectionLoading, setReflectionLoading] = useState(false);
   const [profileData, setProfileData]             = useState(null);
+  const [returnBehavior, setReturnBehavior]       = useState(null);
 
   const latestArtwork = artworks[0] || null;
 
@@ -127,6 +128,12 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
 
   useEffect(() => {
     identity.getProfileData().then(setProfileData).catch(() => {});
+  }, []);
+
+  // M3-10: internal insight metric, not shown as a personal count/streak —
+  // see the stat card below for how it's framed.
+  useEffect(() => {
+    analytics.getReturnBehavior().then(setReturnBehavior).catch(() => {});
   }, []);
 
   const loadReflection = async (artworkId) => {
@@ -230,6 +237,11 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
           </button>
           <p className="db-identity-stat">{artworks.length} artwork{artworks.length !== 1 ? 's' : ''}</p>
           <p className="db-identity-stat">{artworks.filter(a => a.has_reflection).length} reflection{artworks.filter(a => a.has_reflection).length !== 1 ? 's' : ''}</p>
+          {returnBehavior?.share_2plus_in_window != null && (
+            <p className="db-identity-stat">
+              Users with 2+ artworks (30d): {(returnBehavior.share_2plus_in_window * 100).toFixed(0)}%
+            </p>
+          )}
         </div>
       </div>
 

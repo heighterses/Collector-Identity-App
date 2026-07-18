@@ -7,6 +7,7 @@ from app.services.suggested_prompts_service import suggested_prompts_service
 from app.services.personalization_service import personalization_service
 from app.models.identity import IdentityTemplate
 from app.models.identity_version import IdentityVersion
+from app.models.artwork import Artwork
 import logging
 
 bp = Blueprint('chat', __name__)
@@ -19,7 +20,8 @@ _llm = OllamaProvider()
 def send_message():
     """
     M3-03: Main chat endpoint.
-    Body: { "message": "...", "history": [{"role": "user"|"assistant", "content": "..."}] }
+    Body: { "message": "...", "history": [{"role": "user"|"assistant", "content": "..."}],
+            "artwork_id": "..." (optional — the chat UI's currently active artwork) }
     """
     try:
         user_id = request.current_user['user_id']
@@ -27,6 +29,7 @@ def send_message():
 
         user_message = (data.get('message') or '').strip()
         history = data.get('history', [])
+        artwork_id = data.get('artwork_id')
 
         if not user_message:
             return jsonify({"error": "Message is required"}), 400
@@ -61,8 +64,22 @@ def send_message():
             )
             version_dicts = [v.to_dict() for v in versions]
 
+        # M3-11: pull in the currently-discussed artwork's title + reflection
+        # so responses can cite something concrete instead of only abstracted
+        # trait labels — ownership-checked, and quietly skipped if the
+        # artwork doesn't exist or isn't the user's.
+        active_artwork = None
+        if artwork_id:
+            artwork = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+            if artwork:
+                reflection_content = artwork.reflection.content if artwork.reflection else None
+                active_artwork = {
+                    "title": artwork.title,
+                    "reflection_excerpt": reflection_content[:300] if reflection_content else None,
+                }
+
         identity_context = identity_context_service.build_system_context(
-            template_dicts, version_dicts
+            template_dicts, version_dicts, active_artwork
         )
         system_prompt = identity_context_service.build_chat_system_prompt(identity_context)
 

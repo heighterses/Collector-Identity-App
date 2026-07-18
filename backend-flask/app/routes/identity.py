@@ -4,10 +4,12 @@ from app import db
 from app.models.identity import IdentityTemplate, IdentityTrait
 from app.models.edit_event import EditEvent
 from app.models.identity_version import IdentityVersion
+from app.models.identity_note import IdentityNote
 from app.services.identity_service import identity_service
 from app.services.identity_refinement_service import identity_refinement_service
 from app.services.pattern_service import pattern_service
 from app.services.intent_service import intent_service
+from app.services.identity_export_service import identity_export_service
 
 bp = Blueprint('identity', __name__, url_prefix='/api/identity')
 
@@ -211,6 +213,142 @@ def get_version_history(template_id):
         }), 200
 
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# 🔥 M3-19: EXPORT IDENTITY SUMMARY
+# Read-only, own-data-only. Exports only CONFIRMED traits — unconfirmed AI
+# suggestions are not the user's authorized meaning (CLAUDE.md Section 2)
+# and must never appear in something they might keep or share.
+# ==========================================================
+@bp.route('/export', methods=['GET'])
+@jwt_required_custom
+def export_identity():
+    try:
+        user_id = request.current_user['user_id']
+        from app.models.user import User as UserModel
+        from app.models.artwork import Artwork
+
+        user = UserModel.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        templates = (
+            IdentityTemplate.query
+            .filter_by(user_id=user_id)
+            .order_by(IdentityTemplate.created_at.asc())
+            .all()
+        )
+
+        # Top artworks linked to the identity — most recent ones that
+        # actually contributed a template, ownership-scoped via user_id.
+        artwork_ids = [t.artwork_id for t in templates if t.artwork_id]
+        artworks = []
+        if artwork_ids:
+            artworks = (
+                Artwork.query
+                .filter(Artwork.id.in_(artwork_ids), Artwork.user_id == user_id)
+                .order_by(Artwork.created_at.desc())
+                .limit(5)
+                .all()
+            )
+
+        export = identity_export_service.build_export(user, templates, artworks)
+        return jsonify(export), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ==========================================================
+# 🔥 M3-15: MICRO-NOTES ON IDENTITY VERSIONS
+# Deliberately separate from the identity template/trait structure — notes
+# are metadata about a moment, never fed into identity generation, pattern
+# detection, or any prompt-building code. Create + delete only, no edit.
+# ==========================================================
+
+def _owned_version_or_none(version_id, user_id):
+    """Ownership-checked version lookup, shared by all three note routes."""
+    return (
+        IdentityVersion.query
+        .join(IdentityTemplate, IdentityVersion.template_id == IdentityTemplate.id)
+        .filter(IdentityVersion.id == version_id, IdentityTemplate.user_id == user_id)
+        .first()
+    )
+
+
+@bp.route('/<version_id>/note', methods=['POST'])
+@jwt_required_custom
+def add_identity_note(version_id):
+    try:
+        user_id = request.current_user['user_id']
+        data = request.get_json() or {}
+        note_text = (data.get('note_text') or '').strip()
+
+        if not note_text:
+            return jsonify({"error": "note_text is required"}), 400
+        if len(note_text) > 280:
+            return jsonify({"error": "note_text must be 280 characters or fewer"}), 400
+
+        version = _owned_version_or_none(version_id, user_id)
+        if not version:
+            return jsonify({"error": "Identity version not found"}), 404
+
+        note = IdentityNote(
+            user_id=user_id,
+            identity_version_id=version_id,
+            note_text=note_text
+        )
+        db.session.add(note)
+        db.session.commit()
+
+        return jsonify({"note": note.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/<version_id>/notes', methods=['GET'])
+@jwt_required_custom
+def get_identity_notes(version_id):
+    try:
+        user_id = request.current_user['user_id']
+
+        version = _owned_version_or_none(version_id, user_id)
+        if not version:
+            return jsonify({"error": "Identity version not found"}), 404
+
+        notes = (
+            IdentityNote.query
+            .filter_by(identity_version_id=version_id)
+            .order_by(IdentityNote.created_at.asc())
+            .all()
+        )
+        return jsonify({"notes": [n.to_dict() for n in notes]}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/note/<note_id>', methods=['DELETE'])
+@jwt_required_custom
+def delete_identity_note(note_id):
+    try:
+        user_id = request.current_user['user_id']
+
+        note = IdentityNote.query.filter_by(id=note_id, user_id=user_id).first()
+        if not note:
+            return jsonify({"error": "Note not found"}), 404
+
+        db.session.delete(note)
+        db.session.commit()
+
+        return jsonify({"message": "Note deleted"}), 200
+
+    except Exception as e:
+        db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 

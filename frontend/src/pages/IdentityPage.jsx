@@ -1,6 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Snackbar from "../components/identity/Snackbar";
-import { artwork as artworkApi } from "../api.js";
+import { artwork as artworkApi, identity as identityApi } from "../api.js";
+
+/** Triggers a browser download of the given object as a formatted JSON file. */
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,7 +29,7 @@ function groupTraits(traits) {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 /** CARD 1 — Header: Analysis / Your Identity / Based on... / Save button */
-function HeaderCard({ artwork, onSave, saving }) {
+function HeaderCard({ artwork, onSave, saving, onExport, exporting }) {
   return (
     <div className="id2-card-1">
       <div className="id2-card-1-inner">
@@ -27,19 +40,34 @@ function HeaderCard({ artwork, onSave, saving }) {
             <p className="id2-subtitle">Based on &ldquo;{artwork.title}&rdquo;</p>
           )}
         </div>
-        <button
-          className="btn btn-primary btn-sm id2-save-btn"
-          onClick={onSave}
-          disabled={saving}
-          title="Save a snapshot of your current identity"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17 21 17 13 7 13 7 21"/>
-            <polyline points="7 3 7 8 15 8"/>
-          </svg>
-          {saving ? "Saving…" : "Save version"}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={onExport}
+            disabled={exporting}
+            title="Download a clean JSON snapshot of your current identity to keep or share"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {exporting ? "Exporting…" : "Export summary"}
+          </button>
+          <button
+            className="btn btn-primary btn-sm id2-save-btn"
+            onClick={onSave}
+            disabled={saving}
+            title="Save a snapshot of your current identity"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            {saving ? "Saving…" : "Save version"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -282,6 +310,7 @@ function IdentityPage({ artworkId }) {
   const [showSnackbar,    setShowSnackbar]    = useState(false);
   const [savedAt,         setSavedAt]         = useState(null);
   const [saving,          setSaving]          = useState(false);
+  const [exporting,       setExporting]       = useState(false);
   const savingRef = useRef(false);
 
   // Load artworks list on mount
@@ -374,6 +403,20 @@ function IdentityPage({ artworkId }) {
 
   const handleSnackbarClose = useCallback(() => setShowSnackbar(false), []);
 
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const result = await identityApi.exportSummary();
+      const dateStamp = (result.exported_at || new Date().toISOString()).slice(0, 10);
+      downloadJson(result, `identity-summary-${dateStamp}.json`);
+    } catch (err) {
+      console.error("Identity export failed:", err.message || err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Render states ────────────────────────────────────────────
   if (loading) return <LoadingSkeleton />;
   if (!data || !data.traits?.length) return <EmptyState artworkCount={allArtworks.length} />;
@@ -389,6 +432,8 @@ function IdentityPage({ artworkId }) {
         artwork={activeArtwork}
         onSave={handleSaveVersion}
         saving={saving}
+        onExport={handleExport}
+        exporting={exporting}
       />
 
       {/* CARD 2 — Core Statement */}

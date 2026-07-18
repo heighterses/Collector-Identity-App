@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { artwork, reflection } from '../api';
+import { artwork, reflection, collections as collectionsApi } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 
 // ── Normalise image_url to a browser-reachable path ─────────────────────────
@@ -97,6 +97,91 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
 
   // Track previous processing IDs so we can detect when they finish
   const prevProcessingIds = useRef(new Set());
+
+  // ── M3-16: Collections (private, personal organization only) ─────────────
+  const [myCollections, setMyCollections] = useState([]);
+  const [activeCollectionId, setActiveCollectionId] = useState(null); // null = "All"
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [organizing, setOrganizing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [assignTargetId, setAssignTargetId] = useState('');
+  const [applyingAssignment, setApplyingAssignment] = useState(false);
+
+  useEffect(() => {
+    collectionsApi.list().then(data => setMyCollections(data.collections || [])).catch(() => {});
+  }, []);
+
+  const handleCreateCollection = async () => {
+    const name = newCollectionName.trim();
+    if (!name || creatingCollection) return;
+    setCreatingCollection(true);
+    try {
+      const res = await collectionsApi.create(name);
+      if (res?.collection) {
+        setMyCollections(prev => [...prev, res.collection]);
+        setNewCollectionName('');
+      }
+    } catch (err) {
+      console.error('Create collection failed:', err.message || err);
+    } finally {
+      setCreatingCollection(false);
+    }
+  };
+
+  const toggleSelected = (artworkId) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(artworkId)) next.delete(artworkId);
+      else next.add(artworkId);
+      return next;
+    });
+  };
+
+  const refreshCollectionMembership = (collectionId, updated) => {
+    setMyCollections(prev => prev.map(c => c.id === collectionId ? updated : c));
+  };
+
+  const handleAddSelectedToCollection = async () => {
+    if (!assignTargetId || selectedIds.size === 0 || applyingAssignment) return;
+    setApplyingAssignment(true);
+    try {
+      let latest = null;
+      for (const artworkId of selectedIds) {
+        const res = await collectionsApi.addArtwork(assignTargetId, artworkId);
+        latest = res?.collection || latest;
+      }
+      if (latest) refreshCollectionMembership(assignTargetId, latest);
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('Add to collection failed:', err.message || err);
+    } finally {
+      setApplyingAssignment(false);
+    }
+  };
+
+  const handleRemoveSelectedFromCollection = async () => {
+    if (!assignTargetId || selectedIds.size === 0 || applyingAssignment) return;
+    setApplyingAssignment(true);
+    try {
+      let latest = null;
+      for (const artworkId of selectedIds) {
+        const res = await collectionsApi.removeArtwork(assignTargetId, artworkId);
+        latest = res?.collection || latest;
+      }
+      if (latest) refreshCollectionMembership(assignTargetId, latest);
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('Remove from collection failed:', err.message || err);
+    } finally {
+      setApplyingAssignment(false);
+    }
+  };
+
+  const activeCollection = myCollections.find(c => c.id === activeCollectionId) || null;
+  const visibleArtworks = activeCollection
+    ? artworks.filter(a => activeCollection.artwork_ids?.includes(a.id))
+    : artworks;
 
   // Initial load: fetch reflection status for all artworks
   useEffect(() => {
@@ -241,8 +326,76 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
         </button>
       </div>
 
+      {/* M3-16: Collections — private, personal organization only */}
+      <div className="ma-collections-bar">
+        <div className="ma-collections-pills">
+          <button
+            className={`ma-collection-pill ${!activeCollectionId ? 'ma-collection-pill--active' : ''}`}
+            onClick={() => setActiveCollectionId(null)}
+          >
+            All
+          </button>
+          {myCollections.map(c => (
+            <button
+              key={c.id}
+              className={`ma-collection-pill ${activeCollectionId === c.id ? 'ma-collection-pill--active' : ''}`}
+              onClick={() => setActiveCollectionId(c.id)}
+            >
+              {c.name} <span className="ma-collection-pill-count">{c.artwork_count}</span>
+            </button>
+          ))}
+          <input
+            type="text"
+            className="ma-collection-new-input"
+            placeholder="+ New collection"
+            value={newCollectionName}
+            onChange={e => setNewCollectionName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleCreateCollection(); }}
+            disabled={creatingCollection}
+          />
+        </div>
+        <button
+          className={`btn btn-secondary btn-sm ${organizing ? 'ma-organize-btn--active' : ''}`}
+          onClick={() => { setOrganizing(o => !o); setSelectedIds(new Set()); }}
+        >
+          {organizing ? 'Done' : 'Organize'}
+        </button>
+      </div>
+
+      {organizing && (
+        <div className="ma-organize-bar">
+          <span className="ma-organize-count">
+            {selectedIds.size} selected
+          </span>
+          <select
+            className="form-input ma-organize-select"
+            value={assignTargetId}
+            onChange={e => setAssignTargetId(e.target.value)}
+          >
+            <option value="">Choose a collection…</option>
+            {myCollections.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <button
+            className="btn btn-secondary btn-sm"
+            disabled={!assignTargetId || selectedIds.size === 0 || applyingAssignment}
+            onClick={handleAddSelectedToCollection}
+          >
+            Add to collection
+          </button>
+          <button
+            className="btn btn-ghost btn-sm"
+            disabled={!assignTargetId || selectedIds.size === 0 || applyingAssignment}
+            onClick={handleRemoveSelectedFromCollection}
+          >
+            Remove from collection
+          </button>
+        </div>
+      )}
+
       <div className="ma-grid">
-        {artworks.map((art) => {
+        {visibleArtworks.map((art) => {
           // ── Processing card ──────────────────────────────────
           if (art.status === 'processing') {
             return (
@@ -285,7 +438,7 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
           const reflectionChecked = art.id in reflectionMap;
 
           return (
-            <div key={art.id} className="ma-card">
+            <div key={art.id} className={`ma-card ${organizing && selectedIds.has(art.id) ? 'ma-card--selected' : ''}`}>
               {/* Image — main focus */}
               <div className="ma-card-img-wrap">
                 <ArtworkCardImage
@@ -293,6 +446,15 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
                   alt={art.title || 'Artwork'}
                   artworkType={art.artwork_type}
                 />
+                {organizing && (
+                  <label className="ma-card-select" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(art.id)}
+                      onChange={() => toggleSelected(art.id)}
+                    />
+                  </label>
+                )}
                 {/* Hover overlay with actions */}
                 <div className="ma-card-overlay">
                   <button
