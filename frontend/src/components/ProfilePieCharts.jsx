@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -5,51 +6,55 @@ import {
   Legend
 } from 'chart.js';
 
-import { Pie } from 'react-chartjs-2';
+import { Doughnut } from 'react-chartjs-2';
+import { useThemeMode, readSegmentPalette, readToken } from '../utils/useThemeMode.js';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const COLORS = [
-  "#6366f1",
-  "#22c55e",
-  "#f59e0b",
-  "#ef4444",
-  "#06b6d4",
-  "#a855f7",
-  "#14b8a6",
-];
-
-const buildPieData = (items, label) => {
+const buildDonutData = (items, label, palette) => {
   if (!items || items.length === 0) return null;
   return {
     labels: items.map(([name]) => name),
     datasets: [{
       label,
       data: items.map(([_, count]) => count),
-      backgroundColor: items.map((_, i) => COLORS[i % COLORS.length]),
-      borderWidth: 1
+      backgroundColor: items.map((_, i) => palette[i % palette.length]),
+      borderColor: readToken('--card-bg'),
+      borderWidth: 2,
     }]
   };
 };
 
-const PIE_OPTIONS = {
-  responsive: true,
-  maintainAspectRatio: true,
-  plugins: {
-    legend: {
-      position: 'bottom',
-      labels: {
-        font: { size: 11, family: 'Inter, sans-serif' },
-        padding: 12,
-        boxWidth: 12,
+const ProfilePieCharts = ({ patterns }) => {
+  // Chart.js snapshots colors at render time — mode acts as a re-render
+  // trigger so the palette stays in sync with light/dark (see
+  // useThemeMode.js / DESIGN-PATTERNS.md "Chart mode-sync").
+  const mode = useThemeMode();
+
+  const { palette, textSecondary } = useMemo(() => ({
+    palette: readSegmentPalette(),
+    textSecondary: readToken('--text-secondary'),
+  }), [mode]);
+
+  const donutOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: true,
+    cutout: '72%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: { size: 11, family: 'Arial, Helvetica, sans-serif' },
+          color: textSecondary,
+          padding: 12,
+          boxWidth: 10,
+        }
       }
     }
-  }
-};
+  }), [textSecondary]);
 
-const ProfilePieCharts = ({ patterns }) => {
-  const traitsData   = buildPieData(patterns?.traits,   "Traits");
-  const emotionsData = buildPieData(patterns?.emotions, "Emotions");
+  const traitsData   = useMemo(() => buildDonutData(patterns?.traits,   'Traits',   palette), [patterns, palette]);
+  const emotionsData = useMemo(() => buildDonutData(patterns?.emotions, 'Emotions', palette), [patterns, palette]);
 
   if (!traitsData && !emotionsData) return null;
 
@@ -57,14 +62,14 @@ const ProfilePieCharts = ({ patterns }) => {
     <div className="pf-pie-charts">
       {traitsData && (
         <div className="pf-pie-item">
-          <p className="pf-pie-label">Traits Distribution</p>
-          <Pie data={traitsData} options={PIE_OPTIONS} />
+          <p className="pattern-eyebrow">Traits distribution</p>
+          <Doughnut key={`traits-${mode}`} data={traitsData} options={donutOptions} />
         </div>
       )}
       {emotionsData && (
         <div className="pf-pie-item">
-          <p className="pf-pie-label">Emotions Distribution</p>
-          <Pie data={emotionsData} options={PIE_OPTIONS} />
+          <p className="pattern-eyebrow">Emotions distribution</p>
+          <Doughnut key={`emotions-${mode}`} data={emotionsData} options={donutOptions} />
         </div>
       )}
     </div>

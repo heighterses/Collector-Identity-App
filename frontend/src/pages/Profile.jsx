@@ -157,12 +157,6 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
   return (
     <div className="profile-page">
 
-      {/* Page header */}
-      <div className="profile-page-header">
-        <h1 className="profile-page-title">Profile</h1>
-        <p className="profile-page-sub">Your identity and preferences</p>
-      </div>
-
       {/* Notifications */}
       {error   && <div className="alert alert-error"   style={{ marginBottom: 'var(--sp-5)' }}>{error}</div>}
       {success && <div className="alert alert-success" style={{ marginBottom: 'var(--sp-5)' }}>{success}</div>}

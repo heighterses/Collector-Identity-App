@@ -10,14 +10,11 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { timeline, identityNotes } from '../api.js';
+import { useThemeMode, readSegmentPalette } from '../utils/useThemeMode.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 const NOTE_MAX = 280;
-
-// Same palette ProfilePieCharts.jsx uses, for visual consistency across
-// the app's charts.
-const TRAIT_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
 
 // M3-18: trait intensity per version — reuses identity_change_detector's
 // output as-is (intensity_series), no recomputation on the frontend.
@@ -26,6 +23,11 @@ const TRAIT_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a
 // than a second API call.
 const IntensityChart = ({ intensitySeries, analysisEvents }) => {
   const [selectedIndex, setSelectedIndex] = useState(null);
+  // Chart.js snapshots colors at render time — mode acts as a re-render
+  // trigger so the palette stays in sync with light/dark (see
+  // useThemeMode.js / DESIGN-PATTERNS.md "Chart mode-sync").
+  const mode = useThemeMode();
+  const palette = readSegmentPalette();
 
   const { versions = [], series = [] } = intensitySeries || {};
 
@@ -44,8 +46,8 @@ const IntensityChart = ({ intensitySeries, analysisEvents }) => {
     datasets: series.map((s, i) => ({
       label: s.trait,
       data: s.values,
-      borderColor: TRAIT_COLORS[i % TRAIT_COLORS.length],
-      backgroundColor: TRAIT_COLORS[i % TRAIT_COLORS.length],
+      borderColor: palette[i % palette.length],
+      backgroundColor: palette[i % palette.length],
       spanGaps: true,
       tension: 0.25,
       pointRadius: 4,
@@ -85,7 +87,7 @@ const IntensityChart = ({ intensitySeries, analysisEvents }) => {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 10 }}>
         {series.map((s, i) => (
           <span key={s.trait} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)', color: 'var(--gray-500)' }}>
-            <span style={{ width: 9, height: 9, borderRadius: 2, background: TRAIT_COLORS[i % TRAIT_COLORS.length], display: 'inline-block' }} />
+            <span style={{ width: 9, height: 9, borderRadius: 2, background: palette[i % palette.length], display: 'inline-block' }} />
             {s.trait}
           </span>
         ))}
@@ -93,6 +95,7 @@ const IntensityChart = ({ intensitySeries, analysisEvents }) => {
 
       <div style={{ position: 'relative', height: 260 }}>
         <Line
+          key={mode}
           data={data}
           options={options}
           role="img"
@@ -225,7 +228,7 @@ const ChangeBar = ({ score }) => (
     <div style={{ flex: 1, height: 3, background: 'var(--line)', borderRadius: 2 }}>
       <div style={{
         width: `${Math.round(score * 100)}%`, height: '100%',
-        background: score > 0.6 ? 'var(--error)' : score > 0.3 ? 'var(--accent)' : 'var(--success)',
+        background: 'var(--accent)',
         borderRadius: 2, transition: 'width 0.6s ease',
       }} />
     </div>
@@ -238,7 +241,7 @@ const ChangeBar = ({ score }) => (
 const TraitPill = ({ label }) => (
   <span style={{
     display: 'inline-block', background: 'var(--accent-subtle)',
-    border: '1px solid rgba(181,129,58,0.2)',
+    border: '1px solid var(--accent-light)',
     borderRadius: 20, padding: '2px 10px',
     fontSize: 'var(--text-2xs)', color: 'var(--accent)',
     marginRight: 4, marginBottom: 4,
@@ -341,15 +344,6 @@ export default function TimelinePage() {
     </div>
   );
 
-  const tabStyle = (tab) => ({
-    padding: '8px 18px', border: 'none', borderRadius: 20, cursor: 'pointer',
-    fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
-    fontWeight: 'var(--weight-medium)',
-    background: activeTab === tab ? 'var(--ink)' : 'transparent',
-    color: activeTab === tab ? 'var(--white)' : 'var(--gray-500)',
-    transition: 'all 0.15s',
-  });
-
   // artwork_analysis events are built from the same identity_templates list,
   // in the same order, as intensity_series.versions — used to look up each
   // version's key traits for the chart's click/hover reveal.
@@ -358,15 +352,11 @@ export default function TimelinePage() {
   return (
     <div style={{ maxWidth: 680, margin: '0 auto', paddingBottom: 60 }}>
 
-      {/* Header */}
-      <div style={{ padding: '28px 0 20px' }}>
-        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Identity Evolution</p>
-        <h1 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-serif)', color: 'var(--ink)', margin: '0 0 16px' }}>Timeline</h1>
-
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, background: 'var(--paper-2)', borderRadius: 24, padding: 4, width: 'fit-content' }}>
-          <button style={tabStyle('timeline')} onClick={() => setActiveTab('timeline')}>Timeline</button>
-          <button style={tabStyle('changes')} onClick={() => setActiveTab('changes')}>Trait Changes</button>
+      {/* Tabs */}
+      <div style={{ padding: '4px 0 24px' }}>
+        <div className="pattern-segmented" role="group">
+          <button className={`pattern-segmented-btn ${activeTab === 'timeline' ? 'pattern-segmented-btn--active' : ''}`} onClick={() => setActiveTab('timeline')}>Timeline</button>
+          <button className={`pattern-segmented-btn ${activeTab === 'changes' ? 'pattern-segmented-btn--active' : ''}`} onClick={() => setActiveTab('changes')}>Trait changes</button>
         </div>
       </div>
 
@@ -418,7 +408,7 @@ export default function TimelinePage() {
                   <div style={{
                     width: `${Math.round((changes.volatility_score || 0) * 100)}%`,
                     height: '100%', borderRadius: 3,
-                    background: (changes.volatility_score || 0) > 0.6 ? 'var(--error)' : 'var(--accent)',
+                    background: 'var(--accent)',
                   }} />
                 </div>
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-medium)', color: 'var(--ink)', whiteSpace: 'nowrap' }}>
@@ -429,15 +419,20 @@ export default function TimelinePage() {
             </div>
 
             {[
-              { key: 'stable_traits', label: 'Stable Traits', color: 'var(--success)', bg: 'var(--success-bg)' },
-              { key: 'emerging_traits', label: 'Emerging Traits', color: 'var(--accent)', bg: 'var(--accent-light)' },
-              { key: 'fading_traits', label: 'Fading Traits', color: 'var(--gray-500)', bg: 'var(--paper-2)' },
-            ].map(({ key, label, color, bg }) => changes[key]?.length > 0 && (
-              <div key={key} style={{ background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 10, padding: '16px 20px' }}>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</p>
+              { key: 'stable_traits', label: 'Stable traits', variant: 'plain' },
+              { key: 'emerging_traits', label: 'Emerging traits', variant: 'filled' },
+              { key: 'fading_traits', label: 'Fading traits', variant: 'outline' },
+            ].map(({ key, label, variant }) => changes[key]?.length > 0 && (
+              <div key={key} className="card" style={{ padding: '16px 20px' }}>
+                <p className="pattern-eyebrow" style={{ marginBottom: 10 }}>{label}</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {changes[key].map((t, i) => (
-                    <span key={i} style={{ background: bg, color, border: `1px solid ${color}22`, borderRadius: 20, padding: '3px 12px', fontSize: 'var(--text-xs)' }}>{t}</span>
+                    <span
+                      key={i}
+                      className={`pattern-chip ${variant === 'filled' ? 'pattern-chip--active' : variant === 'outline' ? 'pattern-chip--outline' : ''}`}
+                    >
+                      {t}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -450,7 +445,7 @@ export default function TimelinePage() {
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: i < changes.intensity_trends.length - 1 ? '1px solid var(--line-soft)' : 'none' }}>
                     <span style={{ fontSize: 'var(--text-sm)', color: 'var(--ink)' }}>{t.trait}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 'var(--text-xs)', color: t.direction === 'increasing' ? 'var(--success)' : 'var(--error)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>
                         {t.direction === 'increasing' ? '↑' : '↓'} {Math.abs(t.delta).toFixed(2)}
                       </span>
                       <span style={{ fontSize: 'var(--text-2xs)', color: 'var(--gray-400)' }}>avg {t.avg}</span>

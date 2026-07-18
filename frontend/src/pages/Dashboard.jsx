@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { reflection, identity, analytics } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
 
@@ -6,7 +6,6 @@ import ProfilePieCharts from '../components/ProfilePieCharts';
 const CardImage = ({ src, alt, artworkType }) => {
   const [status, setStatus] = useState('loading');
   const [retried, setRetried] = useState(false);
-  const imgRef = useRef(null);
   const isText = artworkType === 'text';
 
   const normalizedSrc = (() => {
@@ -29,12 +28,10 @@ const CardImage = ({ src, alt, artworkType }) => {
     setRetried(false);
   }, [src, artworkType]);
 
-  const handleError = () => {
+  const handleError = (e) => {
     if (!retried && normalizedSrc) {
       setRetried(true);
-      setTimeout(() => {
-        if (imgRef.current) imgRef.current.src = normalizedSrc + '?_r=' + Date.now();
-      }, 800);
+      setTimeout(() => { e.target.src = normalizedSrc + '?_r=' + Date.now(); }, 800);
     } else {
       setStatus('error');
     }
@@ -85,7 +82,6 @@ const CardImage = ({ src, alt, artworkType }) => {
         </div>
       )}
       <img
-        ref={imgRef}
         src={normalizedSrc}
         alt={alt}
         onLoad={() => setStatus('loaded')}
@@ -96,21 +92,18 @@ const CardImage = ({ src, alt, artworkType }) => {
   );
 };
 
-// ── Metric bar ────────────────────────────────────────────────────────────────
-const MetricBar = ({ label, value, max = 10 }) => {
-  const pct = Math.min((parseFloat(value) / max) * 100, 100);
-  return (
-    <div className="db-metric-row">
-      <div className="db-metric-header">
-        <span className="db-metric-label">{label}</span>
-        <span className="db-metric-value">{parseFloat(value).toFixed(1)}</span>
-      </div>
-      <div className="db-metric-track">
-        <div className="db-metric-fill" style={{ width: `${pct}%` }} />
-      </div>
+// ── Reflection-coverage donut — proportion chart, static ratio ──────────────
+const CoverageRing = ({ pct }) => (
+  <div
+    className="pattern-donut db-coverage-ring"
+    style={{ background: `conic-gradient(var(--accent) 0 ${pct}%, var(--border-subtle) ${pct}% 100%)` }}
+  >
+    <div className="pattern-donut-center">
+      <div className="pattern-donut-value">{pct}<span className="db-coverage-pct-sign">%</span></div>
+      <div className="pattern-donut-sub">reflected</div>
     </div>
-  );
-};
+  </div>
+);
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
@@ -166,26 +159,43 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
   const chipTraits = allTraits
     .filter(t => (t.type === 'chip' || t.trait_type === 'chip') && (t.value === 'true' || t.value === '1.0'))
     .slice(0, 6);
-  const sliderTraits = allTraits
-    .filter(t => (t.type === 'slider' || t.trait_type === 'slider'))
-    .sort((a, b) => parseFloat(b.value) - parseFloat(a.value))
-    .slice(0, 2);
   const firstInsight = profileData?.insights?.[0] || null;
+
+  // ── Derived metrics (all from data already fetched — no new calls) ──
+  const worksCount       = artworks.length;
+  const reflectionsCount = artworks.filter(a => a.has_reflection).length;
+  const coveragePct      = worksCount ? Math.round((reflectionsCount / worksCount) * 100) : 0;
+  const dominantTone     = profileData?.patterns?.emotions?.[0]?.[0] || null;
+  const now               = new Date();
+  const thisMonthCount   = artworks.filter(a => {
+    if (!a.created_at) return false;
+    const d = new Date(a.created_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
+  const metrics = [
+    { label: 'Works', value: worksCount, note: 'in your collection' },
+    { label: 'Reflections', value: reflectionsCount, note: `${coveragePct}% of works` },
+    ...(dominantTone ? [{ label: 'Dominant tone', value: dominantTone, note: 'most common emotion' }] : []),
+    { label: 'This month', value: `+${thisMonthCount}`, note: 'new acquisitions' },
+  ];
 
   // ── Empty state ───────────────────────────────────────────────
   if (!latestArtwork) {
     return (
       <div className="db-page">
-        <div className="db-banner">
-          <p className="dash-banner-greeting">{greeting()}, {currentUser?.name?.split(' ')[0] || 'there'}</p>
-          <h1 className="dash-banner-title">Your Collection</h1>
-          <p className="dash-banner-sub">Nothing added yet</p>
-        </div>
-        <div className="dash-empty">
-          <div className="dash-empty-frame" />
-          <h2 className="dash-empty-title">Your gallery awaits</h2>
-          <p className="dash-empty-desc">
-            Add your first artwork to begin. A thoughtful reflection will be generated for you.
+        <div className="pattern-empty">
+          <div className="pattern-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
+          <h2 className="pattern-empty-title">Your gallery awaits</h2>
+          <p className="pattern-empty-desc">
+            {greeting()}, {currentUser?.name?.split(' ')[0] || 'there'} — add your first artwork to begin.
+            A thoughtful reflection will be generated for you.
           </p>
           <button onClick={() => onNavigate('add-artwork')} className="btn btn-primary btn-lg">
             Add your first work
@@ -198,94 +208,77 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
   return (
     <div className="db-page">
 
-      {/* ── 1. IDENTITY SNAPSHOT CARD ──────────────────────────── */}
-      <div className="db-identity-card">
-        <div className="db-identity-left">
-          <p className="db-identity-eyebrow">Your Identity</p>
-          {coreIdentity?.value ? (
-            <p className="db-identity-core">{coreIdentity.value}</p>
-          ) : (
-            <p className="db-identity-core db-identity-core--empty">
-              {greeting()}, {currentUser?.name?.split(' ')[0] || 'there'} — your identity is taking shape.
-            </p>
-          )}
-
-          {chipTraits.length > 0 && (
-            <div className="db-identity-chips">
-              {chipTraits.map((t, i) => (
-                <span key={i} className="db-identity-chip">{t.label}</span>
-              ))}
-            </div>
-          )}
-
-          {sliderTraits.length > 0 && (
-            <div className="db-identity-metrics">
-              {sliderTraits.map((t, i) => (
-                <MetricBar
-                  key={i}
-                  label={t.label.replace(' (ML)', '').replace('(ML)', '').trim()}
-                  value={t.value}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="db-identity-right">
-          <button className="btn db-accent-btn btn-sm" onClick={() => onNavigate('identity')}>
-            View full identity →
-          </button>
-          <p className="db-identity-stat">{artworks.length} artwork{artworks.length !== 1 ? 's' : ''}</p>
-          <p className="db-identity-stat">{artworks.filter(a => a.has_reflection).length} reflection{artworks.filter(a => a.has_reflection).length !== 1 ? 's' : ''}</p>
-          {returnBehavior?.share_2plus_in_window != null && (
-            <p className="db-identity-stat">
-              Users with 2+ artworks (30d): {(returnBehavior.share_2plus_in_window * 100).toFixed(0)}%
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* ── 2. LATEST REFLECTION — full width ──────────────────── */}
-      {reflectionLoading && (
-        <div className="db-reflection-card">
-          <p className="db-col-label">Latest Reflection</p>
-          <p className="db-reflection-snippet" style={{ color: '#aaa' }}>Loading reflection…</p>
-        </div>
-      )}
-
-      {!reflectionLoading && latestReflection && (
-        <div className="db-reflection-card">
-          <div className="db-reflection-card-header">
-            <p className="db-col-label">Latest Reflection</p>
-            <button className="db-col-link" onClick={() => onNavigate('reflections')}>
-              Read full →
-            </button>
+      {/* ── 1. HERO — pull-quote card ──────────────────────────── */}
+      <section className="card db-hero">
+        <p className="pattern-eyebrow pattern-eyebrow--accent pattern-eyebrow--hero">Your identity</p>
+        {coreIdentity?.value ? (
+          <blockquote className="pattern-quote">&ldquo;{coreIdentity.value}&rdquo;</blockquote>
+        ) : (
+          <blockquote className="pattern-quote db-hero-quote--empty">
+            {greeting()}, {currentUser?.name?.split(' ')[0] || 'there'} — your identity is taking shape.
+          </blockquote>
+        )}
+        {chipTraits.length > 0 && (
+          <div className="db-hero-chips">
+            {chipTraits.map((t, i) => (
+              <span key={i} className="pattern-chip pattern-chip--active">{t.label}</span>
+            ))}
           </div>
-          <p className="db-reflection-full">{latestReflection.content}</p>
-        </div>
-      )}
+        )}
+      </section>
 
-      {!reflectionLoading && !latestReflection && (
-        <div className="db-reflection-card db-prompt-card">
-          <p className="db-prompt-text">
-            Generate a reflection for your latest artwork to begin exploring your creative identity.
-          </p>
-          <button
-            className="btn db-accent-btn btn-sm"
-            onClick={() => onNavigate('reflection', latestArtwork.id)}
-          >
-            Generate reflection
-          </button>
-        </div>
-      )}
+      {/* ── 2. METRIC ROW ───────────────────────────────────────── */}
+      <div className="db-metric-row">
+        {metrics.map((m, i) => (
+          <div key={i} className="pattern-metric-card">
+            <div className="pattern-metric-label">{m.label}</div>
+            <div className="pattern-metric-value">{m.value}</div>
+            <div className="pattern-metric-note">{m.note}</div>
+          </div>
+        ))}
+      </div>
 
       {/* ── 3. MAIN 2-COLUMN SECTION ───────────────────────────── */}
       <div className="db-main-grid">
 
-        {/* LEFT — Artworks */}
-        <div className="db-artworks-col">
+        {/* LEFT — Latest reflection + Artworks */}
+        <div className="db-left-col">
+
+          {reflectionLoading && (
+            <div className="card db-reflection-card">
+              <p className="pattern-eyebrow">Latest reflection</p>
+              <p className="db-reflection-body db-reflection-body--muted">Loading reflection…</p>
+            </div>
+          )}
+
+          {!reflectionLoading && latestReflection && (
+            <div className="card db-reflection-card">
+              <div className="db-reflection-card-header">
+                <p className="pattern-eyebrow">Latest reflection</p>
+                <button className="db-col-link" onClick={() => onNavigate('reflections')}>
+                  Read the catalog →
+                </button>
+              </div>
+              <p className="db-reflection-body">{latestReflection.content}</p>
+            </div>
+          )}
+
+          {!reflectionLoading && !latestReflection && (
+            <div className="card db-prompt-card">
+              <p className="db-prompt-text">
+                Generate a reflection for your latest artwork to begin exploring your creative identity.
+              </p>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => onNavigate('reflection', latestArtwork.id)}
+              >
+                Generate reflection
+              </button>
+            </div>
+          )}
+
           <div className="db-col-header">
-            <p className="db-col-label">Your Artworks</p>
+            <p className="pattern-eyebrow">Your artworks</p>
             <button className="db-col-link" onClick={() => onNavigate('my-artwork')}>
               View all →
             </button>
@@ -295,7 +288,7 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
             {artworks.slice(0, 6).map((art) => (
               <div
                 key={art.id}
-                className="db-art-card"
+                className="card db-art-card"
                 onClick={() => onNavigate('my-artwork')}
                 role="button"
                 tabIndex={0}
@@ -305,9 +298,6 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
                 <div className="db-art-body">
                   <p className="db-art-title">{art.title}</p>
                   <p className="db-art-date">{fmtDate(art.created_at)}</p>
-                  {art.has_reflection && (
-                    <span className="db-art-tag">Reflection ready</span>
-                  )}
                 </div>
               </div>
             ))}
@@ -317,20 +307,31 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
         {/* RIGHT — Sidebar */}
         <div className="db-sidebar-col">
 
+          <div className="card db-sidebar-card db-sidebar-card--coverage">
+            <p className="pattern-eyebrow">Reflection coverage</p>
+            <CoverageRing pct={coveragePct} />
+            <p className="db-coverage-note">
+              {reflectionsCount} of {worksCount} work{worksCount !== 1 ? 's' : ''} reflected on
+            </p>
+          </div>
+
           {profileData?.patterns && (
-            <div className="db-sidebar-card">
-              <p className="db-sidebar-card-label">Traits Distribution</p>
-              <div className="db-chart-wrap">
-                <ProfilePieCharts patterns={profileData.patterns} />
-              </div>
+            <div className="card db-sidebar-card">
+              <ProfilePieCharts patterns={profileData.patterns} />
             </div>
           )}
 
           {firstInsight && (
-            <div className="db-sidebar-card db-insight-card">
-              <p className="db-sidebar-card-label">AI Insight</p>
+            <div className="card db-sidebar-card db-insight-card">
+              <p className="pattern-eyebrow">AI insight</p>
               <p className="db-insight-text">{firstInsight}</p>
             </div>
+          )}
+
+          {returnBehavior?.share_2plus_in_window != null && (
+            <p className="db-footnote">
+              {(returnBehavior.share_2plus_in_window * 100).toFixed(0)}% of collectors have 2+ artworks within 30 days
+            </p>
           )}
 
         </div>

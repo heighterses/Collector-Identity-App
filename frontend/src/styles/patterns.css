@@ -1,0 +1,285 @@
+/* ============================================================
+   PATTERN LIBRARY — Collector Identity design import
+   Reusable structural classes extracted from `Collector Identity.dc.html`.
+   Every page should consume these instead of re-deriving one-off styles.
+   Full spec (typography/spacing/token rationale) lives in
+   DESIGN-PATTERNS.md at the project root.
+
+   Three of the twelve catalogued patterns reuse existing global classes
+   rather than duplicating them here — see DESIGN-PATTERNS.md:
+     - Button        → .btn / .btn-primary / .btn-secondary   (styles.css)
+     - Card (surface) → .card                                  (styles.css)
+     - Nav item       → .side-nav-item                         (redesign.css)
+   ============================================================ */
+
+/* 1. Section eyebrow ------------------------------------------------- */
+.pattern-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+}
+.pattern-eyebrow--accent { color: var(--accent-hover); }
+.pattern-eyebrow--hero   { margin-bottom: 22px; }
+
+/* 2. Page title (used inside page content; the topbar already renders
+      the route-level title via Layout.jsx — this is for in-card titles) */
+.pattern-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 4px 0 0;
+}
+
+/* 3. Pull-quote block ------------------------------------------------- */
+.pattern-quote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 34px;
+  line-height: 1.32;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  max-width: 780px;
+  margin: 0;
+}
+.pattern-quote--hero {
+  font-size: 44px;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+  max-width: 900px;
+  text-align: center;
+  margin: 0 auto;
+}
+.pattern-quote-emphasis { font-style: italic; color: var(--accent-hover); }
+
+/* 4. Metric card -------------------------------------------------------- */
+.pattern-metric-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 24px 26px;
+  box-shadow: var(--shadow-sm);
+}
+.pattern-metric-label {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+.pattern-metric-value {
+  font-family: var(--font-serif);
+  font-size: 40px;
+  font-weight: 600;
+  margin-top: 12px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.pattern-metric-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+}
+
+/* 5. Donut ring — proportion charts only (traits/emotions distribution,
+      similarity score). Time-series data stays a line chart. -------- */
+.pattern-donut { position: relative; border-radius: 50%; }
+.pattern-donut-center {
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  background: var(--card-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.pattern-donut-value {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.pattern-donut-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* 6. Selector chip ------------------------------------------------------ */
+.pattern-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.pattern-chip:hover { border-color: var(--accent); }
+.pattern-chip--active {
+  background: var(--accent-subtle);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+.pattern-chip--active:hover { border-color: var(--border-subtle); }
+/* Outlined variant — used where a chip must read as "not filled" without
+   relying on color alone (e.g. Compare's added/removed distinction). */
+.pattern-chip--outline {
+  background: transparent;
+  border-style: dashed;
+}
+.pattern-chip-prefix { font-weight: 700; }
+
+/* 7. Trait card with score bar ------------------------------------------ */
+.pattern-trait-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 24px 26px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.pattern-trait-card--open { border-color: var(--accent); box-shadow: var(--shadow); }
+.pattern-trait-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pattern-trait-card-name {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.pattern-trait-card-meta { display: flex; align-items: center; gap: 12px; }
+.pattern-trait-card-score {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-hover);
+}
+.pattern-trait-card-chevron {
+  color: var(--text-faint);
+  font-size: 22px;
+  line-height: 1;
+  transition: transform 0.25s ease;
+  display: inline-block;
+}
+.pattern-trait-card--open .pattern-trait-card-chevron { transform: rotate(90deg); }
+.pattern-trait-card-bar-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-subtle);
+  margin-top: 16px;
+  overflow: hidden;
+}
+.pattern-trait-card-bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+.pattern-trait-card-desc {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 18px 0 0;
+}
+
+/* 8. Nav item — see .side-nav-item (Layout.jsx / redesign.css) --------- */
+
+/* 9. Empty state --------------------------------------------------------- */
+.pattern-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 64px 24px;
+}
+.pattern-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  color: var(--accent-hover);
+}
+.pattern-empty-title {
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.pattern-empty-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 340px;
+  margin: 0 0 20px;
+}
+
+/* 10. Form field ---------------------------------------------------------- */
+.pattern-field { margin-bottom: 22px; }
+.pattern-field-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 9px;
+}
+.pattern-field-input {
+  width: 100%;
+  background: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.pattern-field-input:focus { border-color: var(--accent); }
+.pattern-field-input--title { font-family: var(--font-serif); font-size: 17px; }
+
+/* 11. Button — see .btn / .btn-primary / .btn-secondary (styles.css) --- */
+/* 12. Card (generic surface) — see .card (styles.css) ------------------ */
+
+/* ── Segmented pill toggle — supporting pattern for Settings ---------- */
+.pattern-segmented {
+  display: inline-flex;
+  background: var(--bg-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+}
+.pattern-segmented-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+.pattern-segmented-btn--active { background: var(--accent); color: #1A1915; }

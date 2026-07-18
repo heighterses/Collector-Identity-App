@@ -107,57 +107,24 @@ const UploadStep = ({ onArtworkCreated, onCancel }) => (
 // edit" is the only path to actually confirm or revise it.
 const ReflectionCard = ({ artwork, reflectionData, onReview }) => (
   <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
-    <div className="db-reflection-card" style={{ width: '100%', maxWidth: '88%' }}>
+    <div className="card db-reflection-card" style={{ width: '100%', maxWidth: '88%' }}>
       <div className="db-reflection-card-header">
-        <p className="db-col-label">Reflection · {artwork.title}</p>
+        <p className="pattern-eyebrow" style={{ marginBottom: 0 }}>Reflection · {artwork.title}</p>
         <button className="db-col-link" onClick={onReview}>Review & edit →</button>
       </div>
-      <p className="db-reflection-full">{reflectionData.content}</p>
+      <p className="db-reflection-body">{reflectionData.content}</p>
     </div>
   </div>
 );
 
 const AddArtworkAction = ({ onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      background: 'var(--white)',
-      border: '1px dashed var(--line)',
-      borderRadius: 20,
-      padding: '6px 14px',
-      fontSize: 'var(--text-xs)',
-      color: 'var(--ink-muted)',
-      cursor: 'pointer',
-      whiteSpace: 'nowrap',
-      transition: 'border-color 0.15s, color 0.15s',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-    }}
-    onMouseEnter={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.color = 'var(--accent)'; }}
-    onMouseLeave={e => { e.target.style.borderColor = 'var(--line)'; e.target.style.color = 'var(--ink-muted)'; }}
-  >
-    <span aria-hidden="true">+</span> Add another artwork
+  <button onClick={onClick} className="pattern-chip pattern-chip--outline">
+    <span className="pattern-chip-prefix" aria-hidden="true">+</span> Add another artwork
   </button>
 );
 
 const SuggestedPrompt = ({ text, onClick }) => (
-  <button
-    onClick={() => onClick(text)}
-    style={{
-      background: 'var(--white)',
-      border: '1px solid var(--line)',
-      borderRadius: 20,
-      padding: '6px 14px',
-      fontSize: 'var(--text-xs)',
-      color: 'var(--ink-muted)',
-      cursor: 'pointer',
-      whiteSpace: 'nowrap',
-      transition: 'border-color 0.15s, color 0.15s',
-    }}
-    onMouseEnter={e => { e.target.style.borderColor = 'var(--accent)'; e.target.style.color = 'var(--accent)'; }}
-    onMouseLeave={e => { e.target.style.borderColor = 'var(--line)'; e.target.style.color = 'var(--ink-muted)'; }}
-  >
+  <button onClick={() => onClick(text)} className="pattern-chip">
     {text}
   </button>
 );
@@ -314,16 +281,14 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate }
 
       <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
 
-        {/* Header */}
-        <div style={{ padding: '28px 0 16px', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4, fontFamily: 'var(--font-sans)' }}>Identity Companion</p>
-          <h1 style={{ fontSize: 'var(--text-xl)', fontFamily: 'var(--font-serif)', color: 'var(--ink)', margin: 0 }}>Chat</h1>
-          {activeArtwork && (
-            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-muted)', marginTop: 6 }}>
+        {/* Header — route title already in the topbar; this just adds context */}
+        {activeArtwork && (
+          <div style={{ padding: '20px 0 16px', borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-muted)', margin: 0 }}>
               Reflecting on <span style={{ color: 'var(--ink)' }}>{activeArtwork.title}</span>
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
@@ -374,29 +339,13 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate }
             placeholder={hasIdentity ? "Ask about your identity…" : "Upload artwork first to start chatting…"}
             disabled={loading}
             rows={1}
-            style={{
-              flex: 1, resize: 'none', border: '1px solid var(--line)',
-              borderRadius: 12, padding: '10px 14px',
-              fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
-              color: 'var(--ink)', background: 'var(--white)',
-              outline: 'none', lineHeight: 'var(--leading-normal)',
-              maxHeight: 120, overflowY: 'auto',
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-            onBlur={e => e.target.style.borderColor = 'var(--line)'}
+            className="pattern-field-input"
+            style={{ flex: 1, resize: 'none', maxHeight: 120, overflowY: 'auto' }}
           />
           <button
             onClick={() => sendMessage()}
             disabled={loading || !input.trim()}
-            style={{
-              background: input.trim() && !loading ? 'var(--ink)' : 'var(--gray-200)',
-              color: input.trim() && !loading ? 'var(--white)' : 'var(--gray-400)',
-              border: 'none', borderRadius: 12, padding: '10px 18px',
-              fontSize: 'var(--text-sm)', cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
-              fontFamily: 'var(--font-sans)', fontWeight: 'var(--weight-medium)',
-              transition: 'background 0.15s',
-              whiteSpace: 'nowrap',
-            }}
+            className="btn btn-primary"
           >
             Send
           </button>

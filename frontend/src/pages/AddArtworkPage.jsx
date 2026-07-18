@@ -122,42 +122,29 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
   const hasImage = !!formData.imageFile;
   const hasDescription = formData.description.trim().length > 0;
   const isFormValid = formData.title.trim() && (hasImage || hasDescription);
+  const pieceNumber = artworks.length + 1;
 
   // ── Loading skeleton ──────────────────────────────────────────
   if (checkingExisting) {
     return (
-      <div className="add-artwork-page">
-        <div className="add-artwork-heading">
-          <div className="ghost-card" style={{ height: 36, width: 220, marginBottom: 8 }} />
-          <div className="ghost-card" style={{ height: 14, width: 300 }} />
-        </div>
-        <div className="add-artwork-grid">
-          <div className="ghost-card" style={{ height: 360, borderRadius: 12 }} />
-          <div className="ghost-card" style={{ height: 360, borderRadius: 12 }} />
+      <div className="aa-page">
+        <div className="aa-grid">
+          <div className="ghost-card" style={{ height: 360, borderRadius: 16 }} />
+          <div className="ghost-card" style={{ height: 360, borderRadius: 16 }} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="add-artwork-page">
-
-      {/* ── Page heading ─────────────────────────────────────── */}
-      <div className="add-artwork-heading">
-        <h1 className="add-artwork-title">Place Your Work</h1>
-        <p className="add-artwork-sub">
-          Upload an image, write a description, or both
-        </p>
-      </div>
-
-      {/* ── 2-column grid ────────────────────────────────────── */}
-      <form onSubmit={handleSubmit} className="add-artwork-grid">
+    <div className="aa-page">
+      <form onSubmit={handleSubmit} className="aa-grid">
 
         {/* LEFT — Upload canvas */}
-        <div className="add-artwork-canvas">
+        <div className="aa-canvas">
           {!imagePreview ? (
             <div
-              className={`add-artwork-dropzone${dragActive ? ' add-artwork-dropzone--active' : ''}${hasDescription && !hasImage ? ' add-artwork-dropzone--optional' : ''}`}
+              className={`aa-dropzone${dragActive ? ' aa-dropzone--active' : ''}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -178,81 +165,67 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
                 onChange={(e) => handleFileChange(e.target.files[0])}
                 style={{ display: 'none' }}
               />
-              <div className="add-artwork-dropzone-icon">
+              <div className="aa-dropzone-icon-badge">
                 {hasDescription && !hasImage ? (
-                  // Softer icon when text is already provided
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
                 ) : (
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
+                  <span className="aa-dropzone-plus">+</span>
                 )}
               </div>
 
-              <p className="add-artwork-dropzone-primary">
-                {hasDescription && !hasImage ? 'Add an image (optional)' : 'Place your artwork here'}
+              <p className="aa-dropzone-primary">
+                {hasDescription && !hasImage ? 'Add an image (optional)' : 'Drop artwork here'}
               </p>
-              <p className="add-artwork-dropzone-secondary">
+              <p className="aa-dropzone-secondary">
                 {hasDescription && !hasImage
                   ? 'Your description is enough — or add an image too'
-                  : 'Click or drag & drop · JPG, PNG up to 10MB'}
+                  : 'Drop a high-resolution image, or browse your files. JPEG, PNG up to 10MB.'}
               </p>
+              <p className="aa-dropzone-mono">[ artwork image ]</p>
             </div>
           ) : (
-            <div className="add-artwork-preview">
-              <img src={imagePreview} alt="Preview" className="add-artwork-preview-img" />
+            <div className="aa-preview">
+              <img src={imagePreview} alt="Preview" className="aa-preview-img" />
               <button
                 type="button"
-                className="btn btn-secondary btn-sm add-artwork-preview-clear"
+                className="btn btn-secondary btn-sm aa-preview-clear"
                 onClick={clearFile}
               >
                 Remove image
               </button>
             </div>
           )}
-
-          {/* "or" divider — only visible on desktop between the two columns */}
-          <div className="add-artwork-or" aria-hidden="true">
-            <span>or</span>
-          </div>
         </div>
 
-        {/* RIGHT — Form panel */}
-        <div className="add-artwork-form-panel">
+        {/* RIGHT — Catalog entry form */}
+        <div className="card aa-form-panel">
+          <div className="aa-form-head">
+            <p className="pattern-eyebrow">Catalog entry</p>
+            <span className="aa-piece-number">Piece #{pieceNumber}</span>
+          </div>
 
-          {/* Collection count */}
-          {artworks.length > 0 && (
-            <p className="add-artwork-count">
-              {artworks.length} artwork{artworks.length !== 1 ? 's' : ''} in your collection
-            </p>
-          )}
-
-          {/* Title */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="artwork-title">Title</label>
+          <div className="pattern-field">
+            <label className="pattern-field-label" htmlFor="artwork-title">Title</label>
             <input
               id="artwork-title"
               type="text"
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className="form-input"
-              placeholder="Give your artwork a title"
+              className="pattern-field-input pattern-field-input--title"
+              placeholder="Untitled work"
             />
           </div>
 
-          {/* Description — clearly labelled as the text-only path */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="artwork-description">
+          <div className="pattern-field">
+            <label className="pattern-field-label" htmlFor="artwork-description">
               Description
               {!hasImage && (
-                <span className="add-artwork-desc-hint">
+                <span className="aa-desc-hint">
                   {hasDescription ? ' · used as your artwork' : ' · required if no image'}
                 </span>
               )}
@@ -262,53 +235,39 @@ const AddArtworkPage = ({ onArtworkCreated, currentUser, onLogout, isWithinLayou
               name="description"
               value={formData.description}
               onChange={handleChange}
-              className={`form-input form-textarea add-artwork-textarea${hasDescription && !hasImage ? ' add-artwork-textarea--active' : ''}`}
-              placeholder="Describe your artwork — its meaning, technique, or story. This becomes the basis for your reflection."
-              rows={6}
+              className="pattern-field-input aa-textarea"
+              placeholder="What drew you to this piece? Note the medium, the moment, the feeling."
+              rows={5}
             />
           </div>
 
-          {/* Input method indicator */}
           {(hasImage || hasDescription) && (
-            <div className="add-artwork-mode">
-              {hasImage && hasDescription && (
-                <>
-                  <span className="add-artwork-mode-dot add-artwork-mode-dot--both" />
-                  Image + description
-                </>
-              )}
-              {hasImage && !hasDescription && (
-                <>
-                  <span className="add-artwork-mode-dot add-artwork-mode-dot--image" />
-                  Image upload
-                </>
-              )}
-              {!hasImage && hasDescription && (
-                <>
-                  <span className="add-artwork-mode-dot add-artwork-mode-dot--text" />
-                  Text description
-                </>
-              )}
+            <div className="aa-mode">
+              {hasImage && hasDescription && (<><span className="aa-mode-dot aa-mode-dot--both" />Image + description</>)}
+              {hasImage && !hasDescription && (<><span className="aa-mode-dot aa-mode-dot--image" />Image upload</>)}
+              {!hasImage && hasDescription && (<><span className="aa-mode-dot aa-mode-dot--text" />Text description</>)}
             </div>
           )}
 
-          {/* Error */}
           {error && <div className="alert alert-error">{error}</div>}
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading || !isFormValid}
-            className="btn btn-primary add-artwork-submit"
-          >
-            {loading ? (
-              <span className="ai-step">
-                <span className="ai-step-dot" />
-                Adding to collection<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span>
-              </span>
-            ) : 'Add to collection'}
-          </button>
-
+          <div className="aa-form-footer">
+            <div className="aa-form-count">
+              <span className="aa-form-count-num">{artworks.length}</span> work{artworks.length !== 1 ? 's' : ''} in collection
+            </div>
+            <button
+              type="submit"
+              disabled={loading || !isFormValid}
+              className="btn btn-primary aa-submit"
+            >
+              {loading ? (
+                <span className="ai-step">
+                  <span className="ai-step-dot" />
+                  Adding<span className="ai-dots"><span>.</span><span>.</span><span>.</span></span>
+                </span>
+              ) : 'Add to collection'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

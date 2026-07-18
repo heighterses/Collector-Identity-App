@@ -216,7 +216,6 @@ const Layout = ({ children, currentUser, onLogout, currentPage, onNavigate, user
             <h1 className="app-topbar-title">{title}</h1>
           </div>
           <div className="app-topbar-actions">
-            <span className="app-topbar-hint">Private collection</span>
             <button className="mode-pill-toggle" onClick={toggleMode} aria-label="Toggle color mode">
               <span className="mode-pill-swatch" data-mode-preview={mode} />
               <span>{mode === 'light' ? 'Light' : 'Dark'}</span>

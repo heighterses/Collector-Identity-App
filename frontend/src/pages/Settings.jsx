@@ -2,10 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { auth } from '../api.js';
 
 const Toggle = ({ checked, onChange }) => (
-  <label className="toggle-switch">
-    <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    <span className="toggle-track" />
-  </label>
+  <div className="pattern-segmented" role="group">
+    <button
+      type="button"
+      className={`pattern-segmented-btn ${!checked ? 'pattern-segmented-btn--active' : ''}`}
+      onClick={() => onChange(false)}
+    >
+      Off
+    </button>
+    <button
+      type="button"
+      className={`pattern-segmented-btn ${checked ? 'pattern-segmented-btn--active' : ''}`}
+      onClick={() => onChange(true)}
+    >
+      On
+    </button>
+  </div>
 );
 
 const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
@@ -87,10 +99,10 @@ const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
   const isGoogleUser = currentUser?.auth_provider === 'google';
 
   const sections = [
-    { id: 'account',       label: 'Account',       icon: '🔐' },
-    { id: 'privacy',       label: 'Privacy',        icon: '🛡️' },
-    { id: 'notifications', label: 'Notifications',  icon: '🔔' },
-    { id: 'preferences',   label: 'Preferences',    icon: '⚙️' },
+    { id: 'account',       label: 'Account' },
+    { id: 'privacy',       label: 'Privacy' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'preferences',   label: 'Preferences' },
   ];
 
   const renderAccount = () => (
@@ -169,9 +181,10 @@ const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
   const renderPreferences = () => (
     <div className="setting-row">
       <div className="setting-row-info"><span className="setting-row-label">Theme</span><span className="setting-row-desc">Choose your preferred appearance</span></div>
-      <select className="settings-select" value={theme} onChange={(e) => handleThemeChange(e.target.value)}>
-        <option value="light">Light</option><option value="dark">Dark</option>
-      </select>
+      <div className="pattern-segmented" role="group">
+        <button type="button" className={`pattern-segmented-btn ${theme === 'light' ? 'pattern-segmented-btn--active' : ''}`} onClick={() => handleThemeChange('light')}>Light</button>
+        <button type="button" className={`pattern-segmented-btn ${theme === 'dark' ? 'pattern-segmented-btn--active' : ''}`} onClick={() => handleThemeChange('dark')}>Dark</button>
+      </div>
     </div>
   );
 
@@ -187,16 +200,10 @@ const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
 
   return (
     <div className="gallery-settings" style={{ maxWidth: 'var(--max-w)', margin: '0 auto' }}>
-      <div className="gallery-settings-header">
-        <h1 className="gallery-settings-title">Settings</h1>
-        <p className="gallery-settings-sub">Manage your account and preferences</p>
-      </div>
-
       <div className="gallery-settings-layout">
         <nav className="gallery-settings-nav">
           {sections.map((s) => (
             <button key={s.id} onClick={() => setActiveSection(s.id)} className={`gallery-settings-nav-btn${activeSection === s.id ? ' gallery-settings-nav-btn--active' : ''}`}>
-              <span className="gallery-settings-nav-icon">{s.icon}</span>
               {s.label}
             </button>
           ))}

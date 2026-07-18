@@ -181,11 +181,6 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   if (loading) {
     return (
       <div className="rf-page">
-        <div className="rf-page-header">
-          <p className="rf-eyebrow">Reflections</p>
-          <div className="ghost-card" style={{ height: 36, width: 240, marginBottom: 8 }} />
-          <div className="ghost-card" style={{ height: 14, width: 160 }} />
-        </div>
         <div className="rf-layout">
           <div className="ghost-card" style={{ height: 400, borderRadius: 12 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -202,19 +197,15 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   if (!artworks.length) {
     return (
       <div className="rf-page">
-        <div className="rf-page-header">
-          <p className="rf-eyebrow">Reflections</p>
-          <h1 className="rf-page-title">Your Reflections</h1>
-        </div>
-        <div className="rf-empty">
-          <div className="rf-empty-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <div className="pattern-empty">
+          <div className="pattern-empty-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <h2 className="rf-empty-title">No reflections yet</h2>
-          <p className="rf-empty-desc">Add an artwork to your collection and a personal reflection will be generated for you.</p>
-          <button className="btn rf-empty-btn" onClick={() => onNavigate('add-artwork')}>Add artwork</button>
+          <h2 className="pattern-empty-title">No reflections yet</h2>
+          <p className="pattern-empty-desc">Add an artwork to your collection and a personal reflection will be generated for you.</p>
+          <button className="btn btn-primary" onClick={() => onNavigate('add-artwork')}>Add artwork</button>
         </div>
       </div>
     );
@@ -224,20 +215,15 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   if (!reflections.length) {
     return (
       <div className="rf-page">
-        <div className="rf-page-header">
-          <p className="rf-eyebrow">Reflections</p>
-          <h1 className="rf-page-title">Your Reflections</h1>
-          <p className="rf-page-sub">{artworks.length} artwork{artworks.length !== 1 ? 's' : ''} · no reflections yet</p>
-        </div>
-        <div className="rf-empty">
-          <div className="rf-empty-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <div className="pattern-empty">
+          <div className="pattern-empty-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
           </div>
-          <h2 className="rf-empty-title">No reflections generated yet</h2>
-          <p className="rf-empty-desc">Go to My Artwork and generate a reflection for any of your {artworks.length} work{artworks.length !== 1 ? 's' : ''}.</p>
-          <button className="btn rf-empty-btn" onClick={() => onNavigate('my-artwork')}>Go to My Artwork</button>
+          <h2 className="pattern-empty-title">No reflections generated yet</h2>
+          <p className="pattern-empty-desc">Go to My Artwork and generate a reflection for any of your {artworks.length} work{artworks.length !== 1 ? 's' : ''}.</p>
+          <button className="btn btn-primary" onClick={() => onNavigate('my-artwork')}>Go to My Artwork</button>
         </div>
       </div>
     );
@@ -247,14 +233,9 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   return (
     <div className="rf-page">
 
-      {/* Page header */}
-      <div className="rf-page-header">
-        <p className="rf-eyebrow">Reflections</p>
-        <h1 className="rf-page-title">Your Reflections</h1>
-        <p className="rf-page-sub">
-          {reflections.length} reflection{reflections.length !== 1 ? 's' : ''} across {artworks.length} artwork{artworks.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+      <p className="rf-count-line">
+        {reflections.length} reflection{reflections.length !== 1 ? 's' : ''} across {artworks.length} artwork{artworks.length !== 1 ? 's' : ''}
+      </p>
 
       {/* Two-column layout */}
       <div className={`rf-layout ${reflections.length === 1 ? 'rf-layout--single' : ''}`}>
