@@ -60,8 +60,7 @@ const App = () => {
   useEffect(() => {
     // Restore saved theme before anything renders
     const saved = localStorage.getItem('theme') || 'light';
-    if (saved === 'dark') document.documentElement.classList.add('dark-theme');
-    else document.documentElement.classList.remove('dark-theme');
+    document.documentElement.setAttribute('data-mode', saved === 'dark' ? 'dark' : 'light');
 
     const urlParams = new URLSearchParams(window.location.search);
     const resetToken = urlParams.get('token');

@@ -32,8 +32,7 @@ const Settings = ({ currentUser, onLogout, onUserUpdate }) => {
   }, [currentUser]);
 
   const applyTheme = (t) => {
-    if (t === 'dark') document.documentElement.classList.add('dark-theme');
-    else document.documentElement.classList.remove('dark-theme');
+    document.documentElement.setAttribute('data-mode', t === 'dark' ? 'dark' : 'light');
   };
 
   const notify = (msg, isError = false) => {
