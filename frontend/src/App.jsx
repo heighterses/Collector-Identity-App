@@ -16,6 +16,36 @@ import IdentityPage from './pages/IdentityPage.jsx';
 import RoleSelectionPage from './pages/RoleSelectionPage.jsx';
 import ChatPage from './pages/ChatPage.jsx';
 
+// ── URL <-> page-id mapping ───────────────────────────────────────────────
+// The app has no server-side routes — this just keeps the browser URL (and
+// therefore a page refresh / direct link) in sync with which page is shown,
+// using the History API directly rather than pulling in a router for a
+// single centralized nav function.
+const PAGE_PATHS = {
+  dashboard:    '/dashboard',
+  'add-artwork':'/add-artwork',
+  'my-artwork': '/my-artwork',
+  reflections:  '/reflections',
+  reflection:   '/reflections',
+  profile:      '/profile',
+  settings:     '/settings',
+  identity:     '/identity',
+  chat:         '/chat',
+};
+
+const pathForPage = (pageId, artworkId) => {
+  const base = PAGE_PATHS[pageId] || '/dashboard';
+  return pageId === 'reflection' && artworkId ? `${base}/${artworkId}` : base;
+};
+
+const pageFromPath = (pathname) => {
+  const [first, second] = pathname.split('/').filter(Boolean);
+  const knownPages = new Set(Object.keys(PAGE_PATHS));
+  if (!first || !knownPages.has(first)) return { page: 'dashboard', artworkId: null };
+  const page = first === 'reflections' && second ? 'reflection' : first;
+  return { page, artworkId: second || null };
+};
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,9 +54,12 @@ const App = () => {
   const [userArtworks, setUserArtworks] = useState([]);   // all artworks
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Navigation
-  const [currentPage, setCurrentPage] = useState('dashboard');
-  const [selectedArtworkId, setSelectedArtworkId] = useState(null); // for per-artwork pages
+  // Navigation — initial page/artwork restored from the current URL so a
+  // full page refresh (or a direct link) lands on the right page instead
+  // of always falling back to the dashboard.
+  const initialRoute = pageFromPath(window.location.pathname);
+  const [currentPage, setCurrentPage] = useState(initialRoute.page);
+  const [selectedArtworkId, setSelectedArtworkId] = useState(initialRoute.artworkId); // for per-artwork pages
   const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Derived helpers
@@ -70,6 +103,17 @@ const App = () => {
     checkAuthAndLoad();
   }, []);
 
+  // Keep currentPage/selectedArtworkId in sync with browser back/forward.
+  useEffect(() => {
+    const onPopState = () => {
+      const { page, artworkId } = pageFromPath(window.location.pathname);
+      setCurrentPage(page);
+      setSelectedArtworkId(artworkId);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
   // ── Load everything from the server ─────────────────────────
   const checkAuthAndLoad = async () => {
     setLoading(true);
@@ -106,6 +150,14 @@ const App = () => {
     setUserArtworks([]);
   };
 
+  // Single funnel for every page change: updates the state React renders
+  // from AND pushes a matching URL, so the two can never drift apart.
+  const navigateTo = (pageId, artworkId = null) => {
+    setCurrentPage(pageId);
+    if (artworkId) setSelectedArtworkId(artworkId);
+    window.history.pushState({}, '', pathForPage(pageId, artworkId));
+  };
+
   // ── Event handlers ───────────────────────────────────────────
   const handleAuthSuccess = async () => {
     await checkAuthAndLoad();
@@ -113,7 +165,7 @@ const App = () => {
 
   const handleArtworkCreated = async () => {
     await checkAuthAndLoad();
-    setCurrentPage('my-artwork');
+    navigateTo('my-artwork');
   };
 
   // Used when artwork is added from inside chat: refetches the artwork list
@@ -130,19 +182,18 @@ const App = () => {
 
   const handleArtworkDeleted = async () => {
     await checkAuthAndLoad();
-    setCurrentPage('my-artwork');
+    navigateTo('my-artwork');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     resetState();
-    setCurrentPage('dashboard');
+    navigateTo('dashboard');
   };
 
   // Navigation accepts an optional artworkId for per-artwork pages
   const handleNavigation = (pageId, artworkId = null) => {
-    setCurrentPage(pageId);
-    if (artworkId) setSelectedArtworkId(artworkId);
+    navigateTo(pageId, artworkId);
   };
 
   // ── Page rendering ───────────────────────────────────────────
