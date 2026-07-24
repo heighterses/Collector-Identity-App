@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { auth, identity } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
+import TimelinePage from './TimelinePage';
+import ComparisonPage from './ComparisonPage';
 
 const RoleIcon = ({ role }) => {
   if (role === 'artist') return (
@@ -438,6 +440,18 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
           </div>
         </div>
       )}
+
+      {/* ── Timeline — moved here from the sidebar nav ──────────── */}
+      <div className="pf-section">
+        <p className="pattern-eyebrow pf-section-eyebrow">Timeline</p>
+        <TimelinePage />
+      </div>
+
+      {/* ── Compare — moved here from the sidebar nav ───────────── */}
+      <div className="pf-section">
+        <p className="pattern-eyebrow pf-section-eyebrow">Compare</p>
+        <ComparisonPage />
+      </div>
 
     </div>
   );

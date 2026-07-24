@@ -85,6 +85,15 @@ const ArtworkCardImage = ({ src, alt, artworkType }) => {
   );
 };
 
+// ── Sort options for the toolbar's sort dropdown ─────────────────────────────
+const SORT_OPTIONS = [
+  { value: 'date-desc', label: 'Date added — newest first' },
+  { value: 'date-asc', label: 'Date added — oldest first' },
+  { value: 'title-asc', label: 'Title A–Z' },
+  { value: 'title-desc', label: 'Title Z–A' },
+  { value: 'recent-reflection', label: 'Recently interpreted' },
+];
+
 // ── Main component ───────────────────────────────────────────────────────────
 const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   // Track which artworks have reflections
@@ -107,6 +116,10 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [assignTargetId, setAssignTargetId] = useState('');
   const [applyingAssignment, setApplyingAssignment] = useState(false);
+
+  // ── Sort & filter toolbar (client-side only, no new fetches) ─────────────
+  const [sortBy, setSortBy] = useState('date-desc');
+  const [reflectionFilter, setReflectionFilter] = useState('all'); // all | interpreted | awaiting
 
   useEffect(() => {
     collectionsApi.list().then(data => setMyCollections(data.collections || [])).catch(() => {});
@@ -179,9 +192,45 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
   };
 
   const activeCollection = myCollections.find(c => c.id === activeCollectionId) || null;
-  const visibleArtworks = activeCollection
+  const collectionFiltered = activeCollection
     ? artworks.filter(a => activeCollection.artwork_ids?.includes(a.id))
     : artworks;
+
+  const statusFiltered = collectionFiltered.filter(a => {
+    // Don't filter out anything while reflections are still loading —
+    // avoids a flash of an empty grid on first render.
+    if (reflectionFilter === 'all' || loadingReflections) return true;
+    const hasReflection = !!reflectionMap[a.id];
+    return reflectionFilter === 'interpreted' ? hasReflection : !hasReflection;
+  });
+
+  const visibleArtworks = [...statusFiltered].sort((a, b) => {
+    switch (sortBy) {
+      case 'date-asc':
+        return new Date(a.created_at) - new Date(b.created_at);
+      case 'title-asc':
+        return (a.title || '').localeCompare(b.title || '');
+      case 'title-desc':
+        return (b.title || '').localeCompare(a.title || '');
+      case 'recent-reflection': {
+        const ra = reflectionMap[a.id];
+        const rb = reflectionMap[b.id];
+        if (ra && rb) return new Date(rb.created_at) - new Date(ra.created_at);
+        if (ra && !rb) return -1;
+        if (!ra && rb) return 1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      }
+      case 'date-desc':
+      default:
+        return new Date(b.created_at) - new Date(a.created_at);
+    }
+  });
+
+  const hasActiveFilters = activeCollectionId !== null || reflectionFilter !== 'all';
+  const clearFilters = () => {
+    setActiveCollectionId(null);
+    setReflectionFilter('all');
+  };
 
   // Initial load: fetch reflection status for all artworks
   useEffect(() => {
@@ -353,6 +402,86 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
         </button>
       </div>
 
+      {/* Sort & filter toolbar — client-side over the already-fetched artworks */}
+      <div className="ma-filter-bar">
+        <div className="ma-filter-controls">
+          <div className="ma-filter-group">
+            <span className="ma-filter-group-label">Collection</span>
+            <div className="ma-filter-chips">
+              <button
+                type="button"
+                className={`pattern-chip ${!activeCollectionId ? 'pattern-chip--active' : ''}`}
+                onClick={() => setActiveCollectionId(null)}
+              >
+                All
+              </button>
+              {myCollections.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={`pattern-chip ${activeCollectionId === c.id ? 'pattern-chip--active' : ''}`}
+                  onClick={() => setActiveCollectionId(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="ma-filter-group">
+            <span className="ma-filter-group-label">Reflection status</span>
+            <div className="ma-filter-chips">
+              <button
+                type="button"
+                className={`pattern-chip ${reflectionFilter === 'all' ? 'pattern-chip--active' : ''}`}
+                onClick={() => setReflectionFilter('all')}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`pattern-chip ${reflectionFilter === 'interpreted' ? 'pattern-chip--active' : ''}`}
+                onClick={() => setReflectionFilter('interpreted')}
+              >
+                Interpreted
+              </button>
+              <button
+                type="button"
+                className={`pattern-chip ${reflectionFilter === 'awaiting' ? 'pattern-chip--active' : ''}`}
+                onClick={() => setReflectionFilter('awaiting')}
+              >
+                Awaiting reflection
+              </button>
+            </div>
+          </div>
+
+          <div className="pattern-field ma-filter-sort">
+            <label className="pattern-field-label" htmlFor="ma-sort-select">Sort by</label>
+            <select
+              id="ma-sort-select"
+              className="pattern-field-input"
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+            >
+              {SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="ma-filter-meta">
+          <span className="ma-filter-count">
+            {visibleArtworks.length} of {artworks.length} works
+          </span>
+          {hasActiveFilters && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
       {organizing && (
         <div className="ma-organize-bar">
           <span className="ma-organize-count">
@@ -385,6 +514,24 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
         </div>
       )}
 
+      {visibleArtworks.length === 0 ? (
+        <div className="pattern-empty">
+          <div className="pattern-empty-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </div>
+          <h2 className="pattern-empty-title">No matching artworks</h2>
+          <p className="pattern-empty-desc">
+            Try adjusting your sort and filter selections to see more of your collection
+          </p>
+          <button type="button" className="btn btn-secondary" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </div>
+      ) : (
       <div className="ma-grid">
         {visibleArtworks.map((art) => {
           // ── Processing card ──────────────────────────────────
@@ -479,6 +626,7 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
           );
         })}
       </div>
+      )}
 
       <ConfirmModal
         isOpen={!!deleteTarget}

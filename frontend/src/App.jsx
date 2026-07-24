@@ -15,8 +15,6 @@ import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import IdentityPage from './pages/IdentityPage.jsx';
 import RoleSelectionPage from './pages/RoleSelectionPage.jsx';
 import ChatPage from './pages/ChatPage.jsx';
-import TimelinePage from './pages/TimelinePage.jsx';
-import ComparisonPage from './pages/ComparisonPage.jsx';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -222,12 +220,6 @@ const App = () => {
             onNavigate={handleNavigation}
           />
         );
-
-      case 'timeline':
-        return <TimelinePage />;
-
-      case 'comparison':
-        return <ComparisonPage />;
 
       default:
         return (

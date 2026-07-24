@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { reflection, identity, analytics } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
 
+// ── Role-specific onboarding quotes for the empty Dashboard state ───────────
+const ROLE_QUOTES = {
+  artist: {
+    before: 'A canvas is a ',
+    emphasis: 'mirror',
+    after: ' that holds its memory.',
+  },
+  collector: {
+    before: 'A collection is a private museum of the ',
+    emphasis: 'soul',
+    after: '.',
+  },
+  enthusiast: {
+    before: 'What catches your eye is a whisper from your own ',
+    emphasis: 'depths',
+    after: '.',
+  },
+};
+
 // ── Image component — unchanged logic ────────────────────────────────────────
 const CardImage = ({ src, alt, artworkType }) => {
   const [status, setStatus] = useState('loading');
@@ -182,6 +201,8 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
 
   // ── Empty state ───────────────────────────────────────────────
   if (!latestArtwork) {
+    const roleQuote = ROLE_QUOTES[currentUser?.user_role] || null;
+
     return (
       <div className="db-page">
         <div className="pattern-empty">
@@ -192,7 +213,15 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
               <polyline points="21 15 16 10 5 21" />
             </svg>
           </div>
-          <h2 className="pattern-empty-title">Your gallery awaits</h2>
+          {roleQuote ? (
+            <blockquote className="pattern-quote pattern-quote--hero db-empty-quote">
+              &ldquo;{roleQuote.before}
+              <span className="pattern-quote-emphasis">{roleQuote.emphasis}</span>
+              {roleQuote.after}&rdquo;
+            </blockquote>
+          ) : (
+            <h2 className="pattern-empty-title">Your gallery awaits</h2>
+          )}
           <p className="pattern-empty-desc">
             {greeting()}, {currentUser?.name?.split(' ')[0] || 'there'} — add your first artwork to begin.
             A thoughtful reflection will be generated for you.

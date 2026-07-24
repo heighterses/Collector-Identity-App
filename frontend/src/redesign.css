@@ -15,6 +15,7 @@
   --accent-light:  rgba(201,162,75,0.13);
   --accent-hover:  #A8842F;   /* accent-deep */
   --accent-subtle: rgba(201,162,75,0.13);
+  --border-strong: #D8CFC2;   /* hover state for inputs/selects */
 
   /* ── Chart / emotion segment palette ──
      Deliberately wide spread of value + saturation + hue within the
@@ -74,6 +75,7 @@
     --accent-light:   rgba(201,162,75,0.14);
     --accent-hover:   #E0C079;
     --accent-subtle:  rgba(201,162,75,0.14);
+    --border-strong:  #33333a;
     --seg-1: #C9A24B; --seg-2: #D97B54; --seg-3: #E8DCC3; --seg-4: #8A7358; --seg-5: #6B4F3A;
     --paper: #0E0E10; --paper-2: #17171A; --paper-3: #202024;
     --white: #17171A; --line: #2A2A2F; --line-soft: #24242A;
@@ -684,6 +686,15 @@ a {
 
 .pf-card-body {
   padding: 20px 24px 24px;
+}
+
+/* ── Timeline / Compare sections — moved here from the sidebar ──── */
+.pf-section {
+  margin-bottom: 28px;
+}
+
+.pf-section-eyebrow {
+  margin-bottom: 16px;
 }
 
 /* ── CARD 1 — Profile Header ──────────────────────────────── */
@@ -1394,6 +1405,9 @@ a {
   color: var(--text-secondary);
 }
 .db-hero-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+
+/* ── Empty-state role quote (Gallery-empty Dashboard state) ─────────── */
+.db-empty-quote { margin-bottom: 20px; }
 
 /* ── 2. Metric row ────────────────────────────────────────── */
 .db-metric-row {
@@ -2507,6 +2521,92 @@ a {
 .ma-organize-btn--active {
   background: var(--ink, #1c1c1c);
   color: #fff;
+}
+
+/* ── Sort & filter toolbar ───────────────────────────────────────────── */
+.ma-filter-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.ma-filter-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+}
+
+.ma-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ma-filter-group-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.ma-filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ma-filter-sort {
+  margin-bottom: 0;
+  min-width: 220px;
+}
+
+.ma-filter-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.ma-filter-count {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .ma-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ma-filter-meta {
+    justify-content: space-between;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 600px) {
+  .ma-filter-controls {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ma-filter-sort {
+    min-width: 0;
+    width: 100%;
+  }
 }
 
 .ma-organize-bar {
@@ -3845,6 +3945,7 @@ p {
   --accent-light:   rgba(201,162,75,0.14);
   --accent-hover:   #E0C079;
   --accent-subtle:  rgba(201,162,75,0.14);
+  --border-strong:  #33333a;
   --seg-1: #C9A24B; --seg-2: #D97B54; --seg-3: #E8DCC3; --seg-4: #8A7358; --seg-5: #6B4F3A;
 
   /* ── Token remaps ── */
