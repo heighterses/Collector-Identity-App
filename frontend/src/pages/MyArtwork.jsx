@@ -455,11 +455,11 @@ const MyArtwork = ({ artworks = [], onNavigate, onArtworkDeleted }) => {
             </div>
           </div>
 
-          <div className="pattern-field ma-filter-sort">
-            <label className="pattern-field-label" htmlFor="ma-sort-select">Sort by</label>
+          <div className="ma-filter-group">
+            <span className="ma-filter-group-label">Sort by</span>
             <select
               id="ma-sort-select"
-              className="pattern-field-input"
+              className="ma-sort-select"
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
             >
