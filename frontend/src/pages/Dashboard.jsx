@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { reflection, identity, analytics } from '../api.js';
 import ProfilePieCharts from '../components/ProfilePieCharts';
+import { computeReflectionMetrics } from '../utils/reflectionMetrics.js';
 
 // ── Role-specific onboarding quotes for the empty Dashboard state ───────────
 const ROLE_QUOTES = {
@@ -130,6 +131,15 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
   const [reflectionLoading, setReflectionLoading] = useState(false);
   const [profileData, setProfileData]             = useState(null);
   const [returnBehavior, setReturnBehavior]       = useState(null);
+  // Fix (P1): the same reflection data the Reflections page reads from — a
+  // real query against the reflections table (reflection.getAll()), scoped to
+  // this user's artworks. Previously the metric row derived its counts from
+  // `artwork.has_reflection`, a field the artwork API never actually returns,
+  // so it was always 0 regardless of how many reflections existed. Counts are
+  // now computed by the shared computeReflectionMetrics() selector so the
+  // Dashboard and the Reflections page always report the same numbers.
+  const [allReflections, setAllReflections]       = useState([]);
+  const [allReflectionsLoading, setAllReflectionsLoading] = useState(true);
 
   const latestArtwork = artworks[0] || null;
 
@@ -140,6 +150,14 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
 
   useEffect(() => {
     identity.getProfileData().then(setProfileData).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setAllReflectionsLoading(true);
+    reflection.getAll()
+      .then(r => setAllReflections(r?.reflections || []))
+      .catch(() => setAllReflections([]))
+      .finally(() => setAllReflectionsLoading(false));
   }, []);
 
   // M3-10: internal insight metric, not shown as a personal count/streak —
@@ -180,10 +198,11 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
     .slice(0, 6);
   const firstInsight = profileData?.insights?.[0] || null;
 
-  // ── Derived metrics (all from data already fetched — no new calls) ──
-  const worksCount       = artworks.length;
-  const reflectionsCount = artworks.filter(a => a.has_reflection).length;
-  const coveragePct      = worksCount ? Math.round((reflectionsCount / worksCount) * 100) : 0;
+  // ── Derived metrics ──
+  // Reflection counts come from the shared selector so the Dashboard and the
+  // Reflections page always agree.
+  const { worksCount, totalReflections: reflectionsCount, reflectedWorksCount, coveragePct } =
+    computeReflectionMetrics(allReflections, artworks);
   const dominantTone     = profileData?.patterns?.emotions?.[0]?.[0] || null;
   const now               = new Date();
   const thisMonthCount   = artworks.filter(a => {
@@ -194,7 +213,11 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
 
   const metrics = [
     { label: 'Works', value: worksCount, note: 'in your collection' },
-    { label: 'Reflections', value: reflectionsCount, note: `${coveragePct}% of works` },
+    {
+      label: 'Reflections',
+      value: allReflectionsLoading ? '—' : reflectionsCount,
+      note: allReflectionsLoading ? 'loading…' : `${coveragePct}% of works`,
+    },
     ...(dominantTone ? [{ label: 'Dominant tone', value: dominantTone, note: 'most common emotion' }] : []),
     { label: 'This month', value: `+${thisMonthCount}`, note: 'new acquisitions' },
   ];
@@ -338,9 +361,11 @@ const Dashboard = ({ currentUser, artworks = [], onNavigate }) => {
 
           <div className="card db-sidebar-card db-sidebar-card--coverage">
             <p className="pattern-eyebrow">Reflection coverage</p>
-            <CoverageRing pct={coveragePct} />
+            <CoverageRing pct={allReflectionsLoading ? 0 : coveragePct} />
             <p className="db-coverage-note">
-              {reflectionsCount} of {worksCount} work{worksCount !== 1 ? 's' : ''} reflected on
+              {allReflectionsLoading
+                ? 'Loading reflections…'
+                : `${reflectedWorksCount} of ${worksCount} work${worksCount !== 1 ? 's' : ''} reflected on`}
             </p>
           </div>
 

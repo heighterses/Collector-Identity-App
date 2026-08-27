@@ -129,7 +129,11 @@ const SuggestedPrompt = ({ text, onClick }) => (
   </button>
 );
 
-export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate }) {
+// Chat history is paginated in pages of this size (mirrors the backend
+// default in app/routes/chat.py).
+const HISTORY_PAGE_SIZE = 50;
+
+export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, initialArtworkId = null }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -142,42 +146,105 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate }
   const [hasIdentity, setHasIdentity] = useState(true);
   const [activeArtworkId, setActiveArtworkId] = useState(null);
   const [pendingArtworkId, setPendingArtworkId] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
   const bottomRef = useRef(null);
+  const historyLoadedRef = useRef(false);
 
   const hasOpenUploadStep = messages.some(m => m.role === 'upload-step');
 
   const activeArtwork = artworks.find(a => a.id === activeArtworkId) || null;
 
-  // Default the active context to the most recent artwork once one exists.
+  // Default the active context to the most recent artwork once one exists —
+  // used e.g. right after an inline upload switches the conversation to the
+  // artwork that was just added.
   useEffect(() => {
     if (!activeArtworkId && artworks.length > 0) {
       setActiveArtworkId(artworks[0].id);
     }
   }, [artworks, activeArtworkId]);
 
+  // The greeting shown when a context (an artwork, or the identity-level
+  // thread) has no prior conversation yet.
+  const showGreeting = async () => {
+    try {
+      const data = await chat.getContext();
+      setHasIdentity(data.has_identity);
+      setMessages([{
+        role: 'assistant',
+        text: data.has_identity
+          ? "Hello! I've been looking at your identity profile. What would you like to explore about yourself today?"
+          : "Welcome! Upload your first artwork and generate a reflection to start exploring your creative identity.",
+      }]);
+    } catch {
+      setMessages([{
+        role: 'assistant',
+        text: "Welcome! I'm here to help you explore your creative identity through your artwork.",
+      }]);
+    }
+  };
+
+  // Fix (P1): chat history now persists server-side, scoped per user and per
+  // context (a specific artwork, or the identity-level thread). Loaded once
+  // on mount so a return visit, a full refresh, or a fresh login after
+  // logout all restore the same conversation in order — instead of always
+  // starting from a blank greeting.
   useEffect(() => {
-    chat.getContext()
-      .then(data => {
-        setHasIdentity(data.has_identity);
-        if (data.has_identity) {
-          setMessages([{
-            role: 'assistant',
-            text: "Hello! I've been looking at your identity profile. What would you like to explore about yourself today?",
-          }]);
+    if (historyLoadedRef.current) return;
+    historyLoadedRef.current = true;
+
+    const contextArtworkId = initialArtworkId || artworks[0]?.id || null;
+    setActiveArtworkId(contextArtworkId);
+
+    (async () => {
+      setHistoryLoading(true);
+      try {
+        const res = await chat.getHistory(contextArtworkId, { limit: HISTORY_PAGE_SIZE });
+        const persisted = (res?.messages || []).map(m => ({
+          role: m.role, text: m.content, created_at: m.created_at,
+        }));
+        if (persisted.length > 0) {
+          setMessages(persisted);
+          setHasMoreHistory(!!res.has_more);
         } else {
-          setMessages([{
-            role: 'assistant',
-            text: "Welcome! Upload your first artwork and generate a reflection to start exploring your creative identity.",
-          }]);
+          await showGreeting();
         }
-      })
-      .catch(() => {
-        setMessages([{
-          role: 'assistant',
-          text: "Welcome! I'm here to help you explore your creative identity through your artwork.",
-        }]);
-      });
+      } catch {
+        await showGreeting();
+      } finally {
+        setHistoryLoading(false);
+      }
+    })();
+    // Runs once on mount only — switching the active artwork afterward
+    // (e.g. after an inline upload) intentionally keeps the same visible
+    // thread going, matching the pre-existing behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // "Load earlier messages" — fetches the page immediately before the
+  // oldest message currently shown, for threads too long to load at once.
+  const loadEarlierMessages = async () => {
+    if (loadingMoreHistory || !hasMoreHistory) return;
+    const oldest = messages.find(m => m.created_at);
+    if (!oldest) return;
+    setLoadingMoreHistory(true);
+    try {
+      const res = await chat.getHistory(activeArtworkId, {
+        limit: HISTORY_PAGE_SIZE,
+        before: oldest.created_at,
+      });
+      const older = (res?.messages || []).map(m => ({
+        role: m.role, text: m.content, created_at: m.created_at,
+      }));
+      setMessages(prev => [...older, ...prev]);
+      setHasMoreHistory(!!res?.has_more);
+    } catch {
+      // Leave state as-is — the button stays visible so the user can retry.
+    } finally {
+      setLoadingMoreHistory(false);
+    }
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -292,27 +359,46 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate }
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 0', display: 'flex', flexDirection: 'column' }}>
-          {messages.map((msg, i) => {
-            if (msg.role === 'upload-step') {
-              return <UploadStep key={i} onArtworkCreated={handleArtworkUploaded} onCancel={handleCancelUpload} />;
-            }
-            if (msg.role === 'reflection') {
-              return (
-                <ReflectionCard
-                  key={i}
-                  artwork={msg.artwork}
-                  reflectionData={msg.reflection}
-                  onReview={() => onNavigate?.('reflections', msg.artwork.id)}
-                />
-              );
-            }
-            if (msg.role === 'note' || msg.display === 'system') return <SystemNote key={i} text={msg.text} />;
-            return msg.role === 'user'
-              ? <UserBubble key={i} text={msg.text} />
-              : <AssistantBubble key={i} text={msg.text} />;
-          })}
-          {loading && <AssistantBubble isTyping />}
-          <div ref={bottomRef} />
+          {historyLoading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+              <TypingDots />
+            </div>
+          ) : (
+            <>
+              {hasMoreHistory && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                  <button
+                    onClick={loadEarlierMessages}
+                    disabled={loadingMoreHistory}
+                    className="pattern-chip pattern-chip--outline"
+                  >
+                    {loadingMoreHistory ? 'Loading…' : 'Load earlier messages'}
+                  </button>
+                </div>
+              )}
+              {messages.map((msg, i) => {
+                if (msg.role === 'upload-step') {
+                  return <UploadStep key={i} onArtworkCreated={handleArtworkUploaded} onCancel={handleCancelUpload} />;
+                }
+                if (msg.role === 'reflection') {
+                  return (
+                    <ReflectionCard
+                      key={i}
+                      artwork={msg.artwork}
+                      reflectionData={msg.reflection}
+                      onReview={() => onNavigate?.('reflections', msg.artwork.id)}
+                    />
+                  );
+                }
+                if (msg.role === 'note' || msg.display === 'system') return <SystemNote key={i} text={msg.text} />;
+                return msg.role === 'user'
+                  ? <UserBubble key={i} text={msg.text} />
+                  : <AssistantBubble key={i} text={msg.text} />;
+              })}
+              {loading && <AssistantBubble isTyping />}
+              <div ref={bottomRef} />
+            </>
+          )}
         </div>
 
         {/* Suggested prompts + quiet invitation to add another artwork */}

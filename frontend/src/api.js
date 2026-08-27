@@ -258,6 +258,19 @@ export const chat = {
     }),
 
   getContext: async () => apiRequest('/chat/context'),
+
+  // Persisted chat history for one context (a specific artwork, or the
+  // identity-level thread when artworkId is null). `before` (an ISO
+  // timestamp) fetches the page immediately preceding it, for "load earlier
+  // messages" pagination.
+  getHistory: async (artworkId = null, { limit, before } = {}) => {
+    const params = new URLSearchParams();
+    if (artworkId) params.set('artwork_id', artworkId);
+    if (limit) params.set('limit', String(limit));
+    if (before) params.set('before', before);
+    const qs = params.toString();
+    return apiRequest(`/chat/history${qs ? `?${qs}` : ''}`);
+  },
 };
 
 // ─────────────────────────────────────────

@@ -8,11 +8,39 @@ from app.services.personalization_service import personalization_service
 from app.models.identity import IdentityTemplate
 from app.models.identity_version import IdentityVersion
 from app.models.artwork import Artwork
+from app.models.chat_message import ChatMessage
+from app import db
+from datetime import datetime
 import logging
 
 bp = Blueprint('chat', __name__)
 logger = logging.getLogger(__name__)
 _llm = OllamaProvider()
+
+# Chat history is paginated in pages of this size (both the default fetch and
+# each "load earlier messages" page).
+HISTORY_PAGE_SIZE = 50
+HISTORY_PAGE_SIZE_MAX = 200
+
+
+def _persist_turn(user_id, artwork_id, user_message, assistant_response):
+    """
+    Save one user/assistant exchange to chat_messages, scoped to
+    (user_id, artwork_id). artwork_id is None for identity-level chat.
+    Best-effort: a persistence failure shouldn't break the chat response
+    that's already been generated.
+    """
+    try:
+        db.session.add(ChatMessage(
+            user_id=user_id, artwork_id=artwork_id, role='user', content=user_message
+        ))
+        db.session.add(ChatMessage(
+            user_id=user_id, artwork_id=artwork_id, role='assistant', content=assistant_response
+        ))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Failed to persist chat turn: {str(e)}")
 
 
 @bp.route('/message', methods=['POST'])
@@ -37,6 +65,7 @@ def send_message():
         # M3-09: off-topic guard before touching the LLM
         guard = conversation_guardrails.enforce_focus(user_message)
         if not guard["allowed"]:
+            _persist_turn(user_id, artwork_id, user_message, guard["redirect"])
             return jsonify({
                 "response": guard["redirect"],
                 "suggested_prompts": suggested_prompts_service.generate_prompts(
@@ -114,6 +143,11 @@ def send_message():
         identity_summary = identity_context[:300] if identity_context else ""
         suggested = suggested_prompts_service.generate_prompts(response, identity_summary, count=4)
 
+        # Persist server-side so the conversation survives navigation, a
+        # refresh, and re-login — scoped to this user + this artwork context
+        # (or identity-level when artwork_id is None).
+        _persist_turn(user_id, artwork_id, user_message, response)
+
         return jsonify({
             "response": response,
             "suggested_prompts": suggested,
@@ -122,6 +156,70 @@ def send_message():
 
     except Exception as e:
         logger.error(f"Chat message failed: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/history', methods=['GET'])
+@jwt_required_custom
+def get_chat_history():
+    """
+    Returns persisted chat history for the current user, scoped to a single
+    context: a specific artwork (?artwork_id=...) or the identity-level
+    conversation (artwork_id omitted). Always chronological (oldest first).
+
+    Paginates backwards from the most recent message: without `before`, the
+    most recent HISTORY_PAGE_SIZE messages are returned; pass `before` (an
+    ISO-8601 timestamp — the `created_at` of the oldest message currently
+    loaded) to fetch the page immediately preceding it, for "load earlier
+    messages" style pagination.
+    """
+    try:
+        user_id = request.current_user['user_id']
+        artwork_id = request.args.get('artwork_id') or None
+
+        try:
+            limit = int(request.args.get('limit', HISTORY_PAGE_SIZE))
+        except (TypeError, ValueError):
+            limit = HISTORY_PAGE_SIZE
+        limit = max(1, min(limit, HISTORY_PAGE_SIZE_MAX))
+
+        # Ownership check: a caller can only ever read their own messages
+        # (filtered by user_id below), but if an artwork_id is supplied,
+        # confirm it's actually theirs so a stale/foreign id quietly returns
+        # an empty thread instead of a leaked one.
+        if artwork_id:
+            owns_artwork = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+            if not owns_artwork:
+                return jsonify({"messages": [], "has_more": False}), 200
+
+        query = ChatMessage.query.filter_by(user_id=user_id, artwork_id=artwork_id)
+
+        before = request.args.get('before')
+        if before:
+            try:
+                before_dt = datetime.fromisoformat(before)
+                query = query.filter(ChatMessage.created_at < before_dt)
+            except ValueError:
+                pass
+
+        # Fetch newest-first (+1 to detect an earlier page), then reverse to
+        # chronological order for the response.
+        rows = (
+            query.order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+            .limit(limit + 1)
+            .all()
+        )
+        has_more = len(rows) > limit
+        rows = rows[:limit]
+        rows.reverse()
+
+        return jsonify({
+            "messages": [m.to_dict() for m in rows],
+            "has_more": has_more,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Chat history fetch failed: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

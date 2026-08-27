@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { reflection } from '../api.js';
 import { formatDate } from '../utils/dateUtils.js';
+import { computeReflectionMetrics } from '../utils/reflectionMetrics.js';
 
 // ── Normalise image URL ──────────────────────────────────────────────────────
 const normaliseImageUrl = (src) => {
@@ -120,15 +121,10 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   const loadAllReflections = async () => {
     setLoading(true);
     try {
-      const results = await Promise.all(
-        artworks.map(async (art) => {
-          try {
-            const res = await reflection.getByArtworkId(art.id);
-            return res?.reflection || null;
-          } catch { return null; }
-        })
-      );
-      const valid = results.filter(Boolean);
+      // Same read the Dashboard uses — one query against the reflections
+      // table, scoped server-side to this user's artworks.
+      const res = await reflection.getAll();
+      const valid = (res?.reflections || []).filter(Boolean);
       setReflections(valid);
 
       // If we arrived here from "View Reflection" on a specific artwork,
@@ -233,9 +229,14 @@ const Reflections = ({ onNavigate, currentUser, artworks = [], initialArtworkId 
   return (
     <div className="rf-page">
 
-      <p className="rf-count-line">
-        {reflections.length} reflection{reflections.length !== 1 ? 's' : ''} across {artworks.length} artwork{artworks.length !== 1 ? 's' : ''}
-      </p>
+      {(() => {
+        const { totalReflections, worksCount } = computeReflectionMetrics(reflections, artworks);
+        return (
+          <p className="rf-count-line">
+            {totalReflections} reflection{totalReflections !== 1 ? 's' : ''} across {worksCount} artwork{worksCount !== 1 ? 's' : ''}
+          </p>
+        );
+      })()}
 
       {/* Two-column layout */}
       <div className={`rf-layout ${reflections.length === 1 ? 'rf-layout--single' : ''}`}>

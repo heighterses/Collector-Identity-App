@@ -43,6 +43,7 @@ def create_app(config_class=Config):
     from app.models import identity_version  # noqa: F401
     from app.models import identity_note  # noqa: F401
     from app.models import artwork_collection  # noqa: F401
+    from app.models import chat_message  # noqa: F401
 
     # Register blueprints
     from app.routes.auth import bp as auth_bp
