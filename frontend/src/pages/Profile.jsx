@@ -403,13 +403,14 @@ const Profile = ({ currentUser, onLogout, onUserUpdate }) => {
                       <div key={item.id} className="pf-artwork-card">
                         {/* Artwork title */}
                         <p className="pf-artwork-card-title">
-                          {item.title || `Artwork ${item.artwork_id?.slice(0, 8) ?? item.id?.slice(0, 8)}`}
+                          {item.title || 'Untitled artwork'}
                         </p>
 
-                        {/* Core Identity — highlighted line */}
+                        {/* Through-line — highlighted line (user-facing label;
+                            the underlying trait is still keyed as "Core Identity") */}
                         {coreIdentity?.value && (
                           <p className="pf-artwork-core">
-                            <span className="pf-artwork-core-key">Core Identity</span>
+                            <span className="pf-artwork-core-key">Through-line</span>
                             {coreIdentity.value}
                           </p>
                         )}

@@ -1,5 +1,7 @@
 import logging
 
+from app.services.identity_prompt import identity_stage
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +73,12 @@ class IdentityContextService:
 
             parts.append(f"Identity version: {latest.get('version', 1)}")
             parts.append(f"Total artworks analysed: {len(identity_templates)}")
+
+            # Round-1 brief, Issue 5: the confidence of the language should match
+            # how much evidence exists. Tell the model the stage so it doesn't
+            # over-claim a fixed identity from very few artworks.
+            stage_label, stage_guidance = identity_stage(len(identity_templates))
+            parts.append(f"Identity maturity stage: {stage_label}. {stage_guidance}")
 
             if identity_versions and len(identity_versions) >= 2:
                 first_v = identity_versions[0]

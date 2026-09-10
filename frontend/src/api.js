@@ -259,6 +259,10 @@ export const chat = {
 
   getContext: async () => apiRequest('/chat/context'),
 
+  // Sidebar thread list: every saved conversation (identity-level + one per
+  // artwork the user has chatted about), newest activity first.
+  getConversations: async () => apiRequest('/chat/conversations'),
+
   // Persisted chat history for one context (a specific artwork, or the
   // identity-level thread when artworkId is null). `before` (an ISO
   // timestamp) fetches the page immediately preceding it, for "load earlier

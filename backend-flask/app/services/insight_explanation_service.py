@@ -1,12 +1,12 @@
 import logging
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 
 logger = logging.getLogger(__name__)
 
 
 class InsightExplanationService:
     def __init__(self):
-        self.llm = OllamaProvider()
+        self.llm = llm_provider
 
     def explain_insight(self, insight: str, traits: list, artwork_description: str = None) -> str:
         try:

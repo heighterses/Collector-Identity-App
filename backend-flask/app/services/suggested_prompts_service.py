@@ -1,5 +1,5 @@
 import logging
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ DEFAULT_PROMPTS = [
 
 class SuggestedPromptsService:
     def __init__(self):
-        self.llm = OllamaProvider()
+        self.llm = llm_provider
 
     def generate_prompts(self, last_assistant_message: str, identity_summary: str, count: int = 4) -> list:
         try:

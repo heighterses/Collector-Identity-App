@@ -16,8 +16,11 @@ class ReflectionService:
     # ==========================================================
     def generate_for_artwork(self, artwork):
         try:
-            prompt = self.pipeline.build_initial_prompt(artwork)
-            result = self.pipeline.generate(prompt)
+            # Attach the artwork image when we have one, so the reflection is
+            # based on the actual visual and not just the title/description.
+            image_b64 = self.pipeline.load_image_b64(artwork)
+            prompt = self.pipeline.build_initial_prompt(artwork, has_image=bool(image_b64))
+            result = self.pipeline.generate(prompt, images=[image_b64] if image_b64 else None)
 
             if not result:
                 raise ValueError("Empty response")
@@ -48,13 +51,15 @@ class ReflectionService:
     # ==========================================================
     def refine_reflection(self, artwork, reflection, user_input):
         try:
+            image_b64 = self.pipeline.load_image_b64(artwork)
             prompt = self.pipeline.build_refinement_prompt(
                 artwork=artwork,
                 previous_reflection=reflection.content,
-                user_input=user_input
+                user_input=user_input,
+                has_image=bool(image_b64)
             )
 
-            result = self.pipeline.generate(prompt)
+            result = self.pipeline.generate(prompt, images=[image_b64] if image_b64 else None)
 
             if not result:
                 raise ValueError("Empty response")

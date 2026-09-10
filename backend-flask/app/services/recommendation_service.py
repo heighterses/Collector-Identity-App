@@ -1,5 +1,5 @@
 import logging
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 from app.services.pattern_service import pattern_service
 
 logger = logging.getLogger(__name__)
@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class RecommendationService:
     def __init__(self):
-        self.llm = OllamaProvider()
+        self.llm = llm_provider
 
     def recommend_next_artwork(self, identities: list) -> dict:
         try:

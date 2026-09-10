@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify
 from app.middleware.auth import jwt_required_custom
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 from app.services.identity_context_service import identity_context_service
 from app.services.conversation_guardrails import conversation_guardrails
 from app.services.suggested_prompts_service import suggested_prompts_service
 from app.services.personalization_service import personalization_service
+from app.services.pattern_service import pattern_service
 from app.models.identity import IdentityTemplate
 from app.models.identity_version import IdentityVersion
 from app.models.artwork import Artwork
@@ -15,12 +16,30 @@ import logging
 
 bp = Blueprint('chat', __name__)
 logger = logging.getLogger(__name__)
-_llm = OllamaProvider()
+_llm = llm_provider
 
 # Chat history is paginated in pages of this size (both the default fetch and
 # each "load earlier messages" page).
 HISTORY_PAGE_SIZE = 50
 HISTORY_PAGE_SIZE_MAX = 200
+
+
+# Phrases that signal an identity-level question ("what does my art say about
+# ME / my collection as a whole") rather than a question about the one artwork
+# currently open in the chat UI (Round-1 brief, Issue 7).
+_IDENTITY_QUESTION_MARKERS = (
+    "about me", "say about me", "who am i", "my identity", "my personality",
+    "my art say", "my work say", "my collection", "my artworks", "across",
+    "in general", "overall", "as a whole", "patterns", "what i choose",
+    "what do you see in what i", "my taste", "over time",
+)
+
+
+def _is_identity_level_question(message: str) -> bool:
+    """Heuristic: does this read as a question about the user's overall identity
+    across their collection, rather than about the single active artwork?"""
+    text = (message or "").lower()
+    return any(marker in text for marker in _IDENTITY_QUESTION_MARKERS)
 
 
 def _persist_turn(user_id, artwork_id, user_message, assistant_response):
@@ -97,8 +116,13 @@ def send_message():
         # so responses can cite something concrete instead of only abstracted
         # trait labels — ownership-checked, and quietly skipped if the
         # artwork doesn't exist or isn't the user's.
+        # Issue 7: for an identity-level question we answer from the whole
+        # collection, so we deliberately do NOT anchor the prompt to a single
+        # active artwork — otherwise chat just re-interprets the current image.
+        is_identity_question = _is_identity_level_question(user_message)
+
         active_artwork = None
-        if artwork_id:
+        if artwork_id and not is_identity_question:
             artwork = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
             if artwork:
                 reflection_content = artwork.reflection.content if artwork.reflection else None
@@ -110,6 +134,26 @@ def send_message():
         identity_context = identity_context_service.build_system_context(
             template_dicts, version_dicts, active_artwork
         )
+
+        # For an identity-level question with more than one artwork, surface the
+        # cross-collection trait dynamics so the answer references broader
+        # patterns rather than one image (Issue 6 + Issue 7).
+        if is_identity_question and len(template_dicts) > 1:
+            dynamics = pattern_service.classify_trait_dynamics(template_dicts)
+            hints = []
+            if dynamics.get("persistent"):
+                hints.append(f"recurring across works: {', '.join(dynamics['persistent'])}")
+            if dynamics.get("emerging"):
+                hints.append(f"emerging recently: {', '.join(dynamics['emerging'])}")
+            if dynamics.get("fading"):
+                hints.append(f"fading: {', '.join(dynamics['fading'])}")
+            if hints:
+                identity_context += "\nPatterns across the collection — " + "; ".join(hints) + "."
+            identity_context += (
+                "\nThis is an identity-level question: answer by looking across ALL of the "
+                "user's artworks and the patterns above, not by re-interpreting a single image."
+            )
+
         system_prompt = identity_context_service.build_chat_system_prompt(identity_context)
 
         # Build conversation history string (last 6 turns)
@@ -220,6 +264,82 @@ def get_chat_history():
 
     except Exception as e:
         logger.error(f"Chat history fetch failed: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@bp.route('/conversations', methods=['GET'])
+@jwt_required_custom
+def list_conversations():
+    """
+    Lists the current user's chat threads for the sidebar, newest activity first.
+
+    A "conversation" is one context scope: the identity-level thread
+    (artwork_id = NULL) and one thread per artwork the user has chatted about.
+    Each entry carries a title, a short preview of the last message, the last
+    activity time, and a message count — enough to render a ChatGPT-style list.
+    """
+    try:
+        from sqlalchemy import func
+        from app.models.artwork import Artwork
+
+        user_id = request.current_user['user_id']
+
+        grouped = (
+            db.session.query(
+                ChatMessage.artwork_id.label('aid'),
+                func.max(ChatMessage.created_at).label('last_at'),
+                func.count(ChatMessage.id).label('cnt'),
+            )
+            .filter(ChatMessage.user_id == user_id)
+            .group_by(ChatMessage.artwork_id)
+            .all()
+        )
+
+        # Resolve artwork titles in one query (ownership-scoped).
+        artwork_ids = [g.aid for g in grouped if g.aid]
+        titles = {}
+        if artwork_ids:
+            arts = (
+                Artwork.query
+                .filter(Artwork.id.in_(artwork_ids), Artwork.user_id == user_id)
+                .all()
+            )
+            titles = {a.id: a.title for a in arts}
+
+        # Fetch the latest message per thread in ONE query (instead of one query
+        # per thread) by pulling the rows at each thread's max timestamp.
+        last_ats = [grp.last_at for grp in grouped if grp.last_at]
+        preview_by_aid = {}
+        if last_ats:
+            preview_rows = (
+                ChatMessage.query
+                .filter(ChatMessage.user_id == user_id, ChatMessage.created_at.in_(last_ats))
+                .with_entities(ChatMessage.artwork_id, ChatMessage.content, ChatMessage.created_at)
+                .all()
+            )
+            for aid, content, created in sorted(preview_rows, key=lambda r: r[2], reverse=True):
+                if aid not in preview_by_aid:
+                    preview_by_aid[aid] = content
+
+        conversations = []
+        for grp in grouped:
+            content = preview_by_aid.get(grp.aid) or ''
+            preview = (content[:90] + '…') if len(content) > 90 else content
+            conversations.append({
+                'artwork_id': grp.aid,
+                'title': (titles.get(grp.aid) or 'Untitled artwork') if grp.aid else 'Your identity',
+                'is_identity': grp.aid is None,
+                'preview': preview,
+                'last_message_at': grp.last_at.isoformat() if grp.last_at else None,
+                'message_count': grp.cnt,
+            })
+
+        conversations.sort(key=lambda c: c['last_message_at'] or '', reverse=True)
+
+        return jsonify({"conversations": conversations}), 200
+
+    except Exception as e:
+        logger.error(f"Chat conversations fetch failed: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

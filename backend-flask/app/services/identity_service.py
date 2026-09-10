@@ -4,6 +4,7 @@ import logging
 from app.services.identity_prompt import build_identity_prompt
 from app.services.identity_parser import parse_identity_response
 from app.services.conversation_service import conversation_service
+from app.services.llm_provider import llm_provider
 
 # 🔥 NEW ML SERVICES (ADDED ONLY)
 from app.services.embedding_service import embedding_service
@@ -27,8 +28,8 @@ class IdentityService:
     # ==========================================================
     # ✅ CORE GENERATION (UNCHANGED)
     # ==========================================================
-    def _generate_identity_data(self, reflection: str):
-        base_prompt = build_identity_prompt(reflection)
+    def _generate_identity_data(self, reflection: str, evidence_count: int = 1):
+        base_prompt = build_identity_prompt(reflection, evidence_count)
 
         context = conversation_service.build_context(
             reflection=reflection
@@ -36,18 +37,7 @@ class IdentityService:
 
         prompt = conversation_service.enrich_prompt(base_prompt, context)
 
-        response = requests.post(
-            self.ollama_url,
-            json={
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False
-            },
-            timeout=120
-        )
-
-        data = response.json()
-        raw_output = data.get("response", "")
+        raw_output = llm_provider.generate(prompt)
 
         return parse_identity_response(raw_output)
 
@@ -73,6 +63,28 @@ class IdentityService:
                 scores[label] += 0.5
 
         return scores
+
+    # ==========================================================
+    # 🔥 NEW: LABELS THE USER HAS NET-REJECTED (ADDED)
+    # ==========================================================
+    def _rejected_labels(self, user_id):
+        """
+        Labels the user has rejected more often than confirmed, across their
+        whole history. Rejection reduces confidence (the trait is regenerated as
+        an unconfirmed suggestion) rather than banning it — repeated new evidence
+        can still reintroduce it (Round-1 brief, Issue 8).
+        """
+        events = EditEvent.query.filter_by(user_id=user_id).all()
+        tally = {}
+        for e in events:
+            label = (e.trait_label or "").strip().lower()
+            if not label:
+                continue
+            if e.action == "reject":
+                tally[label] = tally.get(label, 0) - 1
+            elif e.action in ("confirm", "add"):
+                tally[label] = tally.get(label, 0) + 1
+        return {label for label, net in tally.items() if net < 0}
 
     # ==========================================================
     # 🔥 APPLY USER EDIT (UNCHANGED + TRACKING ADDED)
@@ -145,8 +157,38 @@ class IdentityService:
     # ==========================================================
     def generate_for_reflection(self, user_id: str, artwork_id: str, reflection_text: str, user_role: str = None):
         try:
+            # 🔥 Evidence stage (Issue 5): how many artworks we've analysed for
+            # this user, counting the current one. If this artwork already has a
+            # template (regeneration) the count is unchanged; otherwise it's new.
+            existing_count = IdentityTemplate.query.filter_by(user_id=user_id).count()
+            already_analysed = (
+                IdentityTemplate.query.filter_by(artwork_id=artwork_id).first() is not None
+            )
+            evidence_count = existing_count if already_analysed else existing_count + 1
+
+            # 🔥 Preserve the user's own decisions across regeneration (Issue 8):
+            # confirm/reject state for this artwork's previous traits, plus labels
+            # the user has net-rejected anywhere in their history.
+            prior_confirmed = {}
+            _old = IdentityTemplate.query.filter_by(artwork_id=artwork_id).first()
+            if _old:
+                for t in _old.traits:
+                    if t.label:
+                        prior_confirmed[t.label.strip().lower()] = t.is_confirmed
+            rejected_labels = self._rejected_labels(user_id)
+
+            def _confirmed_for(label):
+                """Keep the prior decision if one exists; otherwise a net-rejected
+                label comes back as an unconfirmed suggestion (reduced confidence)."""
+                key = (label or "").strip().lower()
+                if key in prior_confirmed:
+                    return prior_confirmed[key]
+                if key in rejected_labels:
+                    return False
+                return True
+
             # 🔹 EXISTING
-            identity_data = self._generate_identity_data(reflection_text)
+            identity_data = self._generate_identity_data(reflection_text, evidence_count)
 
             # 🔹 ML (ADDED)
             ml_traits = self._extract_ml_traits(reflection_text, user_id)
@@ -199,23 +241,29 @@ class IdentityService:
             for t in identity_data.get("traits", []):
                 if not t or str(t).strip().lower() in ("none", "", "null"):
                     continue
+                label = str(t).strip()
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=str(t).strip(),
+                    label=label,
                     value="1.0",
                     trait_type="chip",
-                    position=position
+                    position=position,
+                    is_confirmed=_confirmed_for(label)
                 ))
                 position += 1
 
             # 🔥 ML TRAITS (ADDED BLOCK ONLY)
+            # No "(ML)" suffix in the stored label (Issue 9): the model origin is
+            # already carried by trait_type="slider", and the label is user-facing.
             for label, score in ml_traits:
+                clean_label = str(label).strip()
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=f"{label} (ML)",
+                    label=clean_label,
                     value=str(round(score, 2)),
                     trait_type="slider",
-                    position=position
+                    position=position,
+                    is_confirmed=_confirmed_for(clean_label)
                 ))
                 position += 1
 
@@ -223,12 +271,14 @@ class IdentityService:
             for e in identity_data.get("emotions", []):
                 if not e or str(e).strip().lower() in ("none", "", "null"):
                     continue
+                label = str(e).strip()
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=str(e).strip(),
+                    label=label,
                     value="1.0",
                     trait_type="chip",
-                    position=position
+                    position=position,
+                    is_confirmed=_confirmed_for(label)
                 ))
                 position += 1
 
@@ -236,12 +286,14 @@ class IdentityService:
             for th in identity_data.get("themes", []):
                 if not th or str(th).strip().lower() in ("none", "", "null"):
                     continue
+                label = str(th).strip()
                 db.session.add(IdentityTrait(
                     template_id=template.id,
-                    label=str(th).strip(),
+                    label=label,
                     value="1.0",
                     trait_type="chip",
-                    position=position
+                    position=position,
+                    is_confirmed=_confirmed_for(label)
                 ))
                 position += 1
 

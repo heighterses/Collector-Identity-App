@@ -13,11 +13,13 @@ from app.models.password_reset import PasswordResetToken
 from app.services.sendgrid_email_service import sendgrid_email_service
 from app.services.s3_service import s3_service
 from app.middleware.auth import jwt_required_custom
+from app.middleware.rate_limit import rate_limit
 import re
 
 bp = Blueprint('auth', __name__)
 
 @bp.route('/signup', methods=['POST'])
+@rate_limit(5, 60, scope='signup')
 def signup():
     try:
         data = request.get_json()
@@ -61,6 +63,7 @@ def signup():
         return jsonify({'error': 'Internal server error'}), 500
 
 @bp.route('/login', methods=['POST'])
+@rate_limit(10, 60, scope='login')
 def login():
     try:
         data = request.get_json()

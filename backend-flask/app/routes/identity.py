@@ -466,6 +466,12 @@ def get_profile_data():
                     "new_traits": [],
                     "dropped_traits": []
                 },
+                "dynamics": {
+                    "persistent": [],
+                    "one_off": [],
+                    "emerging": [],
+                    "fading": []
+                },
                 "clusters": [],
                 "embedding_clusters": [],
                 "similarities": [],
@@ -478,6 +484,9 @@ def get_profile_data():
         patterns = pattern_service.detect_patterns(identities)
         trend = pattern_service.detect_trend(identities)
 
+        # 🔥 NEW: whole-collection trait dynamics (Issue 6)
+        dynamics = pattern_service.classify_trait_dynamics(identities)
+
         # 🔥 KEEP YOUR ORIGINAL (trait-based clustering)
         clusters = pattern_service.cluster_identities(identities)
 
@@ -486,12 +495,13 @@ def get_profile_data():
         similarities = pattern_service.similarity_matrix(identities)
 
         # 🔥 INSIGHTS
-        insights = pattern_service.generate_insights(patterns, trend)
+        insights = pattern_service.generate_insights(patterns, trend, dynamics)
 
         return jsonify({
             "identities": identities,
             "patterns": patterns,
             "trend": trend,
+            "dynamics": dynamics,  # new (Issue 6)
             "clusters": clusters,  # old (safe)
             "embedding_clusters": embedding_clusters,  # new ML
             "similarities": similarities,  # new ML

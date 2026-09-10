@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +116,7 @@ class IdentityExportService:
         )
 
         try:
-            llm = OllamaProvider()
-            text = (llm.generate(prompt) or "").strip()
+            text = (llm_provider.generate(prompt) or "").strip()
             if len(text) < 10:
                 return None, "unavailable"
             return text, "generated"

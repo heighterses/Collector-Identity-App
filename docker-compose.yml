@@ -30,7 +30,12 @@ services:
       - AWS_SECRET_ACCESS_KEY=minioadmin
       # Ollama (running natively on host machine)
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - OLLAMA_MODEL=gemma:2b
+      - OLLAMA_MODEL=gemma3:4b
+      # Multimodal model for image-aware reflections (ollama pull gemma3:4b)
+      - OLLAMA_VISION_MODEL=gemma3:4b
+      - OLLAMA_TIMEOUT=300
+      # AI provider: "ollama" (local) or "openai" (paid). Switch here to change backend.
+      - AI_PROVIDER=ollama
       # Tell HuggingFace libraries not to hit the internet at runtime.
       # The model is downloaded during docker build and lives in the image layer.
       - TRANSFORMERS_OFFLINE=1

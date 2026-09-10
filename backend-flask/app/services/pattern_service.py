@@ -62,6 +62,61 @@ class PatternService:
         }
 
     # ==========================================================
+    # 🔥 NEW: TRAIT DYNAMICS ACROSS THE WHOLE COLLECTION (Issue 6)
+    # ==========================================================
+    def classify_trait_dynamics(self, identities):
+        """
+        Look across ALL of the user's artwork identities (not just the last two)
+        and classify trait labels as:
+          - persistent : recurs across most artworks
+          - one_off    : seen in only a single artwork
+          - emerging   : shows up in the more recent half, not the older half
+          - fading     : was in the older half, absent from the recent half
+
+        This lets the app "begin showing patterns" instead of just re-listing the
+        active artwork's traits (Round-1 brief, Issue 6). Additive — callers that
+        don't use it are unaffected.
+        """
+        empty = {"persistent": [], "one_off": [], "emerging": [], "fading": []}
+
+        ordered = sorted(identities, key=lambda i: i.get("created_at") or "")
+        n = len(ordered)
+        if n == 0:
+            return empty
+
+        # Per-artwork set of trait labels (skip the Core Identity summary label).
+        seq = []
+        for ident in ordered:
+            labels = set()
+            for t in ident.get("traits", []):
+                lbl = (t.get("label") or "").strip()
+                if lbl and lbl != "Core Identity":
+                    labels.add(lbl)
+            seq.append(labels)
+
+        counts = Counter()
+        for labels in seq:
+            counts.update(labels)
+
+        split = max(1, n // 2)
+        older = set().union(*seq[:split]) if seq[:split] else set()
+        recent = set().union(*seq[split:]) if seq[split:] else set()
+
+        persistent_threshold = max(2, round(n * 0.6))
+
+        persistent = sorted(l for l, c in counts.items() if c >= persistent_threshold)
+        one_off = sorted(l for l, c in counts.items() if c == 1)
+        emerging = sorted(recent - older)
+        fading = sorted(older - recent)
+
+        return {
+            "persistent": persistent[:5],
+            "one_off": one_off[:5],
+            "emerging": emerging[:5],
+            "fading": fading[:5],
+        }
+
+    # ==========================================================
     # 🔥 EXISTING: CLUSTER BY TRAITS (UNCHANGED)
     # ==========================================================
     def cluster_identities(self, identities):
@@ -134,7 +189,7 @@ class PatternService:
     # ==========================================================
     # 🔥 EXISTING: INSIGHTS (UNCHANGED)
     # ==========================================================
-    def generate_insights(self, patterns, trend):
+    def generate_insights(self, patterns, trend, dynamics=None):
         insights = []
 
         if patterns.get("traits"):
@@ -145,11 +200,23 @@ class PatternService:
             top_emotion = patterns["emotions"][0][0]
             insights.append(f"Your emotional pattern leans toward '{top_emotion}'.")
 
-        if trend.get("new_traits"):
+        # Prefer the whole-collection dynamics (Issue 6) when available; fall back
+        # to the simple last-two-artwork trend otherwise.
+        dynamics = dynamics or {}
+        if dynamics.get("persistent"):
+            insights.append(
+                f"Recurring across your work: {', '.join(dynamics['persistent'])}"
+            )
+        if dynamics.get("emerging"):
+            insights.append(f"Emerging themes: {', '.join(dynamics['emerging'])}")
+        elif trend.get("new_traits"):
             insights.append(f"New emerging traits: {', '.join(trend['new_traits'])}")
-
-        if trend.get("dropped_traits"):
+        if dynamics.get("fading"):
+            insights.append(f"Themes that are fading: {', '.join(dynamics['fading'])}")
+        elif trend.get("dropped_traits"):
             insights.append(f"Traits you're moving away from: {', '.join(trend['dropped_traits'])}")
+        if dynamics.get("one_off"):
+            insights.append(f"Seen once so far: {', '.join(dynamics['one_off'])}")
 
         return insights
 

@@ -129,6 +129,80 @@ const SuggestedPrompt = ({ text, onClick }) => (
   </button>
 );
 
+// Retractable list of saved conversations (identity-level + one per artwork),
+// ChatGPT/Claude style. Collapses to a thin rail with just the toggle.
+const ChatSidebar = ({ open, onToggle, conversations, activeArtworkId, onSelect }) => (
+  <div style={{
+    width: open ? 260 : 46,
+    flexShrink: 0,
+    borderRight: '1px solid var(--line)',
+    background: 'var(--paper-2)',
+    display: 'flex', flexDirection: 'column',
+    transition: 'width 0.2s ease',
+    overflow: 'hidden',
+    height: '100%',
+  }}>
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      justifyContent: open ? 'space-between' : 'center',
+      padding: '14px 10px', borderBottom: '1px solid var(--line)', flexShrink: 0,
+    }}>
+      {open && (
+        <span style={{
+          fontSize: 'var(--text-xs)', color: 'var(--ink-muted)',
+          textTransform: 'uppercase', letterSpacing: '0.05em',
+        }}>Chats</span>
+      )}
+      <button
+        onClick={onToggle}
+        aria-label={open ? 'Collapse chat list' : 'Expand chat list'}
+        title={open ? 'Collapse' : 'Expand'}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--ink-muted)', fontSize: 16, lineHeight: 1, padding: 4,
+        }}
+      >
+        {open ? '‹' : '☰'}
+      </button>
+    </div>
+
+    {open && (
+      <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+        {conversations.length === 0 ? (
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--ink-muted)', padding: 8 }}>
+            No saved chats yet.
+          </p>
+        ) : conversations.map(c => {
+          const isActive = (c.artwork_id ?? null) === (activeArtworkId ?? null);
+          return (
+            <button
+              key={c.artwork_id || '__identity__'}
+              onClick={() => onSelect(c.artwork_id ?? null)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                background: isActive ? 'var(--accent-subtle)' : 'transparent',
+                border: isActive ? '1px solid var(--accent)' : '1px solid transparent',
+                borderRadius: 10, padding: '8px 10px', marginBottom: 4,
+              }}
+            >
+              <span style={{
+                display: 'block', fontSize: 'var(--text-sm)', color: 'var(--ink)',
+                fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>{c.title}</span>
+              {c.preview && (
+                <span style={{
+                  display: 'block', fontSize: 'var(--text-xs)', color: 'var(--ink-muted)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2,
+                }}>{c.preview}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    )}
+  </div>
+);
+
 // Chat history is paginated in pages of this size (mirrors the backend
 // default in app/routes/chat.py).
 const HISTORY_PAGE_SIZE = 50;
@@ -149,8 +223,14 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
   const [historyLoading, setHistoryLoading] = useState(true);
   const [hasMoreHistory, setHasMoreHistory] = useState(false);
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [conversations, setConversations] = useState([]);
   const bottomRef = useRef(null);
   const historyLoadedRef = useRef(false);
+  // Set once the user explicitly picks a thread from the sidebar, so the
+  // "default to the first artwork" effect below never overrides their choice
+  // (important for the identity-level thread, whose id is null).
+  const userSelectedRef = useRef(false);
 
   const hasOpenUploadStep = messages.some(m => m.role === 'upload-step');
 
@@ -160,6 +240,7 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
   // used e.g. right after an inline upload switches the conversation to the
   // artwork that was just added.
   useEffect(() => {
+    if (userSelectedRef.current) return;
     if (!activeArtworkId && artworks.length > 0) {
       setActiveArtworkId(artworks[0].id);
     }
@@ -185,6 +266,49 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
     }
   };
 
+  // Refresh the sidebar thread list (non-fatal on failure).
+  const loadConversations = async () => {
+    try {
+      const res = await chat.getConversations();
+      setConversations(res?.conversations || []);
+    } catch {
+      /* leave the current list as-is */
+    }
+  };
+
+  // Load a single thread's persisted history (or a greeting if it's empty).
+  const loadThread = async (artworkId) => {
+    setHistoryLoading(true);
+    setHasMoreHistory(false);
+    try {
+      const res = await chat.getHistory(artworkId, { limit: HISTORY_PAGE_SIZE });
+      const persisted = (res?.messages || []).map(m => ({
+        role: m.role, text: m.content, created_at: m.created_at,
+      }));
+      if (persisted.length > 0) {
+        setMessages(persisted);
+        setHasMoreHistory(!!res.has_more);
+      } else {
+        await showGreeting();
+      }
+    } catch {
+      await showGreeting();
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // Switch the active conversation from the sidebar. artworkId === null is the
+  // identity-level thread.
+  const switchThread = async (artworkId) => {
+    const target = artworkId ?? null;
+    if (target === (activeArtworkId ?? null)) return;
+    userSelectedRef.current = true;
+    setActiveArtworkId(target);
+    setSuggestedPrompts([]);
+    await loadThread(target);
+  };
+
   // Fix (P1): chat history now persists server-side, scoped per user and per
   // context (a specific artwork, or the identity-level thread). Loaded once
   // on mount so a return visit, a full refresh, or a fresh login after
@@ -197,25 +321,8 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
     const contextArtworkId = initialArtworkId || artworks[0]?.id || null;
     setActiveArtworkId(contextArtworkId);
 
-    (async () => {
-      setHistoryLoading(true);
-      try {
-        const res = await chat.getHistory(contextArtworkId, { limit: HISTORY_PAGE_SIZE });
-        const persisted = (res?.messages || []).map(m => ({
-          role: m.role, text: m.content, created_at: m.created_at,
-        }));
-        if (persisted.length > 0) {
-          setMessages(persisted);
-          setHasMoreHistory(!!res.has_more);
-        } else {
-          await showGreeting();
-        }
-      } catch {
-        await showGreeting();
-      } finally {
-        setHistoryLoading(false);
-      }
-    })();
+    loadConversations();
+    loadThread(contextArtworkId);
     // Runs once on mount only — switching the active artwork afterward
     // (e.g. after an inline upload) intentionally keeps the same visible
     // thread going, matching the pre-existing behavior.
@@ -278,6 +385,8 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
       }]);
     } finally {
       setLoading(false);
+      // Keep the sidebar's previews/ordering current after each turn.
+      loadConversations();
     }
   };
 
@@ -346,7 +455,18 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
         }
       `}</style>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)' }}>
+      <div style={{ display: 'flex', height: 'calc(100vh - 80px)' }}>
+
+        <ChatSidebar
+          open={sidebarOpen}
+          onToggle={() => setSidebarOpen(o => !o)}
+          conversations={conversations}
+          activeArtworkId={activeArtworkId}
+          onSelect={switchThread}
+        />
+
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', height: '100%', padding: '0 16px' }}>
 
         {/* Header — route title already in the topbar; this just adds context */}
         {activeArtwork && (
@@ -435,6 +555,8 @@ export default function ChatPage({ artworks = [], onArtworkCreated, onNavigate, 
           >
             Send
           </button>
+        </div>
+          </div>
         </div>
       </div>
     </>

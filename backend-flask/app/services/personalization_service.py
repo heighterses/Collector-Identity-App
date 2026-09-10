@@ -1,5 +1,5 @@
 import logging
-from app.services.ollama_provider import OllamaProvider
+from app.services.llm_provider import llm_provider
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class PersonalizationService:
     """
 
     def __init__(self):
-        self.llm = OllamaProvider()
+        self.llm = llm_provider
 
     def score_genericness(self, response: str) -> float:
         response_lower = response.lower()

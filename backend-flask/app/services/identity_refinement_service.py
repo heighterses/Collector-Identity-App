@@ -1,5 +1,5 @@
-import requests
 from app.services.identity_parser import parse_identity_response
+from app.services.llm_provider import llm_provider
 
 class IdentityRefinementService:
 
@@ -30,18 +30,7 @@ Return ONLY JSON in same format:
 """
 
         try:
-            response = requests.post(
-                self.ollama_url,
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=30
-            )
-
-            data = response.json()
-            return parse_identity_response(data.get("response", ""))
+            return parse_identity_response(llm_provider.generate(prompt))
 
         except Exception as e:
             return {"error": str(e)}

@@ -204,23 +204,34 @@ def refine_reflection():
 
 
 # ==========================================================
-# ⚠️ KEEP OLD REGENERATE
+# 🔥 REGENERATE (Issue 10)
+# Regenerates the reflection for a SPECIFIC artwork when artwork_id is supplied
+# (ownership-checked), falling back to the user's most recent artwork only when
+# it isn't — previously it always targeted the latest artwork regardless of what
+# the user was viewing. Also refreshes the derived identity so identity analysis
+# stays in sync, matching /refine. See REFINE_VS_REGENERATE.md.
 # ==========================================================
 @bp.route('/regenerate', methods=['POST'])
 @jwt_required_custom
 def regenerate_reflection():
     try:
         user_id = request.current_user['user_id']
+        data = request.get_json(silent=True) or {}
+        artwork_id = data.get('artwork_id')
 
         from app.models.artwork import Artwork
         from app.services.reflection_service import reflection_service
+        from app.services.identity_service import identity_service
 
-        artwork = (
-            Artwork.query
-            .filter_by(user_id=user_id)
-            .order_by(Artwork.created_at.desc())
-            .first()
-        )
+        if artwork_id:
+            artwork = Artwork.query.filter_by(id=artwork_id, user_id=user_id).first()
+        else:
+            artwork = (
+                Artwork.query
+                .filter_by(user_id=user_id)
+                .order_by(Artwork.created_at.desc())
+                .first()
+            )
 
         if not artwork:
             return jsonify({'error': 'No artwork found'}), 404
@@ -229,6 +240,18 @@ def regenerate_reflection():
 
         if not updated_reflection:
             return jsonify({'error': 'Generation failed'}), 500
+
+        # Keep identity in sync with the regenerated reflection (non-blocking).
+        try:
+            identity_service.generate_for_reflection(
+                user_id=user_id,
+                artwork_id=artwork.id,
+                reflection_text=updated_reflection.content
+            )
+        except Exception as identity_err:
+            current_app.logger.warning(
+                f"Identity refresh after regenerate failed (non-blocking): {str(identity_err)}"
+            )
 
         return jsonify({
             'reflection': updated_reflection.to_dict()
